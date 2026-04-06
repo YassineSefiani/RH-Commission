@@ -1,7 +1,8 @@
 package com.abcdis.hrapp.controller;
 
 import com.abcdis.hrapp.model.Constraint;
-import com.abcdis.hrapp.repository.ConstraintRepository;
+import com.abcdis.hrapp.service.ConstraintService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,63 +13,54 @@ import java.util.List;
 @RequestMapping("/api/constraints")
 @CrossOrigin(origins = "http://localhost:5173")
 public class ConstraintController {
-    
+
     @Autowired
-    private ConstraintRepository constraintRepository;
-    
+    private ConstraintService service;
+
     @GetMapping
-    public List<Constraint> getAllConstraints() {
-        return constraintRepository.findAll();
+    public List<Constraint> getAll() {
+        return service.getAllConstraints();
     }
-    
+
     @GetMapping("/{id}")
-    public ResponseEntity<Constraint> getConstraintById(@PathVariable Long id) {
-        return constraintRepository.findById(id)
+    public ResponseEntity<Constraint> getById(@PathVariable Long id) {
+        return service.getConstraintById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     @PostMapping
-    public Constraint createConstraint(@RequestBody Constraint constraint) {
-        return constraintRepository.save(constraint);
+    public Constraint create(@RequestBody Constraint constraint) {
+        return service.createConstraint(constraint);
     }
-    
+
     @PutMapping("/{id}")
-    public ResponseEntity<Constraint> updateConstraint(
-            @PathVariable Long id, 
-            @RequestBody Constraint constraintDetails) {
-        
-        return constraintRepository.findById(id)
-                .map(constraint -> {
-                    constraint.setName(constraintDetails.getName());
-                    constraint.setType(constraintDetails.getType());
-                    constraint.setValue(constraintDetails.getValue());
-                    constraint.setValueType(constraintDetails.getValueType());
-                    constraint.setCondition(constraintDetails.getCondition());
-                    constraint.setActive(constraintDetails.getActive());
-                    constraint.setRuleGroups(constraintDetails.getRuleGroups());
-                    return ResponseEntity.ok(constraintRepository.save(constraint));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Constraint> update(
+            @PathVariable Long id,
+            @RequestBody Constraint details) {
+        try {
+            return ResponseEntity.ok(service.updateConstraint(id, details));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
-    
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteConstraint(@PathVariable Long id) {
-        return constraintRepository.findById(id)
-                .map(constraint -> {
-                    constraintRepository.delete(constraint);
-                    return ResponseEntity.ok().build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        try {
+            service.deleteConstraint(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
-    
+
     @PatchMapping("/{id}/toggle")
-    public ResponseEntity<Constraint> toggleConstraint(@PathVariable Long id) {
-        return constraintRepository.findById(id)
-                .map(constraint -> {
-                    constraint.setActive(!constraint.getActive());
-                    return ResponseEntity.ok(constraintRepository.save(constraint));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Constraint> toggle(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(service.toggleConstraint(id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

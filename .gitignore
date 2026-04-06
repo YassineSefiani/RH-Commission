@@ -1,1 +1,6 @@
+# Node.js
 node_modules/
+
+# Java / Maven
+backend/target/
+*.class
