@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import logo from '../assets/logo-on-black.png';
+import { BackendStatus } from './BackendStatus';
 
 interface LayoutProps {
   children: ReactNode;
@@ -183,6 +184,9 @@ export default function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Backend Status Indicator */}
+      <BackendStatus />
     </div>
   );
 }
