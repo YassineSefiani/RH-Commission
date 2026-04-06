@@ -1,0 +1,8 @@
+com\abcdis\hrapp\controller\ConstraintController.class
+com\abcdis\hrapp\repository\HistoryRepository.class
+com\abcdis\hrapp\model\CalculationHistory.class
+com\abcdis\hrapp\HrAppApplication.class
+com\abcdis\hrapp\repository\ConstraintRepository.class
+com\abcdis\hrapp\model\Constraint.class
+com\abcdis\hrapp\config\CorsConfig.class
+com\abcdis\hrapp\controller\HistoryController.class

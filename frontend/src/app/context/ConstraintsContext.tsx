@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { constraintsApi, mapApiConstraintToFrontend, mapFrontendConstraintToApi } from '../services/api';
+import { toast } from 'sonner';
 
 export interface Constraint {
   id: string;
@@ -61,40 +63,134 @@ const INITIAL_CONSTRAINTS: Constraint[] = [
 ];
 
 export function ConstraintsProvider({ children }: { children: ReactNode }) {
-  const [constraints, setConstraints] = useState<Constraint[]>(() => {
-    // Charger depuis localStorage si disponible
-    const saved = localStorage.getItem('abc_dis_constraints');
-    return saved ? JSON.parse(saved) : INITIAL_CONSTRAINTS;
-  });
+  const [constraints, setConstraints] = useState<Constraint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Sauvegarder dans localStorage à chaque modification
+  // Charger les contraintes depuis l'API au démarrage
   useEffect(() => {
-    localStorage.setItem('abc_dis_constraints', JSON.stringify(constraints));
-  }, [constraints]);
+    loadConstraints();
+  }, []);
 
-  const addConstraint = (constraint: Omit<Constraint, 'id'>) => {
-    const newConstraint: Constraint = {
-      ...constraint,
-      id: Date.now().toString(),
-    };
-    setConstraints(prev => [...prev, newConstraint]);
+  const loadConstraints = async () => {
+    try {
+      setIsLoading(true);
+      const apiConstraints = await constraintsApi.getAll();
+      const mappedConstraints = apiConstraints.map(mapApiConstraintToFrontend);
+      setConstraints(mappedConstraints);
+      
+      // Si aucune contrainte n'existe, créer les contraintes initiales
+      if (mappedConstraints.length === 0) {
+        await initializeDefaultConstraints();
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des contraintes:', error);
+      toast.error('Impossible de charger les contraintes. Vérifiez que le backend est démarré.');
+      // En cas d'erreur, utiliser les contraintes par défaut en local
+      setConstraints(INITIAL_CONSTRAINTS);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const updateConstraint = (id: string, updates: Partial<Constraint>) => {
-    setConstraints(prev =>
-      prev.map(c => (c.id === id ? { ...c, ...updates } : c))
+  const initializeDefaultConstraints = async () => {
+    try {
+      const createdConstraints = await Promise.all(
+        INITIAL_CONSTRAINTS.map(constraint => 
+          constraintsApi.create(mapFrontendConstraintToApi(constraint))
+        )
+      );
+      const mappedConstraints = createdConstraints.map(mapApiConstraintToFrontend);
+      setConstraints(mappedConstraints);
+      toast.success('Contraintes initiales créées avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'initialisation des contraintes:', error);
+    }
+  };
+
+  const addConstraint = async (constraint: Omit<Constraint, 'id'>) => {
+    try {
+      const apiConstraint = mapFrontendConstraintToApi(constraint);
+      const created = await constraintsApi.create(apiConstraint);
+      const newConstraint = mapApiConstraintToFrontend(created);
+      setConstraints(prev => [...prev, newConstraint]);
+      toast.success('Contrainte ajoutée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la contrainte:', error);
+      toast.error('Impossible d\'ajouter la contrainte');
+      throw error;
+    }
+  };
+
+  const updateConstraint = async (id: string, updates: Partial<Constraint>) => {
+    try {
+      const numericId = parseInt(id, 10);
+      const currentConstraint = constraints.find(c => c.id === id);
+      if (!currentConstraint) {
+        throw new Error('Contrainte non trouvée');
+      }
+      
+      const updatedConstraint = { ...currentConstraint, ...updates };
+      const apiConstraint = mapFrontendConstraintToApi(updatedConstraint);
+      const updated = await constraintsApi.update(numericId, apiConstraint);
+      const mappedConstraint = mapApiConstraintToFrontend(updated);
+      
+      setConstraints(prev =>
+        prev.map(c => (c.id === id ? mappedConstraint : c))
+      );
+      toast.success('Contrainte mise à jour avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la contrainte:', error);
+      toast.error('Impossible de mettre à jour la contrainte');
+      throw error;
+    }
+  };
+
+  const deleteConstraint = async (id: string) => {
+    try {
+      const numericId = parseInt(id, 10);
+      await constraintsApi.delete(numericId);
+      setConstraints(prev => prev.filter(c => c.id !== id));
+      toast.success('Contrainte supprimée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la contrainte:', error);
+      toast.error('Impossible de supprimer la contrainte');
+      throw error;
+    }
+  };
+
+  const toggleConstraint = async (id: string) => {
+    try {
+      const numericId = parseInt(id, 10);
+      const toggled = await constraintsApi.toggle(numericId);
+      const mappedConstraint = mapApiConstraintToFrontend(toggled);
+      
+      setConstraints(prev =>
+        prev.map(c => (c.id === id ? mappedConstraint : c))
+      );
+      toast.success(`Contrainte ${mappedConstraint.active ? 'activée' : 'désactivée'}`);
+    } catch (error) {
+      console.error('Erreur lors du changement d\'état de la contrainte:', error);
+      toast.error('Impossible de changer l\'état de la contrainte');
+      throw error;
+    }
+  };
+
+  // Afficher un loader pendant le chargement initial
+  if (isLoading) {
+    return (
+      <ConstraintsContext.Provider
+        value={{
+          constraints: [],
+          addConstraint,
+          updateConstraint,
+          deleteConstraint,
+          toggleConstraint,
+        }}
+      >
+        {children}
+      </ConstraintsContext.Provider>
     );
-  };
-
-  const deleteConstraint = (id: string) => {
-    setConstraints(prev => prev.filter(c => c.id !== id));
-  };
-
-  const toggleConstraint = (id: string) => {
-    setConstraints(prev =>
-      prev.map(c => (c.id === id ? { ...c, active: !c.active } : c))
-    );
-  };
+  }
 
   return (
     <ConstraintsContext.Provider

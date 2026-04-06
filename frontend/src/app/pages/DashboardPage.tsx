@@ -35,18 +35,19 @@ export default function DashboardPage() {
 
   // Données mensuelles pour les graphiques
   const monthlyData = useMemo(() => {
-    const monthsMap = new Map<string, { sales: number; commissions: number; salaries: number; count: number }>();
+    const monthsMap = new Map<string, { sales: number; commissions: number; salaries: number; count: number; date: Date }>();
 
     history.forEach(h => {
       const date = new Date(h.date);
       const monthKey = date.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
       
-      const existing = monthsMap.get(monthKey) || { sales: 0, commissions: 0, salaries: 0, count: 0 };
+      const existing = monthsMap.get(monthKey) || { sales: 0, commissions: 0, salaries: 0, count: 0, date };
       monthsMap.set(monthKey, {
         sales: existing.sales + h.totalSales,
         commissions: existing.commissions + h.commissions,
         salaries: existing.salaries + h.finalSalary,
         count: existing.count + 1,
+        date: existing.date, // Garder la date originale pour le tri
       });
     });
 
@@ -57,12 +58,9 @@ export default function DashboardPage() {
         commissions: data.commissions,
         salaires: data.salaries,
         calculs: data.count,
+        sortDate: data.date, // Date pour le tri
       }))
-      .sort((a, b) => {
-        const dateA = new Date(a.month);
-        const dateB = new Date(b.month);
-        return dateA.getTime() - dateB.getTime();
-      })
+      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime()) // Tri par date réelle
       .slice(-6); // Derniers 6 mois
   }, [history]);
 
