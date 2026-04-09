@@ -6,6 +6,7 @@ import CalculationPage from "./pages/CalculationPage";
 import HistoryPage from "./pages/HistoryPage";
 import SettingsPage from "./pages/SettingsPage";
 import NewConstraintPage from "./pages/NewConstraintPage";
+import PersonnelPage from "./pages/PersonnelPage";
 import Layout from "./components/Layout";
 
 export const router = createBrowserRouter([
@@ -32,6 +33,10 @@ export const router = createBrowserRouter([
   {
     path: "/history",
     element: <Layout><HistoryPage /></Layout>,
+  },
+  {
+    path: "/personnel",
+    element: <Layout><PersonnelPage /></Layout>,
   },
   {
     path: "/settings",
