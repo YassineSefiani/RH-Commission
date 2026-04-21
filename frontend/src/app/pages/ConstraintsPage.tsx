@@ -11,17 +11,15 @@ export default function ConstraintsPage() {
   const [filterType, setFilterType] = useState<string>('all');
 
   const typeLabels: Record<Constraint['type'], string> = {
-    commission: 'Commission par produit',
-    performance_bonus: 'Bonus de performance',
-    delivery_bonus: 'Bonus de livraison',
-    penalty: 'Pénalité',
+    commission_quantitative: 'Commission Quantitative',
+    commission_retour: 'Commission Retour',
+    commission_triage: 'Commission Triage',
   };
 
   const typeColors: Record<Constraint['type'], string> = {
-    commission: 'bg-orange-100 text-orange-800',
-    performance_bonus: 'bg-green-100 text-green-800',
-    delivery_bonus: 'bg-blue-100 text-blue-800',
-    penalty: 'bg-red-100 text-red-800',
+    commission_quantitative: 'bg-amber-100 text-amber-800',
+    commission_retour: 'bg-red-100 text-red-800',
+    commission_triage: 'bg-green-100 text-green-800',
   };
 
   const handleDelete = (id: string) => {
@@ -42,8 +40,8 @@ export default function ConstraintsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Contraintes</h1>
-          <p className="text-gray-600 mt-1">Définir les règles de calcul des commissions</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gestion des Commissions Quantitatives</h1>
+          <p className="text-gray-600 mt-1">Définir les règles de calcul des commissions basées sur le volume reçu</p>
         </div>
         <button
           onClick={() => navigate('/constraints/new')}
@@ -51,7 +49,7 @@ export default function ConstraintsPage() {
           style={{ backgroundColor: '#f7a800' }}
         >
           <Plus className="w-5 h-5" />
-          Nouvelle Contrainte
+          Nouvelle Commission Quantitative
         </button>
       </div>
 
@@ -74,10 +72,9 @@ export default function ConstraintsPage() {
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
           >
             <option value="all">Tous les types</option>
-            <option value="commission">Commission par produit</option>
-            <option value="performance_bonus">Bonus de performance</option>
-            <option value="delivery_bonus">Bonus de livraison</option>
-            <option value="penalty">Pénalité</option>
+            <option value="commission_quantitative">Commission Quantitative</option>
+            <option value="commission_retour">Commission Retour</option>
+            <option value="commission_triage">Commission Triage</option>
           </select>
         </div>
       </div>
@@ -90,7 +87,7 @@ export default function ConstraintsPage() {
               <tr>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Nom</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Type</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Valeur</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Taux (%)</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Condition</th>
                 <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Statut</th>
                 <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Actions</th>
@@ -116,7 +113,7 @@ export default function ConstraintsPage() {
                     </td>
                     <td className="py-4 px-6">
                       <span className="font-semibold text-gray-900">
-                        {constraint.valueType === 'percentage' ? `${constraint.value}%` : `${constraint.value}€`}
+                        {constraint.valueType === 'percentage' ? `${constraint.value}%` : `${constraint.value}MAD`}
                       </span>
                     </td>
                     <td className="py-4 px-6">

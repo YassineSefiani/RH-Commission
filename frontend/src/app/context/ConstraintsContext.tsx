@@ -2,10 +2,12 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import { constraintsApi, mapApiConstraintToFrontend, mapFrontendConstraintToApi } from '../services/api';
 import { toast } from 'sonner';
 
+let constraintsInitPromise: Promise<void> | null = null;
+
 export interface Constraint {
   id: string;
   name: string;
-  type: 'commission' | 'performance_bonus' | 'delivery_bonus' | 'penalty';
+  type: 'commission_quantitative' | 'commission_retour' | 'commission_triage';
   value: number;
   valueType: 'percentage' | 'fixed';
   condition: string;
@@ -26,38 +28,74 @@ const ConstraintsContext = createContext<ConstraintsContextType | undefined>(und
 const INITIAL_CONSTRAINTS: Constraint[] = [
   {
     id: '1',
-    name: 'Commission Produit A',
-    type: 'commission',
-    value: 5,
+    name: 'Commission Quantitative - Livreur CDI',
+    type: 'commission_quantitative',
+    value: 18,
     valueType: 'percentage',
-    condition: 'Ventes > 0',
+    condition: 'Livreur CDI - 0.18 x Volume Reçu',
     active: true,
   },
   {
     id: '2',
-    name: 'Bonus Performance Élevée',
-    type: 'performance_bonus',
-    value: 500,
-    valueType: 'fixed',
-    condition: 'Ventes > 100',
+    name: 'Commission Quantitative - Livreur GMS CDI',
+    type: 'commission_quantitative',
+    value: 11,
+    valueType: 'percentage',
+    condition: 'Livreur GMS CDI - 0.11 x Volume Reçu',
     active: true,
   },
   {
     id: '3',
-    name: 'Bonus Livraison Rapide',
-    type: 'delivery_bonus',
-    value: 10,
+    name: 'Commission Quantitative - Aide Livreur CDI',
+    type: 'commission_quantitative',
+    value: 12,
     valueType: 'percentage',
-    condition: 'Livraisons > 50',
+    condition: 'Aide Livreur CDI - 0.12 x Volume Reçu',
     active: true,
   },
   {
     id: '4',
-    name: 'Pénalité Retour Produit',
-    type: 'penalty',
-    value: 50,
+    name: 'Commission Quantitative - Livreur INT',
+    type: 'commission_quantitative',
+    value: 12,
+    valueType: 'percentage',
+    condition: 'Livreur INT - 0.12 x Volume Reçu',
+    active: true,
+  },
+  {
+    id: '5',
+    name: 'Commission Quantitative - Livreur GMS INT',
+    type: 'commission_quantitative',
+    value: 11,
+    valueType: 'percentage',
+    condition: 'Livreur GMS INT - 0.11 x Volume Reçu',
+    active: true,
+  },
+  {
+    id: '6',
+    name: 'Commission Quantitative - Aide Livreur INT',
+    type: 'commission_quantitative',
+    value: 8,
+    valueType: 'percentage',
+    condition: 'Aide Livreur INT - 0.08 x Volume Reçu',
+    active: true,
+  },
+  {
+    id: '7',
+    name: 'Commission Retour - Coca Cola',
+    type: 'commission_retour',
+    value: 250,
     valueType: 'fixed',
-    condition: 'Retours > 5',
+    condition: 'CDI - Livreur/Aide livreur - Taux retour < 1% = 250 DH, 1-2% = 150 DH',
+    active: true,
+  },
+  {
+    id: '8',
+    name: 'Commission Triage - Coca Cola',
+    type: 'commission_triage',
+    value: 200,
+    valueType: 'fixed',
+    condition: 'CDI - Livreur/Aide livreur - Au moins 15 jours travaillés - Taux triage > 70% = 200 DH',
     active: true,
   },
 ];
@@ -74,16 +112,25 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
   const loadConstraints = async () => {
     try {
       setIsLoading(true);
+      console.log('🔄 Chargement des contraintes depuis l\'API...');
       const apiConstraints = await constraintsApi.getAll();
+      console.log('📊 Contraintes reçues de l\'API:', apiConstraints.length, apiConstraints);
       const mappedConstraints = apiConstraints.map(mapApiConstraintToFrontend);
+      console.log('🗺️ Contraintes mappées:', mappedConstraints.length, mappedConstraints);
       setConstraints(mappedConstraints);
-      
+
       // Si aucune contrainte n'existe, créer les contraintes initiales
       if (mappedConstraints.length === 0) {
+        console.log('⚠️ Aucune contrainte trouvée, création des contraintes initiales...');
         await initializeDefaultConstraints();
+        const reloadedConstraints = await constraintsApi.getAll();
+        const mappedReloaded = reloadedConstraints.map(mapApiConstraintToFrontend);
+        setConstraints(mappedReloaded);
+      } else {
+        console.log('✅ Contraintes existantes chargées:', mappedConstraints.length);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des contraintes:', error);
+      console.error('❌ Erreur lors du chargement des contraintes:', error);
       toast.error('Impossible de charger les contraintes. Vérifiez que le backend est démarré.');
       // En cas d'erreur, utiliser les contraintes par défaut en local
       setConstraints(INITIAL_CONSTRAINTS);
@@ -93,18 +140,34 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
   };
 
   const initializeDefaultConstraints = async () => {
-    try {
-      const createdConstraints = await Promise.all(
-        INITIAL_CONSTRAINTS.map(constraint => 
-          constraintsApi.create(mapFrontendConstraintToApi(constraint))
-        )
-      );
-      const mappedConstraints = createdConstraints.map(mapApiConstraintToFrontend);
-      setConstraints(mappedConstraints);
-      toast.success('Contraintes initiales créées avec succès');
-    } catch (error) {
-      console.error('Erreur lors de l\'initialisation des contraintes:', error);
+    if (constraintsInitPromise) {
+      return constraintsInitPromise;
     }
+
+    constraintsInitPromise = (async () => {
+      try {
+        const existing = await constraintsApi.getAll();
+        if (existing.length > 0) {
+          console.log('⚠️ Contraintes déjà initialisées, skipping...');
+          return;
+        }
+
+        console.log('🏗️ Création des contraintes initiales...');
+        await Promise.all(
+          INITIAL_CONSTRAINTS.map(constraint =>
+            constraintsApi.create(mapFrontendConstraintToApi(constraint))
+          )
+        );
+        toast.success('Contraintes initiales créées avec succès');
+      } catch (error) {
+        console.error('❌ Erreur lors de l\'initialisation des contraintes:', error);
+        throw error;
+      } finally {
+        constraintsInitPromise = null;
+      }
+    })();
+
+    return constraintsInitPromise;
   };
 
   const addConstraint = async (constraint: Omit<Constraint, 'id'>) => {

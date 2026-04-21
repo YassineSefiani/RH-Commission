@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState, type ChangeEvent } from 'react';
 import { Calculator } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { useConstraints } from '../context/ConstraintsContext';
 import { useHistory } from '../context/HistoryContext';
 
@@ -9,25 +10,53 @@ interface Employee {
   role: string;
   baseSalary: number;
   zone: string;
+  brand: string;
 }
+
+const brandCards = [
+  { id: 'coca-cola', name: 'Coca Cola', accent: '#ef4444', bg: 'bg-red-50' },
+  { id: 'ferrero-rocher', name: 'Ferrero Rocher', accent: '#d97706', bg: 'bg-amber-50' },
+  { id: 'magnum', name: 'Magnum', accent: '#0f172a', bg: 'bg-slate-50' },
+  { id: 'red-bull', name: 'Red Bull', accent: '#0ea5e9', bg: 'bg-sky-50' },
+];
 
 export default function CalculationPage() {
   const { constraints } = useConstraints();
   const { addCalculation } = useHistory();
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importedFileName, setImportedFileName] = useState<string>('');
 
   const [employees] = useState<Employee[]>([
-    { id: '1', name: 'Sophie Martin', role: 'Commercial Senior', baseSalary: 2500, zone: 'Nord' },
-    { id: '2', name: 'Pierre Dubois', role: 'Commercial', baseSalary: 2200, zone: 'Sud' },
-    { id: '3', name: 'Marie Lefebvre', role: 'Commercial Senior', baseSalary: 2600, zone: 'Est' },
-    { id: '4', name: 'Jean Rousseau', role: 'Manager Commercial', baseSalary: 3000, zone: 'Ouest' },
+    { id: '1', name: 'Sophie Martin', role: 'Commercial Senior', baseSalary: 2500, zone: 'Nord', brand: 'Coca Cola' },
+    { id: '2', name: 'Pierre Dubois', role: 'Commercial', baseSalary: 2200, zone: 'Sud', brand: 'Ferrero Rocher' },
+    { id: '3', name: 'Marie Lefebvre', role: 'Commercial Senior', baseSalary: 2600, zone: 'Est', brand: 'Magnum' },
+    { id: '4', name: 'Jean Rousseau', role: 'Manager Commercial', baseSalary: 3000, zone: 'Ouest', brand: 'Coca Cola' },
   ]);
 
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedConstraints, setSelectedConstraints] = useState<string[]>([]);
-  const [totalSales, setTotalSales] = useState<number>(0);
+  const [volumeLivre, setVolumeLivre] = useState<number>(0);
   const [deliveries, setDeliveries] = useState<number>(0);
-  const [returns, setReturns] = useState<number>(0);
+  const [returnRate, setReturnRate] = useState<number>(0);
+  const [triageRate, setTriageRate] = useState<number>(0);
+  const [commissionType, setCommissionType] = useState<'quantitative' | 'retour' | 'triage' | 'all'>('all');
   const [result, setResult] = useState<any>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImportedFileName(file.name);
+    }
+  };
+
+  const handleBrandClick = (brand: string) => {
+    navigate(`/calculation/brand/${encodeURIComponent(brand)}`);
+  };
 
   const handleConstraintToggle = (id: string) => {
     setSelectedConstraints(prev => 
@@ -52,33 +81,36 @@ export default function CalculationPage() {
 
       let amount = 0;
       
-      if (constraint.type === 'commission') {
+      if (constraint.type === 'commission_quantitative') {
         if (constraint.valueType === 'percentage') {
-          amount = (totalSales * constraint.value) / 100;
+          amount = (volumeLivre * constraint.value) / 100;
         } else {
           amount = constraint.value;
         }
         commissions += amount;
         details.push({ name: constraint.name, amount, type: 'commission' });
-      } 
-      else if (constraint.type === 'performance_bonus' || constraint.type === 'delivery_bonus') {
-        if (constraint.valueType === 'percentage') {
-          const base = constraint.type === 'delivery_bonus' ? deliveries * 100 : totalSales;
-          amount = (base * constraint.value) / 100;
+      } else if (constraint.type === 'commission_retour') {
+        // Utiliser le taux de retour directement
+        if (returnRate < 1) {
+          amount = 250; // DH
+        } else if (returnRate >= 1 && returnRate <= 2) {
+          amount = 150; // DH
         } else {
-          amount = constraint.value;
+          amount = 0; // Pas de commission si taux > 2%
         }
-        bonuses += amount;
-        details.push({ name: constraint.name, amount, type: 'bonus' });
-      }
-      else if (constraint.type === 'penalty') {
-        if (constraint.valueType === 'percentage') {
-          amount = (returns * constraint.value);
+        
+        commissions += amount;
+        details.push({ name: constraint.name, amount, type: 'commission' });
+      } else if (constraint.type === 'commission_triage') {
+        // Commission triage : taux > 70% = 200 DH
+        if (triageRate > 70) {
+          amount = 200; // DH
         } else {
-          amount = constraint.value * returns;
+          amount = 0; // Pas de commission si taux <= 70%
         }
-        penalties += amount;
-        details.push({ name: constraint.name, amount, type: 'penalty' });
+        
+        commissions += amount;
+        details.push({ name: constraint.name, amount, type: 'commission' });
       }
     });
 
@@ -101,9 +133,9 @@ export default function CalculationPage() {
       employeeName: employee.name,
       employeeRole: employee.role,
       baseSalary,
-      totalSales,
+      totalSales: volumeLivre,
       deliveries,
-      returns,
+      returns: returnRate, // Now storing return rate instead of number of returns
       commissions,
       bonuses,
       penalties,
@@ -125,12 +157,64 @@ export default function CalculationPage() {
 
   const selectedEmployeeData = employees.find(e => e.id === selectedEmployee);
 
+  const filteredConstraints = constraints.filter(c => {
+    if (!c.active) return false;
+    if (commissionType === 'all') {
+      return true; // Show all active constraints
+    } else if (commissionType === 'quantitative') {
+      return c.type === 'commission_quantitative';
+    } else if (commissionType === 'retour') {
+      return c.type === 'commission_retour';
+    } else {
+      return c.type === 'commission_triage';
+    }
+  });
+
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Calcul des Salaires et Commissions</h1>
-        <p className="text-gray-600 mt-1">Simuler le calcul du salaire d'un employé</p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Calcul des Salaires et Commissions</h1>
+          <p className="text-gray-600 mt-1">Simuler le calcul du salaire d'un employé ou basculer vers une carte de marque.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleImportClick}
+            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
+          >
+            Importer un fichier Excel
+          </button>
+          {importedFileName && (
+            <span className="text-sm text-gray-600">Fichier sélectionné : {importedFileName}</span>
+          )}
+        </div>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {brandCards.map(card => (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => handleBrandClick(card.name)}
+            className={`rounded-3xl border border-gray-200 ${card.bg} p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg`}
+          >
+            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">Carte</div>
+            <div className="text-lg font-semibold text-gray-900">{card.name}</div>
+            <div className="mt-4 text-sm text-gray-600">Tous les personnels affectés à cette carte seront disponibles sur la page dédiée.</div>
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-medium" style={{ color: card.accent }}>
+              Ouvrir la carte
+            </div>
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -173,18 +257,33 @@ export default function CalculationPage() {
           {/* Constraints Selection */}
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-4">
-              Contraintes applicables
+              Commissions Applicables
               <span className="ml-2 text-sm font-normal text-gray-500">
-                ({constraints.filter(c => c.active).length} active{constraints.filter(c => c.active).length > 1 ? 's' : ''})
+                ({filteredConstraints.length} active{filteredConstraints.length > 1 ? 's' : ''})
               </span>
             </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filtrer par Type de Commission
+              </label>
+              <select
+                value={commissionType}
+                onChange={(e) => setCommissionType(e.target.value as 'quantitative' | 'retour' | 'triage' | 'all')}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+              >
+                <option value="all">Toutes les commissions</option>
+                <option value="quantitative">Commission Quantitative</option>
+                <option value="retour">Commission Retour</option>
+                <option value="triage">Commission Triage</option>
+              </select>
+            </div>
             <div className="space-y-3">
-              {constraints.filter(c => c.active).length === 0 ? (
+              {filteredConstraints.length === 0 ? (
                 <p className="text-sm text-gray-500 py-4 text-center">
-                  Aucune contrainte active. Créez des contraintes depuis la page Contraintes.
+                  Aucune commission active pour ce filtre. Créez des commissions depuis la page Contraintes.
                 </p>
               ) : (
-                constraints.filter(c => c.active).map(constraint => (
+                filteredConstraints.map(constraint => (
                   <label key={constraint.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                     <input
                       type="checkbox"
@@ -196,7 +295,7 @@ export default function CalculationPage() {
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">{constraint.name}</div>
                       <div className="text-xs text-gray-500">
-                        {constraint.valueType === 'percentage' ? `${constraint.value}%` : `${constraint.value}€`}
+                        {constraint.valueType === 'percentage' ? `${constraint.value}%` : `${constraint.value}MAD`}
                         {' - '}
                         {constraint.condition}
                       </div>
@@ -213,38 +312,40 @@ export default function CalculationPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Total des ventes (€)
+                  Volume livré
                 </label>
                 <input
                   type="number"
-                  value={totalSales}
-                  onChange={(e) => setTotalSales(parseFloat(e.target.value) || 0)}
+                  value={volumeLivre}
+                  onChange={(e) => setVolumeLivre(parseFloat(e.target.value) || 0)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
                   placeholder="0"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre de livraisons
+                  Taux de retour (%)
                 </label>
                 <input
                   type="number"
-                  value={deliveries}
-                  onChange={(e) => setDeliveries(parseInt(e.target.value) || 0)}
+                  value={returnRate}
+                  onChange={(e) => setReturnRate(parseFloat(e.target.value) || 0)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
                   placeholder="0"
+                  step="0.01"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre de retours
+                  Taux de triage (%)
                 </label>
                 <input
                   type="number"
-                  value={returns}
-                  onChange={(e) => setReturns(parseInt(e.target.value) || 0)}
+                  value={triageRate}
+                  onChange={(e) => setTriageRate(parseFloat(e.target.value) || 0)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
                   placeholder="0"
+                  step="0.01"
                 />
               </div>
             </div>
@@ -283,20 +384,9 @@ export default function CalculationPage() {
                     <div key={index} className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <div>
                         <div className="text-gray-700">{detail.name}</div>
-                        <span className={`text-xs ${
-                          detail.type === 'commission' ? 'text-orange-600' :
-                          detail.type === 'bonus' ? 'text-green-600' :
-                          'text-red-600'
-                        }`}>
-                          {detail.type === 'commission' ? 'Commission' :
-                           detail.type === 'bonus' ? 'Bonus' : 'Pénalité'}
-                        </span>
+                        <span className="text-xs text-orange-600">Commission Quantitative</span>
                       </div>
-                      <span className={`font-semibold ${
-                        detail.type === 'penalty' ? 'text-red-600' : 'text-green-600'
-                      }`}>
-                        {detail.type === 'penalty' ? '-' : '+'} {formatCurrency(detail.amount)}
-                      </span>
+                      <span className="font-semibold text-green-600">+ {formatCurrency(detail.amount)}</span>
                     </div>
                   ))}
 
@@ -304,20 +394,6 @@ export default function CalculationPage() {
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <span className="font-medium text-gray-700">Total Commissions</span>
                       <span className="font-semibold text-green-600">+ {formatCurrency(result.commissions)}</span>
-                    </div>
-                  )}
-
-                  {result.bonuses > 0 && (
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="font-medium text-gray-700">Total Bonus</span>
-                      <span className="font-semibold text-green-600">+ {formatCurrency(result.bonuses)}</span>
-                    </div>
-                  )}
-
-                  {result.penalties > 0 && (
-                    <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                      <span className="font-medium text-gray-700">Total Pénalités</span>
-                      <span className="font-semibold text-red-600">- {formatCurrency(result.penalties)}</span>
                     </div>
                   )}
                 </div>

@@ -15,7 +15,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 export interface ApiConstraint {
   id?: number;
   name: string;
-  type: 'commission' | 'performance_bonus' | 'delivery_bonus' | 'penalty';
+  type: 'commission_quantitative' | 'commission_retour';
   value: number;
   valueType: 'percentage' | 'fixed';
   condition: string;
@@ -31,7 +31,7 @@ export interface ApiCalculationHistory {
   baseSalary: number;
   totalSales: number;
   deliveries: number;
-  returns: number;
+  returnRate: number;
   commissions: number;
   bonuses: number;
   penalties: number;
@@ -200,7 +200,7 @@ export function mapApiHistoryToFrontend(apiHistory: ApiCalculationHistory) {
     baseSalary: apiHistory.baseSalary,
     totalSales: apiHistory.totalSales,
     deliveries: apiHistory.deliveries,
-    returns: apiHistory.returns,
+    returns: apiHistory.returnRate,
     commissions: apiHistory.commissions,
     bonuses: apiHistory.bonuses,
     penalties: apiHistory.penalties,
@@ -218,7 +218,7 @@ export function mapFrontendHistoryToApi(frontendHistory: any): Omit<ApiCalculati
     baseSalary: frontendHistory.baseSalary,
     totalSales: frontendHistory.totalSales,
     deliveries: frontendHistory.deliveries,
-    returns: frontendHistory.returns,
+    returnRate: frontendHistory.returns,
     commissions: frontendHistory.commissions,
     bonuses: frontendHistory.bonuses,
     penalties: frontendHistory.penalties,

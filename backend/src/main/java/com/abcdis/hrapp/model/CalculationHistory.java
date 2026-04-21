@@ -31,8 +31,8 @@ public class CalculationHistory {
     @Column(nullable = false)
     private Integer deliveries;
     
-    @Column(nullable = false)
-    private Integer returns;
+    @Column(name = "return_rate", nullable = false)
+    private Double returnRate;
     
     @Column(nullable = false)
     private Double commissions;

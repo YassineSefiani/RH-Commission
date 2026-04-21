@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import DashboardPage from "./pages/DashboardPage";
 import ConstraintsPage from "./pages/ConstraintsPage";
 import CalculationPage from "./pages/CalculationPage";
+import BrandCalculationPage from "./pages/BrandCalculationPage";
 import HistoryPage from "./pages/HistoryPage";
 import SettingsPage from "./pages/SettingsPage";
 import NewConstraintPage from "./pages/NewConstraintPage";
@@ -29,6 +30,10 @@ export const router = createBrowserRouter([
   {
     path: "/calculation",
     element: <Layout><CalculationPage /></Layout>,
+  },
+  {
+    path: "/calculation/brand/:brand",
+    element: <Layout><BrandCalculationPage /></Layout>,
   },
   {
     path: "/history",

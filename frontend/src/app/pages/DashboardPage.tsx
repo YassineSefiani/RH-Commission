@@ -369,7 +369,7 @@ export default function DashboardPage() {
                 <h4 className="font-bold text-blue-900">Ventes Moyennes</h4>
               </div>
               <p className="text-3xl font-bold text-blue-900">
-                {kpiData.totalCalculations > 0 ? formatCurrency(kpiData.totalSales / kpiData.totalCalculations) : '0 €'}
+                {kpiData.totalCalculations > 0 ? formatCurrency(kpiData.totalSales / kpiData.totalCalculations) : '0 MAD'}
               </p>
               <p className="text-sm text-blue-700 mt-1">par calcul</p>
             </div>
@@ -380,7 +380,7 @@ export default function DashboardPage() {
                 <h4 className="font-bold text-green-900">Commission Moyenne</h4>
               </div>
               <p className="text-3xl font-bold text-green-900">
-                {kpiData.totalCalculations > 0 ? formatCurrency(kpiData.totalCommissions / kpiData.totalCalculations) : '0 €'}
+                {kpiData.totalCalculations > 0 ? formatCurrency(kpiData.totalCommissions / kpiData.totalCalculations) : '0 MAD'}
               </p>
               <p className="text-sm text-green-700 mt-1">par calcul</p>
             </div>

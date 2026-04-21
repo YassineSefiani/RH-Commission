@@ -24,7 +24,7 @@ export default function NewConstraintPage() {
 
   const [formData, setFormData] = useState({
     name: editingConstraint?.name || '',
-    type: editingConstraint?.type || 'commission',
+    type: editingConstraint?.type || 'commission_quantitative',
     value: editingConstraint?.value || 0,
     valueType: editingConstraint?.valueType || 'percentage',
     active: editingConstraint?.active ?? true,
@@ -165,9 +165,9 @@ export default function NewConstraintPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {editingConstraint ? 'Modifier la contrainte' : 'Nouvelle contrainte'}
+            {editingConstraint ? 'Modifier la commission quantitative' : 'Nouvelle commission quantitative'}
           </h1>
-          <p className="text-gray-600 mt-1">Définir les règles et conditions d'application</p>
+          <p className="text-gray-600 mt-1">Définir les règles et conditions d'application basées sur le volume reçu</p>
         </div>
         <button
           onClick={() => navigate('/constraints')}
@@ -200,17 +200,15 @@ export default function NewConstraintPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de contrainte
+                  Type de commission
                 </label>
                 <select
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
                 >
-                  <option value="commission">Commission par produit</option>
-                  <option value="performance_bonus">Bonus de performance</option>
-                  <option value="delivery_bonus">Bonus de livraison</option>
-                  <option value="penalty">Pénalité</option>
+                  <option value="commission_quantitative">Commission Quantitative</option>
+                  <option value="commission_retour">Commission Retour</option>
                 </select>
               </div>
 
@@ -237,7 +235,7 @@ export default function NewConstraintPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
                   >
                     <option value="percentage">%</option>
-                    <option value="fixed">€</option>
+                    <option value="fixed">MAD</option>
                   </select>
                 </div>
               </div>

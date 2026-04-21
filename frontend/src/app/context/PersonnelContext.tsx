@@ -8,6 +8,47 @@ import {
 } from '../services/personnelApi';
 import { toast } from 'sonner';
 
+let personnelInitPromise: Promise<void> | null = null;
+
+const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
+  {
+    matricule: 'P001',
+    nom: 'Bennani',
+    prenom: 'Youssef',
+    carte: 'A12345',
+    fonction: 'Livreur',
+    role: 'CDI',
+    numero: '0600000001',
+    natureContrat: 'CDI',
+    ville: 'Casablanca',
+    actif: true,
+  },
+  {
+    matricule: 'P002',
+    nom: 'El Idrissi',
+    prenom: 'Sara',
+    carte: 'B23456',
+    fonction: 'Aide Livreur',
+    role: 'INT',
+    numero: '0600000002',
+    natureContrat: 'Int',
+    ville: 'Rabat',
+    actif: true,
+  },
+  {
+    matricule: 'P003',
+    nom: 'Moussaoui',
+    prenom: 'Karim',
+    carte: 'C34567',
+    fonction: 'Livreur',
+    role: 'CDD',
+    numero: '0600000003',
+    natureContrat: 'CDD',
+    ville: 'Marrakech',
+    actif: true,
+  },
+];
+
 interface PersonnelContextType {
   personnel: Personnel[];
   stats: PersonnelStats | null;
@@ -32,10 +73,47 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<PersonnelStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger le personnel et les stats depuis l'API au démarrage
   useEffect(() => {
-    loadPersonnel();
-    loadStats();
+    let mounted = true;
+
+    const initialize = async () => {
+      if (!mounted) return;
+
+      try {
+        setIsLoading(true);
+        const apiPersonnel = await personnelApi.getAll();
+
+        if (!mounted) return;
+
+        if (apiPersonnel.length === 0) {
+          console.log('🏗️ Initialisation du personnel par défaut...');
+          await initializeDefaultPersonnel();
+          if (mounted) {
+            await reloadPersonnel();
+          }
+        } else {
+          const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
+          if (mounted) {
+            setPersonnel(mappedPersonnel);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du personnel:', error);
+        if (mounted) {
+          toast.error('Impossible de charger le personnel');
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initialize();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const loadPersonnel = async () => {
@@ -44,6 +122,11 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       const apiPersonnel = await personnelApi.getAll();
       const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
       setPersonnel(mappedPersonnel);
+
+      if (mappedPersonnel.length === 0) {
+        await initializeDefaultPersonnel();
+        await reloadPersonnel();
+      }
     } catch (error) {
       console.error('Erreur lors du chargement du personnel:', error);
       toast.error('Impossible de charger le personnel. Vérifiez que le backend est démarré.');
@@ -51,6 +134,49 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const reloadPersonnel = async () => {
+    try {
+      const apiPersonnel = await personnelApi.getAll();
+      const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
+      setPersonnel(mappedPersonnel);
+    } catch (error) {
+      console.error('Erreur lors du rechargement du personnel:', error);
+    }
+  };
+
+  const initializeDefaultPersonnel = async () => {
+    if (personnelInitPromise) {
+      return personnelInitPromise;
+    }
+
+    personnelInitPromise = (async () => {
+      try {
+        const existing = await personnelApi.getAll();
+        if (existing.length > 0) {
+          console.log('⚠️ Personnel déjà initialisé, skipping...');
+          return;
+        }
+
+        console.log('🏗️ Initialisation du personnel par défaut...');
+        await Promise.all(
+          INITIAL_PERSONNEL.map(person =>
+            personnelApi.create(mapFrontendPersonnelToApi(person))
+          )
+        );
+        await loadStats();
+        toast.success('Personnel initialisé avec succès');
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation du personnel:', error);
+        toast.error('Impossible d\'initialiser le personnel par défaut');
+        throw error;
+      } finally {
+        personnelInitPromise = null;
+      }
+    })();
+
+    return personnelInitPromise;
   };
 
   const loadStats = async () => {
