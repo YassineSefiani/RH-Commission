@@ -119,7 +119,7 @@ export default function DashboardPage() {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'MAD',
       maximumFractionDigits: 0,
     }).format(value);
   };

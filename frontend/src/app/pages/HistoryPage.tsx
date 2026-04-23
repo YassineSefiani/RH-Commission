@@ -20,7 +20,7 @@ export default function HistoryPage() {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'MAD',
     }).format(value);
   };
 

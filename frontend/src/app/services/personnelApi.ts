@@ -29,12 +29,24 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(`API Error: ${response.status} - ${error}`);
   }
   
-  // Si pas de contenu (204 No Content)
+  // Si pas de contenu (204 No Content ou réponse vide)
   if (response.status === 204) {
     return {} as T;
   }
   
-  return response.json();
+  // Vérifier si la réponse est vide
+  const contentLength = response.headers.get('content-length');
+  if (contentLength === '0' || response.bodyUsed) {
+    return {} as T;
+  }
+  
+  // Essayer de parser le JSON
+  const text = await response.text();
+  if (!text) {
+    return {} as T;
+  }
+  
+  return JSON.parse(text);
 }
 
 // ============================================

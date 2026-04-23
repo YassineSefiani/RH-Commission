@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePersonnel } from '../context/PersonnelContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -65,6 +65,11 @@ export default function PersonnelPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [contractFilter, setContractFilter] = useState('');
+  const [carteFilter, setCarteFilter] = useState('');
+  const [villeFilter, setVilleFilter] = useState('');
+  const [availableCartes, setAvailableCartes] = useState<string[]>([]);
+  const [availableVilles, setAvailableVilles] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     matricule: '',
     nom: '',
@@ -78,7 +83,26 @@ export default function PersonnelPage() {
     actif: true,
   });
 
-  // Liste des villes uniques pour le filtre
+  // Accumuler toutes les cartes et villes jamais rencontrées
+  useEffect(() => {
+    setAvailableCartes(prev => {
+      const newCartes = personnel
+        .map(p => p.carte)
+        .filter(Boolean) as string[];
+      const allCartes = new Set([...prev, ...newCartes]);
+      return Array.from(allCartes).sort();
+    });
+    
+    setAvailableVilles(prev => {
+      const newVilles = personnel
+        .map(p => p.ville)
+        .filter(Boolean) as string[];
+      const allVilles = new Set([...prev, ...newVilles]);
+      return Array.from(allVilles).sort();
+    });
+  }, [personnel]);
+
+  // Liste des villes/cartes pour les listes originales (utilisées pour options uniquement)
   const villes = Array.from(new Set(personnel.map(p => p.ville).filter(Boolean)));
 
   const cartes = Array.from(new Set(personnel.map(p => p.carte).filter(Boolean)));
@@ -150,6 +174,42 @@ export default function PersonnelPage() {
       searchByNom(searchTerm);
     } else {
       resetFilter();
+    }
+  };
+
+  const handleContractChange = (value: string) => {
+    if (value === 'all') {
+      resetFilter();
+      setContractFilter('');
+    } else {
+      setContractFilter(value);
+      setCarteFilter('');
+      setVilleFilter('');
+      filterByContrat(value);
+    }
+  };
+
+  const handleCarteChange = (value: string) => {
+    if (value === 'all') {
+      resetFilter();
+      setCarteFilter('');
+    } else {
+      setCarteFilter(value);
+      setContractFilter('');
+      setVilleFilter('');
+      filterByCarte(value);
+    }
+  };
+
+  const handleVilleChange = (value: string) => {
+    if (value === 'all') {
+      resetFilter();
+      setVilleFilter('');
+    } else {
+      setVilleFilter(value);
+      setContractFilter('');
+      setCarteFilter('');
+      filterByVille(value);
     }
   };
 
@@ -238,11 +298,12 @@ export default function PersonnelPage() {
           </div>
 
           <div className="flex gap-2">
-            <Select onValueChange={(value) => filterByContrat(value)}>
+            <Select value={contractFilter} onValueChange={handleContractChange}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Type contrat" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Tous les contrats</SelectItem>
                 {NATURE_CONTRATS.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
@@ -251,14 +312,15 @@ export default function PersonnelPage() {
               </SelectContent>
             </Select>
             
-            {cartes.length > 0 && (
-              <Select onValueChange={(value) => filterByCarte(value)}>
+            {availableCartes.length > 0 && (
+              <Select value={carteFilter} onValueChange={handleCarteChange}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Carte" />
                 </SelectTrigger>
                 <SelectContent>
-                  {cartes.map((carte) => (
-                    <SelectItem key={carte} value={carte || ''}>
+                  <SelectItem value="all">Toutes les cartes</SelectItem>
+                  {availableCartes.map((carte) => (
+                    <SelectItem key={carte} value={carte}>
                       {carte}
                     </SelectItem>
                   ))}
@@ -266,14 +328,15 @@ export default function PersonnelPage() {
               </Select>
             )}
 
-            {villes.length > 0 && (
-              <Select onValueChange={(value) => filterByVille(value)}>
+            {availableVilles.length > 0 && (
+              <Select value={villeFilter} onValueChange={handleVilleChange}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Ville" />
                 </SelectTrigger>
                 <SelectContent>
-                  {villes.map((ville) => (
-                    <SelectItem key={ville} value={ville || ''}>
+                  <SelectItem value="all">Toutes les villes</SelectItem>
+                  {availableVilles.map((ville) => (
+                    <SelectItem key={ville} value={ville}>
                       {ville}
                     </SelectItem>
                   ))}
@@ -302,8 +365,9 @@ export default function PersonnelPage() {
                 <TableHead>Matricule</TableHead>
                 <TableHead>Nom Complet</TableHead>
                 <TableHead>Carte</TableHead>
-                <TableHead>Fonction</TableHead>
                 <TableHead>Contrat</TableHead>
+                <TableHead>Fonction</TableHead>
+                <TableHead>Rôle</TableHead>
                 <TableHead>Téléphone</TableHead>
                 <TableHead>Ville</TableHead>
                 <TableHead>Statut</TableHead>
@@ -313,13 +377,13 @@ export default function PersonnelPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                     Chargement...
                   </TableCell>
                 </TableRow>
               ) : personnel.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                     Aucun personnel trouvé
                   </TableCell>
                 </TableRow>
@@ -328,12 +392,7 @@ export default function PersonnelPage() {
                   <TableRow key={person.id}>
                     <TableCell className="font-medium">{person.matricule}</TableCell>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">{person.prenom} {person.nom}</p>
-                        {person.role && (
-                          <p className="text-sm text-gray-500">{person.role}</p>
-                        )}
-                      </div>
+                      <p className="font-medium">{person.prenom} {person.nom}</p>
                     </TableCell>
                     <TableCell>
                       {person.carte && (
@@ -341,6 +400,11 @@ export default function PersonnelPage() {
                           {person.carte}
                         </Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={getContractBadgeVariant(person.natureContrat)}>
+                        {person.natureContrat}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {person.fonction && (
@@ -351,9 +415,9 @@ export default function PersonnelPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getContractBadgeVariant(person.natureContrat)}>
-                        {person.natureContrat}
-                      </Badge>
+                      {person.role && (
+                        <span className="text-sm">{person.role}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {person.numero && (
@@ -489,6 +553,7 @@ export default function PersonnelPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Coca Cola">Coca Cola</SelectItem>
+                    <SelectItem value="Magnum">Magnum</SelectItem>
                     <SelectItem value="Ferrero Rocher">Ferrero Rocher</SelectItem>
                   </SelectContent>
                 </Select>

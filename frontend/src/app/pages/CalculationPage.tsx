@@ -3,14 +3,15 @@ import { Calculator } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useConstraints } from '../context/ConstraintsContext';
 import { useHistory } from '../context/HistoryContext';
+import { usePersonnel } from '../context/PersonnelContext';
 
 interface Employee {
   id: string;
   name: string;
+  prenom: string;
   role: string;
-  baseSalary: number;
-  zone: string;
-  brand: string;
+  carte: string;
+  natureContrat: string;
 }
 
 const brandCards = [
@@ -23,16 +24,22 @@ const brandCards = [
 export default function CalculationPage() {
   const { constraints } = useConstraints();
   const { addCalculation } = useHistory();
+  const { personnel } = usePersonnel();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importedFileName, setImportedFileName] = useState<string>('');
 
-  const [employees] = useState<Employee[]>([
-    { id: '1', name: 'Sophie Martin', role: 'Commercial Senior', baseSalary: 2500, zone: 'Nord', brand: 'Coca Cola' },
-    { id: '2', name: 'Pierre Dubois', role: 'Commercial', baseSalary: 2200, zone: 'Sud', brand: 'Ferrero Rocher' },
-    { id: '3', name: 'Marie Lefebvre', role: 'Commercial Senior', baseSalary: 2600, zone: 'Est', brand: 'Magnum' },
-    { id: '4', name: 'Jean Rousseau', role: 'Manager Commercial', baseSalary: 3000, zone: 'Ouest', brand: 'Coca Cola' },
-  ]);
+  // Convertir le personnel en format Employee (uniquement les actifs)
+  const employees: Employee[] = personnel
+    .filter(p => p.actif)
+    .map(p => ({
+      id: p.id,
+      name: p.nom,
+      prenom: p.prenom,
+      role: p.role || '',
+      carte: p.carte || '',
+      natureContrat: p.natureContrat || 'CDI',
+    }));
 
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [selectedConstraints, setSelectedConstraints] = useState<string[]>([]);
@@ -64,15 +71,68 @@ export default function CalculationPage() {
     );
   };
 
+  const autoSelectConstraints = () => {
+    const employee = employees.find(e => e.id === selectedEmployee);
+    if (!employee) return;
+
+    const selectedIds: string[] = [];
+    const searchKey = `${employee.role} ${employee.natureContrat}`;
+
+    console.log('=== Auto Select Constraints ===');
+    console.log('Employee:', employee);
+    console.log('Search Key:', searchKey);
+    console.log('All Constraints:', constraints);
+
+    // Sélectionner les contraintes appropriées
+    constraints.forEach(constraint => {
+      if (!constraint.active) return;
+
+      console.log(`Checking constraint: ${constraint.name}, type: ${constraint.type}`);
+
+      if (constraint.type === 'commission_quantitative') {
+        // Chercher "- Rôle Contrat" pour éviter les faux positifs
+        // Ex: "- Livreur CDI" ne doit pas matcher "- Aide Livreur CDI"
+        const pattern = `- ${employee.role} ${employee.natureContrat}`;
+        const regex = new RegExp(pattern, 'i');
+        
+        console.log(`  Pattern: "${pattern}", constraint: "${constraint.name}"`);
+        
+        if (regex.test(constraint.name)) {
+          console.log(`  ✓ MATCH!`);
+          selectedIds.push(constraint.id);
+        } else {
+          console.log(`  ✗ No match`);
+        }
+      } else if (constraint.type === 'commission_retour') {
+        // Vérifier si la contrainte correspond à la carte
+        if (constraint.name.includes(employee.carte)) {
+          console.log(`  ✓ MATCH (carte)!`);
+          selectedIds.push(constraint.id);
+        }
+      } else if (constraint.type === 'commission_triage') {
+        // Vérifier si la contrainte correspond à la carte
+        if (constraint.name.includes(employee.carte)) {
+          console.log(`  ✓ MATCH (carte)!`);
+          selectedIds.push(constraint.id);
+        }
+      }
+    });
+
+    console.log('Selected IDs:', selectedIds);
+    setSelectedConstraints(selectedIds);
+  };
+
+  const handleAutoCalculate = () => {
+    autoSelectConstraints();
+    // Utiliser un setTimeout pour laisser le state se mettre à jour
+    setTimeout(handleSimulate, 0);
+  };
+
   const handleSimulate = () => {
     const employee = employees.find(e => e.id === selectedEmployee);
     if (!employee) return;
 
-    let baseSalary = employee.baseSalary;
     let commissions = 0;
-    let bonuses = 0;
-    let penalties = 0;
-
     const details: any[] = [];
 
     selectedConstraints.forEach(constraintId => {
@@ -114,15 +174,9 @@ export default function CalculationPage() {
       }
     });
 
-    const finalSalary = baseSalary + commissions + bonuses - penalties;
-
     const calculationResult = {
       employee,
-      baseSalary,
       commissions,
-      bonuses,
-      penalties,
-      finalSalary,
       details,
     };
 
@@ -130,16 +184,16 @@ export default function CalculationPage() {
 
     // Enregistrer dans l'historique
     addCalculation({
-      employeeName: employee.name,
+      employeeName: `${employee.prenom} ${employee.name}`,
       employeeRole: employee.role,
-      baseSalary,
+      baseSalary: 0,
       totalSales: volumeLivre,
       deliveries,
-      returns: returnRate, // Now storing return rate instead of number of returns
+      returns: returnRate,
       commissions,
-      bonuses,
-      penalties,
-      finalSalary,
+      bonuses: 0,
+      penalties: 0,
+      finalSalary: commissions,
       constraintsApplied: selectedConstraints.map(id => {
         const c = constraints.find(con => con.id === id);
         return c ? c.name : '';
@@ -151,7 +205,7 @@ export default function CalculationPage() {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'MAD',
     }).format(value);
   };
 
@@ -174,8 +228,8 @@ export default function CalculationPage() {
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calcul des Salaires et Commissions</h1>
-          <p className="text-gray-600 mt-1">Simuler le calcul du salaire d'un employé ou basculer vers une carte de marque.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Calcul des Commissions</h1>
+          <p className="text-gray-600 mt-1">Calculer les commissions d'un employé ou basculer vers une carte de marque.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -231,25 +285,34 @@ export default function CalculationPage() {
               <option value="">-- Sélectionner un employé --</option>
               {employees.map(emp => (
                 <option key={emp.id} value={emp.id}>
-                  {emp.name} - {emp.role}
+                  {emp.prenom} {emp.name} - {emp.role} ({emp.natureContrat})
                 </option>
               ))}
             </select>
 
             {selectedEmployeeData && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Rôle:</span>
-                  <span className="text-sm font-semibold text-gray-900">{selectedEmployeeData.role}</span>
+              <div className="mt-4 space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Rôle:</span>
+                    <span className="text-sm font-semibold text-gray-900">{selectedEmployeeData.role}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Type de Contrat:</span>
+                    <span className="text-sm font-semibold text-gray-900">{selectedEmployeeData.natureContrat}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Carte:</span>
+                    <span className="text-sm font-semibold text-gray-900">{selectedEmployeeData.carte}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Salaire de base:</span>
-                  <span className="text-sm font-semibold text-gray-900">{formatCurrency(selectedEmployeeData.baseSalary)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Zone:</span>
-                  <span className="text-sm font-semibold text-gray-900">{selectedEmployeeData.zone}</span>
-                </div>
+                <button
+                  onClick={handleAutoCalculate}
+                  className="w-full px-4 py-2 text-white rounded-lg hover:opacity-90 transition font-medium"
+                  style={{ backgroundColor: '#f7a800' }}
+                >
+                  Appliquer les règles et calculer
+                </button>
               </div>
             )}
           </div>
@@ -368,23 +431,18 @@ export default function CalculationPage() {
           {result ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-6 border-b border-gray-200" style={{ backgroundColor: '#f7a80010' }}>
-                <h3 className="text-lg font-bold text-gray-900">Résultat du Calcul</h3>
-                <p className="text-sm text-gray-600 mt-1">{result.employee.name}</p>
+                <h3 className="text-lg font-bold text-gray-900">Résultat du Calcul de Commission</h3>
+                <p className="text-sm text-gray-600 mt-1">{result.employee.prenom} {result.employee.name}</p>
               </div>
 
               <div className="p-6 space-y-6">
                 {/* Detail Breakdown */}
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center pb-3 border-b border-gray-200">
-                    <span className="text-gray-700">Salaire de base</span>
-                    <span className="font-semibold text-gray-900">{formatCurrency(result.baseSalary)}</span>
-                  </div>
-
                   {result.details.map((detail: any, index: number) => (
                     <div key={index} className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <div>
                         <div className="text-gray-700">{detail.name}</div>
-                        <span className="text-xs text-orange-600">Commission Quantitative</span>
+                        <span className="text-xs text-orange-600">Commission</span>
                       </div>
                       <span className="font-semibold text-green-600">+ {formatCurrency(detail.amount)}</span>
                     </div>
@@ -393,17 +451,17 @@ export default function CalculationPage() {
                   {result.commissions > 0 && (
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200">
                       <span className="font-medium text-gray-700">Total Commissions</span>
-                      <span className="font-semibold text-green-600">+ {formatCurrency(result.commissions)}</span>
+                      <span className="font-semibold text-green-600">{formatCurrency(result.commissions)}</span>
                     </div>
                   )}
                 </div>
 
-                {/* Final Salary */}
+                {/* Final Commission */}
                 <div className="p-6 rounded-xl" style={{ backgroundColor: '#f7a80010' }}>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">SALAIRE FINAL</span>
+                    <span className="text-lg font-bold text-gray-900">COMMISSION TOTALE</span>
                     <span className="text-3xl font-bold" style={{ color: '#f7a800' }}>
-                      {formatCurrency(result.finalSalary)}
+                      {formatCurrency(result.commissions)}
                     </span>
                   </div>
                 </div>
@@ -411,11 +469,8 @@ export default function CalculationPage() {
                 {/* Summary */}
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-700">
-                    <strong>Récapitulatif:</strong> Le salaire final de {result.employee.name} est calculé à partir 
-                    du salaire de base ({formatCurrency(result.baseSalary)}) 
-                    {result.commissions > 0 && ` avec des commissions de ${formatCurrency(result.commissions)}`}
-                    {result.bonuses > 0 && ` et des bonus de ${formatCurrency(result.bonuses)}`}
-                    {result.penalties > 0 && `, moins des pénalités de ${formatCurrency(result.penalties)}`}.
+                    <strong>Récapitulatif:</strong> La commission totale de {result.employee.prenom} {result.employee.name} 
+                    ({result.employee.role}) est de <strong>{formatCurrency(result.commissions)}</strong>.
                   </p>
                 </div>
               </div>
@@ -423,7 +478,7 @@ export default function CalculationPage() {
           ) : (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
               <Calculator className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-500">Sélectionnez un employé et cliquez sur "Simuler" pour voir le résultat</p>
+              <p className="text-gray-500">Sélectionnez un employé et cliquez sur "Simuler" pour calculer sa commission</p>
             </div>
           )}
         </div>

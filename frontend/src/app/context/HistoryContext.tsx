@@ -68,14 +68,24 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteCalculation = async (id: string) => {
+    // Sauvegarder l'état actuel pour restauration en cas d'erreur
+    const previousHistory = history;
+    
     try {
-      const numericId = parseInt(id, 10);
-      await historyApi.delete(numericId);
+      // Mise à jour optimiste - supprimer immédiatement du UI
       setHistory(prev => prev.filter(h => h.id !== id));
+      
+      const numericId = parseInt(id, 10);
+      console.log(`Suppression du calcul ${numericId}...`);
+      await historyApi.delete(numericId);
+      console.log(`Calcul ${numericId} supprimé avec succès`);
       toast.success('Calcul supprimé de l\'historique');
     } catch (error) {
-      console.error('Erreur lors de la suppression du calcul:', error);
-      toast.error('Impossible de supprimer le calcul');
+      // Restaurer l'état précédent en cas d'erreur
+      setHistory(previousHistory);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      console.error('Erreur lors de la suppression du calcul:', errorMessage);
+      toast.error(`Impossible de supprimer le calcul: ${errorMessage}`);
       throw error;
     }
   };

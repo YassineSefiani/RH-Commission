@@ -15,9 +15,9 @@ const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
     matricule: 'P001',
     nom: 'Bennani',
     prenom: 'Youssef',
-    carte: 'A12345',
+    carte: 'Coca Cola',
     fonction: 'Livreur',
-    role: 'CDI',
+    role: 'Livreur',
     numero: '0600000001',
     natureContrat: 'CDI',
     ville: 'Casablanca',
@@ -27,11 +27,11 @@ const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
     matricule: 'P002',
     nom: 'El Idrissi',
     prenom: 'Sara',
-    carte: 'B23456',
-    fonction: 'Aide Livreur',
-    role: 'INT',
+    carte: 'Coca Cola',
+    fonction: 'Livreur',
+    role: 'Aide Livreur',
     numero: '0600000002',
-    natureContrat: 'Int',
+    natureContrat: 'CDI',
     ville: 'Rabat',
     actif: true,
   },
@@ -39,12 +39,84 @@ const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
     matricule: 'P003',
     nom: 'Moussaoui',
     prenom: 'Karim',
-    carte: 'C34567',
+    carte: 'Coca Cola',
     fonction: 'Livreur',
-    role: 'CDD',
+    role: 'Livreur',
     numero: '0600000003',
-    natureContrat: 'CDD',
+    natureContrat: 'Int',
     ville: 'Marrakech',
+    actif: true,
+  },
+  {
+    matricule: 'P004',
+    nom: 'Novo',
+    prenom: 'Ahmed',
+    carte: 'Magnum',
+    fonction: 'Livreur',
+    role: 'Aide Livreur',
+    numero: '0600000004',
+    natureContrat: 'CDI',
+    ville: 'Fès',
+    actif: true,
+  },
+  {
+    matricule: 'P005',
+    nom: 'Sidi',
+    prenom: 'Fatima',
+    carte: 'Magnum',
+    fonction: 'Livreur',
+    role: 'Livreur',
+    numero: '0600000005',
+    natureContrat: 'CDI',
+    ville: 'Tanger',
+    actif: true,
+  },
+  {
+    matricule: 'P006',
+    nom: 'Belaid',
+    prenom: 'Mohammed',
+    carte: 'Magnum',
+    fonction: 'Livreur',
+    role: 'Aide Livreur',
+    numero: '0600000006',
+    natureContrat: 'Int',
+    ville: 'Agadir',
+    actif: true,
+  },
+  {
+    matricule: 'P007',
+    nom: 'Radi',
+    prenom: 'Laila',
+    carte: 'Ferrero Rocher',
+    fonction: 'Livreur',
+    role: 'Livreur',
+    numero: '0600000007',
+    natureContrat: 'CDI',
+    ville: 'Meknes',
+    actif: true,
+  },
+  {
+    matricule: 'P008',
+    nom: 'Tazi',
+    prenom: 'Ismail',
+    carte: 'Ferrero Rocher',
+    fonction: 'Livreur',
+    role: 'Aide Livreur',
+    numero: '0600000008',
+    natureContrat: 'CDI',
+    ville: 'Oujda',
+    actif: true,
+  },
+  {
+    matricule: 'P009',
+    nom: 'Karim',
+    prenom: 'Nadia',
+    carte: 'Ferrero Rocher',
+    fonction: 'Livreur',
+    role: 'Livreur',
+    numero: '0600000009',
+    natureContrat: 'Int',
+    ville: 'Tétouan',
     actif: true,
   },
 ];
@@ -238,11 +310,19 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
   };
 
   const deletePersonnel = async (id: string) => {
+    const previousPersonnel = personnel;
+    
     try {
       const numericId = parseInt(id, 10);
       const person = personnel.find(p => p.id === id);
-      await personnelApi.delete(numericId);
+      
+      // Mise à jour optimiste
       setPersonnel(prev => prev.filter(p => p.id !== id));
+      
+      console.log(`Suppression du personnel ${numericId}...`);
+      await personnelApi.delete(numericId);
+      console.log(`Personnel ${numericId} supprimé avec succès`);
+      
       await loadStats(); // Rafraîchir les stats
       if (person) {
         toast.success(`${person.prenom} ${person.nom} supprimé(e) avec succès`);
@@ -250,8 +330,11 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
         toast.success('Personnel supprimé avec succès');
       }
     } catch (error) {
-      console.error('Erreur lors de la suppression du personnel:', error);
-      toast.error('Impossible de supprimer le personnel');
+      // Restaurer l'état précédent en cas d'erreur
+      setPersonnel(previousPersonnel);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      console.error('Erreur lors de la suppression du personnel:', errorMessage);
+      toast.error(`Impossible de supprimer le personnel: ${errorMessage}`);
       throw error;
     }
   };
