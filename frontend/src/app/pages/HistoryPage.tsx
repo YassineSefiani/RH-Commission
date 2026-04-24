@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { Search, Trash2, Calendar, User, DollarSign } from 'lucide-react';
 import { useHistory } from '../context/HistoryContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 
 export default function HistoryPage() {
   const { history, deleteCalculation, clearHistory } = useHistory();
@@ -8,6 +17,8 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
   const filteredHistory = history.filter(record => {
     const date = new Date(record.date);
@@ -124,9 +135,8 @@ export default function HistoryPage() {
                   </div>
                   <button
                     onClick={() => {
-                      if (confirm('Supprimer ce calcul de l\'historique ?')) {
-                        deleteCalculation(record.id);
-                      }
+                      setIdToDelete(record.id);
+                      setDeleteConfirmOpen(true);
                     }}
                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                   >
@@ -206,6 +216,33 @@ export default function HistoryPage() {
           ))}
         </div>
       )}
+
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le calcul</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce calcul de l'historique ? Cette action ne peut pas être annulée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3">
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (idToDelete) {
+                  deleteCalculation(idToDelete);
+                }
+                setDeleteConfirmOpen(false);
+                setIdToDelete(null);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

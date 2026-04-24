@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useRef, useState, useEffect, type ChangeEvent } from 'react';
 import { Calculator } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useConstraints } from '../context/ConstraintsContext';
@@ -122,11 +122,12 @@ export default function CalculationPage() {
     setSelectedConstraints(selectedIds);
   };
 
-  const handleAutoCalculate = () => {
-    autoSelectConstraints();
-    // Utiliser un setTimeout pour laisser le state se mettre à jour
-    setTimeout(handleSimulate, 0);
-  };
+  // Auto-apply constraints when employee is selected
+  useEffect(() => {
+    if (selectedEmployee) {
+      autoSelectConstraints();
+    }
+  }, [selectedEmployee]);
 
   const handleSimulate = () => {
     const employee = employees.find(e => e.id === selectedEmployee);
@@ -306,13 +307,6 @@ export default function CalculationPage() {
                     <span className="text-sm font-semibold text-gray-900">{selectedEmployeeData.carte}</span>
                   </div>
                 </div>
-                <button
-                  onClick={handleAutoCalculate}
-                  className="w-full px-4 py-2 text-white rounded-lg hover:opacity-90 transition font-medium"
-                  style={{ backgroundColor: '#f7a800' }}
-                >
-                  Appliquer les règles et calculer
-                </button>
               </div>
             )}
           </div>
@@ -414,7 +408,7 @@ export default function CalculationPage() {
             </div>
           </div>
 
-          {/* Simulate Button */}
+          {/* Calculate Button */}
           <button
             onClick={handleSimulate}
             disabled={!selectedEmployee}
@@ -422,7 +416,7 @@ export default function CalculationPage() {
             style={{ backgroundColor: '#f7a800' }}
           >
             <Calculator className="w-5 h-5" />
-            Simuler
+            Calculer
           </button>
         </div>
 

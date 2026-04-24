@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useConstraints, Constraint } from '../context/ConstraintsContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 
 export default function ConstraintsPage() {
   const navigate = useNavigate();
@@ -9,6 +18,8 @@ export default function ConstraintsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
   const typeLabels: Record<Constraint['type'], string> = {
     commission_quantitative: 'Commission Quantitative',
@@ -23,9 +34,16 @@ export default function ConstraintsPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette contrainte ?')) {
-      deleteConstraint(id);
+    setIdToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (idToDelete) {
+      deleteConstraint(idToDelete);
     }
+    setDeleteConfirmOpen(false);
+    setIdToDelete(null);
   };
 
   const filteredConstraints = constraints.filter(c => {
@@ -156,6 +174,24 @@ export default function ConstraintsPage() {
           </table>
         </div>
       </div>
+
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la contrainte</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette contrainte ? Cette action ne peut pas être annulée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3">
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Supprimer
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

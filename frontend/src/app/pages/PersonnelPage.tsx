@@ -20,6 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 import { Label } from '../components/ui/label';
 import {
   Select,
@@ -64,6 +73,8 @@ export default function PersonnelPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [idToDelete, setIdToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [contractFilter, setContractFilter] = useState('');
   const [carteFilter, setCarteFilter] = useState('');
@@ -159,14 +170,21 @@ export default function PersonnelPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce personnel ?')) {
+  const handleDelete = (id: string) => {
+    setIdToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (idToDelete) {
       try {
-        await deletePersonnel(id);
+        await deletePersonnel(idToDelete);
       } catch (error) {
         // Error handled by context
       }
     }
+    setDeleteConfirmOpen(false);
+    setIdToDelete(null);
   };
 
   const handleSearch = () => {
@@ -476,6 +494,24 @@ export default function PersonnelPage() {
           </Table>
         </div>
       </Card>
+
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le personnel</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer ce personnel ? Cette action ne peut pas être annulée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <DialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Supprimer
+            </AlertDialogAction>
+          </DialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Dialog d'ajout/édition */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
