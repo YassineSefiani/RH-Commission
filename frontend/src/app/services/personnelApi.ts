@@ -16,10 +16,61 @@ export interface ApiPersonnel {
   actif?: boolean;
 }
 
+export interface ApiFichePresence {
+  id?: number;
+  date: string;
+  matriculeCamion?: string;
+  canal?: string;
+  livreur1Id?: number;
+  livreur1Matricule?: string;
+  livreur1Nom?: string;
+  livreur1Prenom?: string;
+  livreur2Id?: number;
+  livreur2Matricule?: string;
+  livreur2Nom?: string;
+  livreur2Prenom?: string;
+  livreur3Id?: number;
+  livreur3Matricule?: string;
+  livreur3Nom?: string;
+  livreur3Prenom?: string;
+}
+
 export interface PersonnelStats {
   total: number;
   actifs: number;
   inactifs: number;
+}
+
+// Helper pour obtenir le rôle de l'utilisateur
+function getUserRole(): string {
+  const userStr = localStorage.getItem('user');
+  console.log('🔍 [personnelApi] user from localStorage:', userStr);
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      console.log('🔍 [personnelApi] parsed user:', user);
+      return user.superRole || '';
+    } catch (e) {
+      console.error('🔍 [personnelApi] error parsing user:', e);
+      return '';
+    }
+  }
+  console.log('🔍 [personnelApi] no user in localStorage');
+  return '';
+}
+
+// Helper pour les headers avec rôle utilisateur
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  const role = getUserRole();
+  console.log('🔍 [personnelApi] getHeaders - role:', role);
+  if (role) {
+    headers['X-User-Role'] = role;
+  }
+  console.log('🔍 [personnelApi] headers:', headers);
+  return headers;
 }
 
 // Helper pour gérer les erreurs
@@ -111,9 +162,7 @@ export const personnelApi = {
   create: async (personnel: Omit<ApiPersonnel, 'id'>): Promise<ApiPersonnel> => {
     const response = await fetch(`${API_BASE_URL}/personnel`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getHeaders(),
       body: JSON.stringify(personnel),
     });
     return handleResponse<ApiPersonnel>(response);
@@ -123,9 +172,7 @@ export const personnelApi = {
   update: async (id: number, personnel: Partial<ApiPersonnel>): Promise<ApiPersonnel> => {
     const response = await fetch(`${API_BASE_URL}/personnel/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getHeaders(),
       body: JSON.stringify(personnel),
     });
     return handleResponse<ApiPersonnel>(response);
@@ -135,6 +182,7 @@ export const personnelApi = {
   toggle: async (id: number): Promise<ApiPersonnel> => {
     const response = await fetch(`${API_BASE_URL}/personnel/${id}/toggle`, {
       method: 'PATCH',
+      headers: getHeaders(),
     });
     return handleResponse<ApiPersonnel>(response);
   },
@@ -143,6 +191,64 @@ export const personnelApi = {
   delete: async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/personnel/${id}`, {
       method: 'DELETE',
+      headers: getHeaders(),
+    });
+    await handleResponse<void>(response);
+  },
+};
+
+// ============================================
+// FICHE PRESENCE API
+// ============================================
+
+export const fichePresenceApi = {
+  getAll: async (): Promise<ApiFichePresence[]> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence`);
+    return handleResponse<ApiFichePresence[]>(response);
+  },
+
+  getById: async (id: number): Promise<ApiFichePresence> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence/${id}`);
+    return handleResponse<ApiFichePresence>(response);
+  },
+
+  getByDate: async (date: string): Promise<ApiFichePresence[]> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence/date/${encodeURIComponent(date)}`);
+    return handleResponse<ApiFichePresence[]>(response);
+  },
+
+  getByMatriculeCamion: async (matricule: string): Promise<ApiFichePresence[]> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence/camion/${encodeURIComponent(matricule)}`);
+    return handleResponse<ApiFichePresence[]>(response);
+  },
+
+  getByCanal: async (canal: string): Promise<ApiFichePresence[]> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence/canal/${encodeURIComponent(canal)}`);
+    return handleResponse<ApiFichePresence[]>(response);
+  },
+
+  create: async (fichePresence: Omit<ApiFichePresence, 'id'>): Promise<ApiFichePresence> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(fichePresence),
+    });
+    return handleResponse<ApiFichePresence>(response);
+  },
+
+  update: async (id: number, fichePresence: Partial<ApiFichePresence>): Promise<ApiFichePresence> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(fichePresence),
+    });
+    return handleResponse<ApiFichePresence>(response);
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/fiche-presence/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
     });
     await handleResponse<void>(response);
   },
@@ -167,6 +273,25 @@ export interface Personnel {
   actif: boolean;
 }
 
+export interface FichePresence {
+  id: string;
+  date: string;
+  matriculeCamion?: string;
+  canal?: string;
+  livreur1Id?: string;
+  livreur1Matricule?: string;
+  livreur1Nom?: string;
+  livreur1Prenom?: string;
+  livreur2Id?: string;
+  livreur2Matricule?: string;
+  livreur2Nom?: string;
+  livreur2Prenom?: string;
+  livreur3Id?: string;
+  livreur3Matricule?: string;
+  livreur3Nom?: string;
+  livreur3Prenom?: string;
+}
+
 // Convertir un personnel API vers le format frontend
 export function mapApiPersonnelToFrontend(apiPersonnel: ApiPersonnel): Personnel {
   return {
@@ -184,6 +309,28 @@ export function mapApiPersonnelToFrontend(apiPersonnel: ApiPersonnel): Personnel
   };
 }
 
+// Convertir une fiche de présence API vers le format frontend
+export function mapApiFichePresenceToFrontend(api: ApiFichePresence): FichePresence {
+  return {
+    id: api.id?.toString() || '',
+    date: api.date,
+    matriculeCamion: api.matriculeCamion,
+    canal: api.canal,
+    livreur1Id: api.livreur1Id?.toString(),
+    livreur1Matricule: api.livreur1Matricule,
+    livreur1Nom: api.livreur1Nom,
+    livreur1Prenom: api.livreur1Prenom,
+    livreur2Id: api.livreur2Id?.toString(),
+    livreur2Matricule: api.livreur2Matricule,
+    livreur2Nom: api.livreur2Nom,
+    livreur2Prenom: api.livreur2Prenom,
+    livreur3Id: api.livreur3Id?.toString(),
+    livreur3Matricule: api.livreur3Matricule,
+    livreur3Nom: api.livreur3Nom,
+    livreur3Prenom: api.livreur3Prenom,
+  };
+}
+
 // Convertir un personnel frontend vers le format API
 export function mapFrontendPersonnelToApi(frontendPersonnel: Partial<Personnel>): Omit<ApiPersonnel, 'id'> {
   return {
@@ -197,5 +344,26 @@ export function mapFrontendPersonnelToApi(frontendPersonnel: Partial<Personnel>)
     natureContrat: frontendPersonnel.natureContrat || 'CDI',
     ville: frontendPersonnel.ville,
     actif: frontendPersonnel.actif ?? true,
+  };
+}
+
+// Convertir une fiche de présence frontend vers le format API
+export function mapFrontendFichePresenceToApi(frontendFichePresence: Partial<FichePresence>): Omit<ApiFichePresence, 'id'> {
+  return {
+    date: frontendFichePresence.date || '',
+    matriculeCamion: frontendFichePresence.matriculeCamion,
+    canal: frontendFichePresence.canal,
+    livreur1Id: frontendFichePresence.livreur1Id ? parseInt(frontendFichePresence.livreur1Id, 10) : undefined,
+    livreur1Matricule: frontendFichePresence.livreur1Matricule,
+    livreur1Nom: frontendFichePresence.livreur1Nom,
+    livreur1Prenom: frontendFichePresence.livreur1Prenom,
+    livreur2Id: frontendFichePresence.livreur2Id ? parseInt(frontendFichePresence.livreur2Id, 10) : undefined,
+    livreur2Matricule: frontendFichePresence.livreur2Matricule,
+    livreur2Nom: frontendFichePresence.livreur2Nom,
+    livreur2Prenom: frontendFichePresence.livreur2Prenom,
+    livreur3Id: frontendFichePresence.livreur3Id ? parseInt(frontendFichePresence.livreur3Id, 10) : undefined,
+    livreur3Matricule: frontendFichePresence.livreur3Matricule,
+    livreur3Nom: frontendFichePresence.livreur3Nom,
+    livreur3Prenom: frontendFichePresence.livreur3Prenom,
   };
 }

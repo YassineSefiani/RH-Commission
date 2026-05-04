@@ -6,6 +6,7 @@ import {
   Calculator, 
   History, 
   FileText,
+  ClipboardList,
   LogOut,
   Menu,
   X,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import logo from '../assets/logo-on-black.png';
 import { BackendStatus } from './BackendStatus';
+import { useUser } from '../context/UserContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -23,22 +25,41 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile
   const [isHovered, setIsHovered] = useState(false); // Desktop Hover
-  const userEmail = localStorage.getItem('userEmail') || '';
+  const { user, logout } = useUser();
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userEmail');
+    logout();
     navigate('/');
   };
 
+  // Définition des items avec restrictions par rôle
   const menuItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/personnel', label: 'Personnel', icon: Users },
-    { path: '/constraints', label: 'Contraintes', icon: FileText },
-    { path: '/calculation', label: 'Calcul', icon: Calculator },
+    { path: '/presence', label: 'Fiches Présence', icon: ClipboardList },
+    { 
+      path: '/constraints', 
+      label: 'Contraintes', 
+      icon: FileText, 
+      allowedRoles: ['ADMIN', 'ADV'] 
+    },
+    { 
+      path: '/calculation', 
+      label: 'Calcul', 
+      icon: Calculator, 
+      allowedRoles: ['ADMIN', 'ADV'] 
+    },
     { path: '/history', label: 'Historique', icon: History },
     { path: '/settings', label: 'Paramètres', icon: Settings },
   ];
+
+  // Filtrage des éléments du menu selon le rôle de l'utilisateur
+  const filteredMenuItems = menuItems.filter(item => {
+    // Si aucune restriction n'est définie, tout le monde voit l'item
+    if (!item.allowedRoles) return true;
+    // Sinon, on vérifie si le rôle de l'utilisateur est autorisé
+    return user && item.allowedRoles.includes(user.superRole);
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-hidden">
@@ -66,7 +87,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             return (
@@ -93,10 +114,12 @@ export default function Layout({ children }: LayoutProps) {
         <div className="p-4 border-t flex-shrink-0" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
           <div className="flex items-center gap-4 overflow-hidden mb-3">
             <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-medium" style={{ backgroundColor: '#f7a800' }}>
-              {userEmail.charAt(0).toUpperCase()}
+              {user?.prenom?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
             </div>
             <div className={`transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-              <p className="text-sm font-medium text-gray-200 truncate w-32">{userEmail}</p>
+              <p className="text-sm font-medium text-gray-200 truncate w-32">
+                {user ? `${user.prenom} ${user.nom}` : user?.email}
+              </p>
             </div>
           </div>
           <button
@@ -111,10 +134,10 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Spacer Desktop : empêche le contenu de passer sous le sidebar fixe */}
+      {/* Spacer Desktop */}
       <div className={`hidden md:block transition-all duration-300 flex-shrink-0 ${isHovered ? 'w-64' : 'w-20'}`} />
 
-      {/* Sidebar Mobile (Full Overlay) */}
+      {/* Sidebar Mobile */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-[60] md:hidden">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
@@ -135,7 +158,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
 
             <nav className="flex-1 px-3 py-4 space-y-1">
-              {menuItems.map((item) => {
+              {filteredMenuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
                 return (
@@ -167,7 +190,6 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-screen">
-        {/* Top Navbar */}
         <header className="h-16 border-b flex items-center px-4 md:px-6 flex-shrink-0 z-40" style={{ backgroundColor: '#18324B', borderColor: 'rgba(255, 255, 255, 0.1)' }}>
           <button
             className="md:hidden mr-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -176,17 +198,15 @@ export default function Layout({ children }: LayoutProps) {
             <Menu className="w-6 h-6 text-gray-300" />
           </button>
           <h2 className="text-xl font-bold text-white">
-            {menuItems.find(item => item.path === location.pathname)?.label || 'ABC DIS'}
+            {filteredMenuItems.find(item => item.path === location.pathname)?.label || 'ABC DIS'}
           </h2>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 overflow-auto bg-gray-50 relative">
           {children}
         </main>
       </div>
 
-      {/* Backend Status Indicator */}
       <BackendStatus />
     </div>
   );

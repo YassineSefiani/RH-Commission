@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/personnel")
@@ -18,7 +18,12 @@ public class PersonnelController {
     @Autowired
     private PersonnelRepository personnelRepository;
     
-    // GET /api/personnel - Récupérer tous les personnels
+    // Vérifier si l'utilisateur a le rôle requis pour Personnel
+    private boolean hasPersonnelAccess(String superRole) {
+        return "ADMIN".equals(superRole) || "RH".equals(superRole);
+    }
+    
+    // GET /api/personnel - Récupérer tous les personnels (accessible à tous)
     @GetMapping
     public List<Personnel> getAllPersonnel() {
         return personnelRepository.findAll();
@@ -69,10 +74,18 @@ public class PersonnelController {
         return personnelRepository.findByNomContainingIgnoreCase(nom);
     }
     
-    // POST /api/personnel - Créer un nouveau personnel
+    // POST /api/personnel - Créer un nouveau personnel (ADMIN ou RH uniquement, sauf si pas de rôle pour init)
     @PostMapping
-    public ResponseEntity<?> createPersonnel(@RequestBody Personnel personnel) {
-        // Vérifier si le matricule existe déjà
+    public ResponseEntity<?> createPersonnel(
+            @RequestBody Personnel personnel,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String userRole) {
+        
+        // Permettre la création sans authentification si aucun rôle n'est fourni (pour l'initialisation)
+        if (!userRole.isEmpty() && !hasPersonnelAccess(userRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé. Rôle ADMIN ou RH requis."));
+        }
+        
         if (personnelRepository.existsByMatricule(personnel.getMatricule())) {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
@@ -83,15 +96,20 @@ public class PersonnelController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
     
-    // PUT /api/personnel/{id} - Mettre à jour un personnel
+    // PUT /api/personnel/{id} - Mettre à jour un personnel (ADMIN ou RH uniquement)
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePersonnel(
             @PathVariable Long id,
-            @RequestBody Personnel personnelDetails) {
+            @RequestBody Personnel personnelDetails,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String userRole) {
+        
+        if (!hasPersonnelAccess(userRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé. Rôle ADMIN ou RH requis."));
+        }
         
         return personnelRepository.findById(id)
                 .map(personnel -> {
-                    // Vérifier si le nouveau matricule n'existe pas déjà (sauf pour le même personnel)
                     if (!personnel.getMatricule().equals(personnelDetails.getMatricule()) &&
                         personnelRepository.existsByMatricule(personnelDetails.getMatricule())) {
                         return ResponseEntity
@@ -115,9 +133,17 @@ public class PersonnelController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
-    // PATCH /api/personnel/{id}/toggle - Activer/Désactiver un personnel
+    // PATCH /api/personnel/{id}/toggle - Activer/Désactiver un personnel (ADMIN ou RH uniquement)
     @PatchMapping("/{id}/toggle")
-    public ResponseEntity<Personnel> togglePersonnel(@PathVariable Long id) {
+    public ResponseEntity<?> togglePersonnel(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String userRole) {
+        
+        if (!hasPersonnelAccess(userRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé. Rôle ADMIN ou RH requis."));
+        }
+        
         return personnelRepository.findById(id)
                 .map(personnel -> {
                     personnel.setActif(!personnel.getActif());
@@ -126,9 +152,17 @@ public class PersonnelController {
                 .orElse(ResponseEntity.notFound().build());
     }
     
-    // DELETE /api/personnel/{id} - Supprimer un personnel
+    // DELETE /api/personnel/{id} - Supprimer un personnel (ADMIN ou RH uniquement)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePersonnel(@PathVariable Long id) {
+    public ResponseEntity<?> deletePersonnel(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "") String userRole) {
+        
+        if (!hasPersonnelAccess(userRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Accès refusé. Rôle ADMIN ou RH requis."));
+        }
+        
         return personnelRepository.findById(id)
                 .map(personnel -> {
                     personnelRepository.delete(personnel);
@@ -147,6 +181,5 @@ public class PersonnelController {
         return ResponseEntity.ok(new Stats(total, actifs, inactifs));
     }
     
-    // Classe interne pour les stats
     record Stats(long total, long actifs, long inactifs) {}
 }

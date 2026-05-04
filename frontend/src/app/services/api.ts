@@ -11,6 +11,38 @@ declare global {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+// Helper pour obtenir le rôle de l'utilisateur
+function getUserRole(): string {
+  const userStr = localStorage.getItem('user');
+  console.log('🔍 [api] user from localStorage:', userStr);
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      console.log('🔍 [api] parsed user:', user);
+      return user.superRole || '';
+    } catch (e) {
+      console.error('🔍 [api] error parsing user:', e);
+      return '';
+    }
+  }
+  console.log('🔍 [api] no user in localStorage');
+  return '';
+}
+
+// Helper pour les headers avec rôle utilisateur
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  const role = getUserRole();
+  console.log('🔍 [api] getHeaders - role:', role);
+  if (role) {
+    headers['X-User-Role'] = role;
+  }
+  console.log('🔍 [api] headers:', headers);
+  return headers;
+}
+
 // Types pour l'API
 export interface ApiConstraint {
   id?: number;
@@ -88,9 +120,7 @@ export const constraintsApi = {
   create: async (constraint: Omit<ApiConstraint, 'id'>): Promise<ApiConstraint> => {
     const response = await fetch(`${API_BASE_URL}/constraints`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getHeaders(),
       body: JSON.stringify(constraint),
     });
     return handleResponse<ApiConstraint>(response);
@@ -100,9 +130,7 @@ export const constraintsApi = {
   update: async (id: number, constraint: Partial<ApiConstraint>): Promise<ApiConstraint> => {
     const response = await fetch(`${API_BASE_URL}/constraints/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getHeaders(),
       body: JSON.stringify(constraint),
     });
     return handleResponse<ApiConstraint>(response);
@@ -112,6 +140,7 @@ export const constraintsApi = {
   delete: async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/constraints/${id}`, {
       method: 'DELETE',
+      headers: getHeaders(),
     });
     await handleResponse<void>(response);
   },
@@ -120,6 +149,7 @@ export const constraintsApi = {
   toggle: async (id: number): Promise<ApiConstraint> => {
     const response = await fetch(`${API_BASE_URL}/constraints/${id}/toggle`, {
       method: 'PATCH',
+      headers: getHeaders(),
     });
     return handleResponse<ApiConstraint>(response);
   },

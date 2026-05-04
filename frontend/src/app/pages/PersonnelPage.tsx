@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { usePersonnel } from '../context/PersonnelContext';
+import { usePresence } from '../context/PresenceContext';
+import { useUser } from '../context/UserContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
@@ -20,15 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../components/ui/alert-dialog';
 import { Label } from '../components/ui/label';
 import {
   Select,
@@ -73,8 +66,6 @@ export default function PersonnelPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [idToDelete, setIdToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [contractFilter, setContractFilter] = useState('');
   const [carteFilter, setCarteFilter] = useState('');
@@ -93,6 +84,28 @@ export default function PersonnelPage() {
     ville: '',
     actif: true,
   });
+
+  const [isPresenceDialogOpen, setIsPresenceDialogOpen] = useState(false);
+  const [presenceForm, setPresenceForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    matriculeCamion: '',
+    canal: '',
+    livreur1Id: '',
+    livreur1Matricule: '',
+    livreur1Nom: '',
+    livreur1Prenom: '',
+    livreur2Id: '',
+    livreur2Matricule: '',
+    livreur2Nom: '',
+    livreur2Prenom: '',
+    livreur3Id: '',
+    livreur3Matricule: '',
+    livreur3Nom: '',
+    livreur3Prenom: '',
+  });
+
+  const { user } = useUser();
+  const { addPresenceRecord } = usePresence();
 
   // Accumuler toutes les cartes et villes jamais rencontrées
   useEffect(() => {
@@ -170,21 +183,75 @@ export default function PersonnelPage() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    setIdToDelete(id);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (idToDelete) {
+  const handleDelete = async (id: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce personnel ?')) {
       try {
-        await deletePersonnel(idToDelete);
+        await deletePersonnel(id);
       } catch (error) {
         // Error handled by context
       }
     }
-    setDeleteConfirmOpen(false);
-    setIdToDelete(null);
+  };
+
+  const handlePresenceSelect = (field: 'livreur1' | 'livreur2' | 'livreur3', id: string) => {
+    if (id === 'none') {
+      setPresenceForm((prev) => ({
+        ...prev,
+        [`${field}Id`]: '',
+        [`${field}Matricule`]: '',
+        [`${field}Nom`]: '',
+        [`${field}Prenom`]: '',
+      }));
+      return;
+    }
+
+    const selectedPerson = personnel.find((person) => person.id === id);
+    setPresenceForm((prev) => ({
+      ...prev,
+      [`${field}Id`]: id,
+      [`${field}Matricule`]: selectedPerson?.matricule || '',
+      [`${field}Nom`]: selectedPerson?.nom || '',
+      [`${field}Prenom`]: selectedPerson?.prenom || '',
+    }));
+  };
+
+  const handlePresenceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await addPresenceRecord({
+      date: presenceForm.date,
+      matriculeCamion: presenceForm.matriculeCamion,
+      canal: presenceForm.canal,
+      livreur1Id: presenceForm.livreur1Id,
+      livreur1Matricule: presenceForm.livreur1Matricule,
+      livreur1Nom: presenceForm.livreur1Nom,
+      livreur1Prenom: presenceForm.livreur1Prenom,
+      livreur2Id: presenceForm.livreur2Id,
+      livreur2Matricule: presenceForm.livreur2Matricule,
+      livreur2Nom: presenceForm.livreur2Nom,
+      livreur2Prenom: presenceForm.livreur2Prenom,
+      livreur3Id: presenceForm.livreur3Id,
+      livreur3Matricule: presenceForm.livreur3Matricule,
+      livreur3Nom: presenceForm.livreur3Nom,
+      livreur3Prenom: presenceForm.livreur3Prenom,
+    });
+    setIsPresenceDialogOpen(false);
+    setPresenceForm({
+      date: new Date().toISOString().split('T')[0],
+      matriculeCamion: '',
+      canal: '',
+      livreur1Id: '',
+      livreur1Matricule: '',
+      livreur1Nom: '',
+      livreur1Prenom: '',
+      livreur2Id: '',
+      livreur2Matricule: '',
+      livreur2Nom: '',
+      livreur2Prenom: '',
+      livreur3Id: '',
+      livreur3Matricule: '',
+      livreur3Nom: '',
+      livreur3Prenom: '',
+    });
   };
 
   const handleSearch = () => {
@@ -252,10 +319,21 @@ export default function PersonnelPage() {
           <h1 className="text-3xl font-bold text-gray-900">Gestion du Personnel</h1>
           <p className="text-gray-600 mt-1">Gérez les employés de l'entreprise</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-[#f7a800] hover:bg-[#e09800]">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Ajouter un Personnel
-        </Button>
+        <div className="flex flex-wrap gap-2 justify-end">
+          {user?.superRole === 'DISPATCHER' && (
+            <Button
+              onClick={() => setIsPresenceDialogOpen(true)}
+              className="bg-[#2563eb] hover:bg-[#1d4ed8]"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Fiche de Présence
+            </Button>
+          )}
+          <Button onClick={() => handleOpenDialog()} className="bg-[#f7a800] hover:bg-[#e09800]">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Ajouter un Personnel
+          </Button>
+        </div>
       </div>
 
       {/* Statistiques */}
@@ -495,23 +573,90 @@ export default function PersonnelPage() {
         </div>
       </Card>
 
-      {/* Dialog de confirmation de suppression */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer le personnel</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce personnel ? Cette action ne peut pas être annulée.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <DialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Supprimer
-            </AlertDialogAction>
-          </DialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Dialog de fiche de présence pour dispatcher */}
+      <Dialog open={isPresenceDialogOpen} onOpenChange={setIsPresenceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Fiche de Présence</DialogTitle>
+            <DialogDescription>
+              Enregistrez la présence des trois livreurs pour la tournée du jour.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handlePresenceSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="presenceDate">Date</Label>
+                <Input id="presenceDate" value={presenceForm.date} readOnly />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="matriculeCamion">Matricule du Camion</Label>
+                <Input
+                  id="matriculeCamion"
+                  value={presenceForm.matriculeCamion}
+                  onChange={(e) => setPresenceForm({ ...presenceForm, matriculeCamion: e.target.value })}
+                  placeholder="EX: TRK123"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="canal">Canal</Label>
+                <Input
+                  id="canal"
+                  value={presenceForm.canal}
+                  onChange={(e) => setPresenceForm({ ...presenceForm, canal: e.target.value })}
+                  placeholder="Ex: Retail"
+                />
+              </div>
+            </div>
+
+            {['livreur1', 'livreur2', 'livreur3'].map((field, index) => {
+              const label = index === 0 ? 'Livreur' : `Aide Livreur ${index}`;
+              const selectedId = presenceForm[`${field}Id` as keyof typeof presenceForm] as string;
+              const selectedMatricule = presenceForm[`${field}Matricule` as keyof typeof presenceForm] as string;
+
+              return (
+                <div key={field} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor={`${field}Id`}>{label}</Label>
+                    <Select
+                      value={selectedId}
+                      onValueChange={(value) => handlePresenceSelect(field as 'livreur1' | 'livreur2' | 'livreur3', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Sélectionner ${label}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucun</SelectItem>
+                        {personnel.map((person) => (
+                          <SelectItem key={person.id} value={person.id}>
+                            {person.prenom} {person.nom}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor={`${field}Matricule`}>Matricule</Label>
+                    <Input id={`${field}Matricule`} value={selectedMatricule} readOnly placeholder="Auto" />
+                  </div>
+                </div>
+              );
+            })}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsPresenceDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" className="bg-[#f7a800] hover:bg-[#e09800]">
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog d'ajout/édition */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -589,7 +734,7 @@ export default function PersonnelPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Coca Cola">Coca Cola</SelectItem>
-                    <SelectItem value="Magnum">Magnum</SelectItem>
+                    <SelectItem value="Wall's">Wall's</SelectItem>
                     <SelectItem value="Ferrero Rocher">Ferrero Rocher</SelectItem>
                   </SelectContent>
                 </Select>

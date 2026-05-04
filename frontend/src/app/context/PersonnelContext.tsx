@@ -7,6 +7,7 @@ import {
   PersonnelStats
 } from '../services/personnelApi';
 import { toast } from 'sonner';
+import { useUser } from '../context/UserContext'; // Import crucial
 
 let personnelInitPromise: Promise<void> | null = null;
 
@@ -51,7 +52,7 @@ const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
     matricule: 'P004',
     nom: 'Novo',
     prenom: 'Ahmed',
-    carte: 'Magnum',
+    carte: "Wall's",
     fonction: 'Livreur',
     role: 'Aide Livreur',
     numero: '0600000004',
@@ -63,7 +64,7 @@ const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
     matricule: 'P005',
     nom: 'Sidi',
     prenom: 'Fatima',
-    carte: 'Magnum',
+    carte: "Wall's",
     fonction: 'Livreur',
     role: 'Livreur',
     numero: '0600000005',
@@ -75,7 +76,7 @@ const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
     matricule: 'P006',
     nom: 'Belaid',
     prenom: 'Mohammed',
-    carte: 'Magnum',
+    carte: "Wall's",
     fonction: 'Livreur',
     role: 'Aide Livreur',
     numero: '0600000006',
@@ -145,10 +146,14 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
   const [stats, setStats] = useState<PersonnelStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Récupération de l'état d'authentification
+  const { isAuthenticated, isLoading: isAuthLoading } = useUser();
+
   useEffect(() => {
     let mounted = true;
 
     const initialize = async () => {
+      // On n'initialise QUE si l'utilisateur est authentifié OU si c'est le premier chargement
       if (!mounted) return;
 
       try {
@@ -167,11 +172,12 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
           const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
           if (mounted) {
             setPersonnel(mappedPersonnel);
+            await loadStats(); // Charger les stats si des données existent
           }
         }
       } catch (error) {
         console.error('Erreur lors du chargement du personnel:', error);
-        if (mounted) {
+        if (mounted && isAuthenticated) {
           toast.error('Impossible de charger le personnel');
         }
       } finally {
@@ -181,12 +187,13 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Initialiser immédiatement, indépendamment de l'authentification
     initialize();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, []); // Retirer les dépendances pour initialiser au premier rendu
 
   const loadPersonnel = async () => {
     try {
@@ -201,7 +208,7 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Erreur lors du chargement du personnel:', error);
-      toast.error('Impossible de charger le personnel. Vérifiez que le backend est démarré.');
+      toast.error('Erreur de chargement du personnel.');
       setPersonnel([]);
     } finally {
       setIsLoading(false);
@@ -226,12 +233,9 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     personnelInitPromise = (async () => {
       try {
         const existing = await personnelApi.getAll();
-        if (existing.length > 0) {
-          console.log('⚠️ Personnel déjà initialisé, skipping...');
-          return;
-        }
+        if (existing.length > 0) return;
 
-        console.log('🏗️ Initialisation du personnel par défaut...');
+        console.log('🏗️ Création du personnel par défaut...');
         await Promise.all(
           INITIAL_PERSONNEL.map(person =>
             personnelApi.create(mapFrontendPersonnelToApi(person))
@@ -240,8 +244,7 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
         await loadStats();
         toast.success('Personnel initialisé avec succès');
       } catch (error) {
-        console.error('Erreur lors de l\'initialisation du personnel:', error);
-        toast.error('Impossible d\'initialiser le personnel par défaut');
+        console.error('Erreur lors de l\'initialisation:', error);
         throw error;
       } finally {
         personnelInitPromise = null;
@@ -256,7 +259,7 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       const statsData = await personnelApi.getStats();
       setStats(statsData);
     } catch (error) {
-      console.error('Erreur lors du chargement des statistiques:', error);
+      console.error('Erreur stats:', error);
     }
   };
 
@@ -266,16 +269,10 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       const created = await personnelApi.create(apiPersonnel);
       const mappedPersonnel = mapApiPersonnelToFrontend(created);
       setPersonnel(prev => [...prev, mappedPersonnel]);
-      await loadStats(); // Rafraîchir les stats
-      toast.success(`${newPersonnel.prenom} ${newPersonnel.nom} ajouté(e) avec succès`);
+      await loadStats();
+      toast.success(`${newPersonnel.prenom} ${newPersonnel.nom} ajouté(e)`);
     } catch (error) {
-      console.error('Erreur lors de l\'ajout du personnel:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      if (errorMessage.includes('existe déjà')) {
-        toast.error('Ce matricule existe déjà');
-      } else {
-        toast.error('Impossible d\'ajouter le personnel');
-      }
+      toast.error('Impossible d\'ajouter le personnel');
       throw error;
     }
   };
@@ -284,9 +281,7 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     try {
       const numericId = parseInt(id, 10);
       const currentPersonnel = personnel.find(p => p.id === id);
-      if (!currentPersonnel) {
-        throw new Error('Personnel non trouvé');
-      }
+      if (!currentPersonnel) throw new Error('Personnel non trouvé');
       
       const updatedPersonnel = { ...currentPersonnel, ...updates };
       const apiPersonnel = mapFrontendPersonnelToApi(updatedPersonnel);
@@ -296,45 +291,24 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       setPersonnel(prev =>
         prev.map(p => (p.id === id ? mappedPersonnel : p))
       );
-      toast.success('Personnel mis à jour avec succès');
+      toast.success('Mise à jour réussie');
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du personnel:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      if (errorMessage.includes('existe déjà')) {
-        toast.error('Ce matricule existe déjà');
-      } else {
-        toast.error('Impossible de mettre à jour le personnel');
-      }
+      toast.error('Erreur de mise à jour');
       throw error;
     }
   };
 
   const deletePersonnel = async (id: string) => {
     const previousPersonnel = personnel;
-    
     try {
       const numericId = parseInt(id, 10);
-      const person = personnel.find(p => p.id === id);
-      
-      // Mise à jour optimiste
       setPersonnel(prev => prev.filter(p => p.id !== id));
-      
-      console.log(`Suppression du personnel ${numericId}...`);
       await personnelApi.delete(numericId);
-      console.log(`Personnel ${numericId} supprimé avec succès`);
-      
-      await loadStats(); // Rafraîchir les stats
-      if (person) {
-        toast.success(`${person.prenom} ${person.nom} supprimé(e) avec succès`);
-      } else {
-        toast.success('Personnel supprimé avec succès');
-      }
+      await loadStats();
+      toast.success('Personnel supprimé');
     } catch (error) {
-      // Restaurer l'état précédent en cas d'erreur
       setPersonnel(previousPersonnel);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      console.error('Erreur lors de la suppression du personnel:', errorMessage);
-      toast.error(`Impossible de supprimer le personnel: ${errorMessage}`);
+      toast.error('Erreur lors de la suppression');
       throw error;
     }
   };
@@ -348,11 +322,10 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       setPersonnel(prev =>
         prev.map(p => (p.id === id ? mappedPersonnel : p))
       );
-      await loadStats(); // Rafraîchir les stats
+      await loadStats();
       toast.success(`Personnel ${mappedPersonnel.actif ? 'activé' : 'désactivé'}`);
     } catch (error) {
-      console.error('Erreur lors du changement d\'état du personnel:', error);
-      toast.error('Impossible de changer l\'état du personnel');
+      toast.error('Erreur de changement d\'état');
       throw error;
     }
   };
@@ -362,16 +335,12 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
       await loadPersonnel();
       return;
     }
-    
     try {
       setIsLoading(true);
       const apiPersonnel = await personnelApi.searchByNom(nom);
-      const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
-      setPersonnel(mappedPersonnel);
-      toast.success(`${mappedPersonnel.length} résultat(s) trouvé(s)`);
+      setPersonnel(apiPersonnel.map(mapApiPersonnelToFrontend));
     } catch (error) {
-      console.error('Erreur lors de la recherche:', error);
-      toast.error('Erreur lors de la recherche');
+      toast.error('Erreur de recherche');
     } finally {
       setIsLoading(false);
     }
@@ -381,12 +350,7 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const apiPersonnel = await personnelApi.getByVille(ville);
-      const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
-      setPersonnel(mappedPersonnel);
-      toast.success(`${mappedPersonnel.length} personnel(s) à ${ville}`);
-    } catch (error) {
-      console.error('Erreur lors du filtrage par ville:', error);
-      toast.error('Erreur lors du filtrage');
+      setPersonnel(apiPersonnel.map(mapApiPersonnelToFrontend));
     } finally {
       setIsLoading(false);
     }
@@ -396,12 +360,7 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const apiPersonnel = await personnelApi.getByContrat(type);
-      const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
-      setPersonnel(mappedPersonnel);
-      toast.success(`${mappedPersonnel.length} personnel(s) en ${type}`);
-    } catch (error) {
-      console.error('Erreur lors du filtrage par contrat:', error);
-      toast.error('Erreur lors du filtrage');
+      setPersonnel(apiPersonnel.map(mapApiPersonnelToFrontend));
     } finally {
       setIsLoading(false);
     }
@@ -409,29 +368,19 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
 
   const filterByCarte = async (carte: string) => {
     try {
-        setIsLoading(true);
-        const apiPersonnel = await personnelApi.getByCarte(carte);
-        const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
-        setPersonnel(mappedPersonnel);
-        toast.success(`${mappedPersonnel.length} personnel(s) pour ${carte}`);
-    } catch (error) {
-        console.error('Erreur lors du filtrage par carte:', error);
-        toast.error('Erreur lors du filtrage');
+      setIsLoading(true);
+      const apiPersonnel = await personnelApi.getByCarte(carte);
+      setPersonnel(apiPersonnel.map(mapApiPersonnelToFrontend));
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-    };
+  };
 
   const showActifsOnly = async () => {
     try {
       setIsLoading(true);
       const apiPersonnel = await personnelApi.getActifs();
-      const mappedPersonnel = apiPersonnel.map(mapApiPersonnelToFrontend);
-      setPersonnel(mappedPersonnel);
-      toast.success(`${mappedPersonnel.length} personnel(s) actif(s)`);
-    } catch (error) {
-      console.error('Erreur lors du filtrage des actifs:', error);
-      toast.error('Erreur lors du filtrage');
+      setPersonnel(apiPersonnel.map(mapApiPersonnelToFrontend));
     } finally {
       setIsLoading(false);
     }
