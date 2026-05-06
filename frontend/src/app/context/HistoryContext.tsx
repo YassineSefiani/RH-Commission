@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import { historyApi, mapApiHistoryToFrontend, mapFrontendHistoryToApi } from '../services/api';
 import { toast } from 'sonner';
 
+// --- TYPES POUR LES CALCULS ---
 export interface CalculationHistory {
   id: string;
   date: string;
@@ -19,24 +20,50 @@ export interface CalculationHistory {
   details: any[];
 }
 
+// --- TYPES POUR LES MODIFICATIONS DE CONTRAINTES ---
+export interface ConstraintHistoryEntry {
+  constraintId: string;
+  modifiedBy: string;
+  modificationDate: string;
+  oldValue?: string;
+  newValue: string;
+  changeType: 'CREATE' | 'UPDATE' | 'TOGGLE' | 'DELETE';
+}
+
+// --- INTERFACE DU CONTEXTE ---
 interface HistoryContextType {
+  // Calculs
   history: CalculationHistory[];
   addCalculation: (calculation: Omit<CalculationHistory, 'id' | 'date'>) => void;
   deleteCalculation: (id: string) => void;
   clearHistory: () => void;
+  
+  // Contraintes
+  constraintHistory: ConstraintHistoryEntry[];
+  addHistoryEntry: (entry: ConstraintHistoryEntry) => void;
 }
 
 const HistoryContext = createContext<HistoryContextType | undefined>(undefined);
 
 export function HistoryProvider({ children }: { children: ReactNode }) {
+  // États
   const [history, setHistory] = useState<CalculationHistory[]>([]);
+  const [constraintHistory, setConstraintHistory] = useState<ConstraintHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger l'historique depuis l'API au démarrage
+  // Charger les historiques au démarrage
   useEffect(() => {
+    // Chargement de l'historique des contraintes depuis le localStorage
+    const savedConstraintHistory = localStorage.getItem('constraintHistory');
+    if (savedConstraintHistory) {
+      setConstraintHistory(JSON.parse(savedConstraintHistory));
+    }
+    
+    // Chargement de l'historique des calculs via API
     loadHistory();
   }, []);
 
+  // --- LOGIQUE DES CALCULS (API) ---
   const loadHistory = async () => {
     try {
       setIsLoading(true);
@@ -46,7 +73,6 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Erreur lors du chargement de l\'historique:', error);
       toast.error('Impossible de charger l\'historique. Vérifiez que le backend est démarré.');
-      // En cas d'erreur, utiliser un historique vide
       setHistory([]);
     } finally {
       setIsLoading(false);
@@ -58,7 +84,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       const apiHistory = mapFrontendHistoryToApi(calculation);
       const created = await historyApi.create(apiHistory);
       const newCalculation = mapApiHistoryToFrontend(created);
-      setHistory(prev => [newCalculation, ...prev]); // Ajouter au début pour avoir les plus récents en premier
+      setHistory(prev => [newCalculation, ...prev]);
       toast.success('Calcul ajouté à l\'historique');
     } catch (error) {
       console.error('Erreur lors de l\'ajout du calcul:', error);
@@ -68,23 +94,15 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteCalculation = async (id: string) => {
-    // Sauvegarder l'état actuel pour restauration en cas d'erreur
     const previousHistory = history;
-    
     try {
-      // Mise à jour optimiste - supprimer immédiatement du UI
       setHistory(prev => prev.filter(h => h.id !== id));
-      
       const numericId = parseInt(id, 10);
-      console.log(`Suppression du calcul ${numericId}...`);
       await historyApi.delete(numericId);
-      console.log(`Calcul ${numericId} supprimé avec succès`);
       toast.success('Calcul supprimé de l\'historique');
     } catch (error) {
-      // Restaurer l'état précédent en cas d'erreur
       setHistory(previousHistory);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      console.error('Erreur lors de la suppression du calcul:', errorMessage);
       toast.error(`Impossible de supprimer le calcul: ${errorMessage}`);
       throw error;
     }
@@ -97,14 +115,22 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         setHistory([]);
         toast.success('Historique supprimé avec succès');
       } catch (error) {
-        console.error('Erreur lors de la suppression de l\'historique:', error);
         toast.error('Impossible de supprimer l\'historique');
         throw error;
       }
     }
   };
 
-  // Afficher un loader pendant le chargement initial
+  // --- LOGIQUE DES CONTRAINTES (LOCALSTORAGE) ---
+  const addHistoryEntry = (entry: ConstraintHistoryEntry) => {
+    setConstraintHistory(prev => {
+      const newHistory = [entry, ...prev];
+      localStorage.setItem('constraintHistory', JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
+
+  // --- RENDU ---
   if (isLoading) {
     return (
       <HistoryContext.Provider
@@ -113,6 +139,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           addCalculation,
           deleteCalculation,
           clearHistory,
+          constraintHistory, // On passe l'état actuel même si ça charge
+          addHistoryEntry,
         }}
       >
         {children}
@@ -127,6 +155,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         addCalculation,
         deleteCalculation,
         clearHistory,
+        constraintHistory,
+        addHistoryEntry,
       }}
     >
       {children}

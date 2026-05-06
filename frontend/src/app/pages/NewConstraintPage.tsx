@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Plus, Trash2, Save, X } from 'lucide-react';
 import { useConstraints, Constraint } from '../context/ConstraintsContext';
+import { useHistory } from '../context/HistoryContext'; // Import de l'historique
 
 interface Rule {
   id: string;
@@ -20,9 +21,12 @@ export default function NewConstraintPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addConstraint, updateConstraint } = useConstraints();
+  const { addHistoryEntry } = useHistory(); // Hook pour l'historique
   const editingConstraint = location.state?.constraint as Constraint | undefined;
 
-  // 1. Initialisation des informations de base
+  // Récupération de l'utilisateur connecté (simulé via localStorage)
+  const currentUser = localStorage.getItem('userName') || 'Utilisateur';
+
   const [formData, setFormData] = useState({
     name: editingConstraint?.name || '',
     type: editingConstraint?.type || 'commission_quantitative',
@@ -32,7 +36,6 @@ export default function NewConstraintPage() {
     active: editingConstraint?.active ?? true,
   });
 
-  // 2. Chargement des groupes existants pour permettre la modification
   const [ruleGroups, setRuleGroups] = useState<RuleGroup[]>(
     editingConstraint?.ruleGroups || [
       {
@@ -126,13 +129,31 @@ export default function NewConstraintPage() {
 
     if (editingConstraint) {
       updateConstraint(editingConstraint.id, constraintData as any);
+      
+      // Enregistrement de la modification dans l'historique
+      addHistoryEntry({
+        constraintId: editingConstraint.id,
+        modifiedBy: currentUser,
+        modificationDate: new Date().toISOString(),
+        oldValue: `${editingConstraint.value}${editingConstraint.valueType === 'percentage' ? '%' : ' MAD'}`,
+        newValue: `${formData.value}${formData.valueType === 'percentage' ? '%' : ' MAD'}`,
+        changeType: 'UPDATE'
+      });
     } else {
-      addConstraint(constraintData as any);
+      const newId = Date.now().toString();
+      addConstraint({ ...constraintData, id: newId } as any);
+      
+      // Enregistrement de la création dans l'historique
+      addHistoryEntry({
+        constraintId: newId,
+        modifiedBy: currentUser,
+        modificationDate: new Date().toISOString(),
+        newValue: `${formData.value}${formData.valueType === 'percentage' ? '%' : ' MAD'}`,
+        changeType: 'CREATE'
+      });
     }
     navigate('/constraints');
   };
-
-  const getFieldLabel = (val: string) => fieldOptions.find(f => f.value === val)?.label || val;
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -145,7 +166,6 @@ export default function NewConstraintPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Panel Gauche: Infos de base */}
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Paramètres</h3>
@@ -186,15 +206,12 @@ export default function NewConstraintPage() {
             </div>
           </div>
           
-          {/* Aperçu rapide */}
           <div className="bg-orange-50 p-6 rounded-xl border border-orange-100">
-            <h3 className="font-bold text-orange-900 mb-2 text-sm uppercase">Condition actuelle :</h3>
-            <p className="text-sm text-orange-800 italic">{editingConstraint ? formData.name : "Nouvelle règle en cours..."}</p>
-            <div className="mt-2 text-xs text-gray-600">{ruleGroups.length} groupe(s) de règles défini(s).</div>
+            <h3 className="font-bold text-orange-900 mb-2 text-sm uppercase">Modifié par :</h3>
+            <p className="text-sm text-orange-800 font-medium">{currentUser}</p>
           </div>
         </div>
 
-        {/* Panel Droit: Rule Builder */}
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
             <div className="flex justify-between items-center mb-6">
@@ -242,7 +259,7 @@ export default function NewConstraintPage() {
           </div>
 
           <div className="flex gap-4">
-            <button onClick={handleSave} disabled={!formData.name} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-white font-bold rounded-xl hover:opacity-90 transition disabled:opacity-50" style={{ backgroundColor: '#f7a800' }}>
+            <button onClick={handleSave} disabled={!formData.name} className="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-white font-bold rounded-xl hover:opacity-90 transition disabled:opacity-50 shadow-lg" style={{ backgroundColor: '#f7a800' }}>
               <Save className="w-5 h-5" /> {editingConstraint ? 'Sauvegarder les modifications' : 'Créer la règle'}
             </button>
             <button onClick={() => navigate('/constraints')} className="px-8 py-4 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition">Annuler</button>

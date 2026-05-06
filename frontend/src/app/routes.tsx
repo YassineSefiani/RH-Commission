@@ -2,6 +2,7 @@ import { createBrowserRouter, redirect } from "react-router";
 import Login from "./pages/Login";
 import DashboardPage from "./pages/DashboardPage";
 import ConstraintsPage from "./pages/ConstraintsPage";
+import ConstraintsHistoryPage from "./pages/ConstraintsHistoryPage"; // Importation de la nouvelle page
 import CalculationPage from "./pages/CalculationPage";
 import BrandCalculationPage from "./pages/BrandCalculationPage";
 import HistoryPage from "./pages/HistoryPage";
@@ -13,20 +14,16 @@ import Layout from "./components/Layout";
 
 /**
  * Loader pour vérifier l'authentification et les permissions par rôle
- * Ajout du type string[] pour corriger l'erreur TS
  */
 const requireAuth = (allowedRoles: string[] = []) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated');
   const authToken = localStorage.getItem('authToken');
   const userRole = localStorage.getItem('userRole'); 
 
-  // 1. Vérification de l'authentification de base
   if (!isAuthenticated || !authToken) {
     return redirect('/');
   }
 
-  // 2. Vérification des permissions
-  // On vérifie que userRole n'est pas null avant d'utiliser .includes()
   if (allowedRoles.length > 0) {
     if (!userRole || !allowedRoles.includes(userRole)) {
       return redirect('/dashboard');
@@ -54,6 +51,12 @@ export const router = createBrowserRouter([
   {
     path: "/constraints/new",
     element: <Layout><NewConstraintPage /></Layout>,
+    loader: () => requireAuth(['ADMIN', 'ADV']),
+  },
+  // Nouvelle route pour l'historique d'une contrainte spécifique
+  {
+    path: "/constraints/history/:id",
+    element: <Layout><ConstraintsHistoryPage /></Layout>,
     loader: () => requireAuth(['ADMIN', 'ADV']),
   },
   {

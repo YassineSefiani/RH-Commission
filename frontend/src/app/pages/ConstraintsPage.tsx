@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, History } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useConstraints, Constraint } from '../context/ConstraintsContext';
+import { useConstraints } from '../context/ConstraintsContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +17,6 @@ export default function ConstraintsPage() {
   const { constraints, deleteConstraint, toggleConstraint } = useConstraints();
 
   const [searchTerm, setSearchTerm] = useState('');
-  // Changement du filtre Type vers Carte
   const [filterCarte, setFilterCarte] = useState<string>('all');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
@@ -45,7 +44,6 @@ export default function ConstraintsPage() {
   const filteredConstraints = constraints.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           c.condition.toLowerCase().includes(searchTerm.toLowerCase());
-    // Filtrage par carte au lieu du type
     const matchesCarte = filterCarte === 'all' || c.carte === filterCarte;
     return matchesSearch && matchesCarte;
   });
@@ -60,7 +58,7 @@ export default function ConstraintsPage() {
         </div>
         <button
           onClick={() => navigate('/constraints/new')}
-          className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition"
+          className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition shadow-sm"
           style={{ backgroundColor: '#f7a800' }}
         >
           <Plus className="w-5 h-5" />
@@ -78,14 +76,13 @@ export default function ConstraintsPage() {
               placeholder="Rechercher une règle ou une condition..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
             />
           </div>
-          {/* Sélecteur par Carte */}
           <select
             value={filterCarte}
             onChange={(e) => setFilterCarte(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white transition-all"
           >
             <option value="all">Toutes les Cartes</option>
             <option value="Coca Cola">Coca Cola</option>
@@ -101,19 +98,19 @@ export default function ConstraintsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Nom</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Carte</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Valeur</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Condition</th>
-                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Statut</th>
-                <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Nom</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Carte</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Valeur</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Condition</th>
+                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
+                <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredConstraints.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500">
-                    Aucune règle trouvée pour cette carte
+                    Aucune règle trouvée.
                   </td>
                 </tr>
               ) : (
@@ -133,7 +130,9 @@ export default function ConstraintsPage() {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <span className="text-sm text-gray-600">{constraint.condition}</span>
+                      <span className="text-sm text-gray-600 line-clamp-1" title={constraint.condition}>
+                        {constraint.condition}
+                      </span>
                     </td>
                     <td className="py-4 px-6 text-center">
                       <button
@@ -150,17 +149,29 @@ export default function ConstraintsPage() {
                       </button>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
+                        {/* Bouton Historique */}
+                        <button
+                          onClick={() => navigate(`/constraints/history/${constraint.id}`)}
+                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                          title="Voir l'historique"
+                        >
+                          <History className="w-4 h-4" />
+                        </button>
+                        
+                        {/* Bouton Modifier */}
                         <button
                           onClick={() => navigate('/constraints/new', { state: { constraint } })}
-                          className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition"
+                          className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
                           title="Modifier"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
+
+                        {/* Bouton Supprimer */}
                         <button
                           onClick={() => handleDelete(constraint.id)}
-                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                           title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -177,18 +188,18 @@ export default function ConstraintsPage() {
 
       {/* Dialog de confirmation de suppression */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer la règle</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer cette règle de commission ? Cette action est irréversible et pourrait affecter les calculs futurs.
+              Êtes-vous sûr de vouloir supprimer cette règle de commission ? Cette action est irréversible et pourrait affecter les calculs de commissions en cours.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex justify-end gap-3 p-4">
-            <AlertDialogCancel className="rounded-lg">Annuler</AlertDialogCancel>
+          <div className="flex justify-end gap-3 mt-4">
+            <AlertDialogCancel className="rounded-lg border-gray-200">Annuler</AlertDialogCancel>
             <AlertDialogAction 
                 onClick={confirmDelete} 
-                className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2"
+                className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 transition-colors"
             >
               Confirmer la suppression
             </AlertDialogAction>
