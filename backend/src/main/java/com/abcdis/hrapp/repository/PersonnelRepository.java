@@ -33,4 +33,5 @@ public interface PersonnelRepository extends JpaRepository<Personnel, Long> {
     
     // Vérifier si un matricule existe déjà
     boolean existsByMatricule(String matricule);
+    List<Personnel> findByCarteAndActifTrue(String carte);
 }

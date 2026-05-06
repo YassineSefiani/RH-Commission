@@ -1,17 +1,9 @@
 import { useState, useEffect } from 'react';
 import { usePersonnel } from '../context/PersonnelContext';
+import { Personnel } from '../services/personnelApi';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -49,10 +41,45 @@ import {
   MapPin,
   Briefcase,
   Phone,
-  Calendar,
+  X,
+  ChevronRight,
+  RotateCcw,
 } from 'lucide-react';
 
 const NATURE_CONTRATS = ['CDI', 'Int'];
+
+function getInitials(prenom: string, nom: string) {
+  return `${prenom?.[0] ?? ''}${nom?.[0] ?? ''}`.toUpperCase();
+}
+
+function getCarteColor(carte?: string) {
+  if (!carte) return 'bg-gray-400';
+  if (carte.toLowerCase().includes('coca')) return 'bg-red-500';
+  if (carte.toLowerCase().includes('magnum') || carte.toLowerCase().includes('wall')) return 'bg-blue-600';
+  if (carte.toLowerCase().includes('ferrero')) return 'bg-amber-500';
+  return 'bg-gray-500';
+}
+
+function getCarteBorderColor(carte?: string) {
+  if (!carte) return 'border-gray-200';
+  if (carte.toLowerCase().includes('coca')) return 'hover:border-red-300';
+  if (carte.toLowerCase().includes('magnum') || carte.toLowerCase().includes('wall')) return 'hover:border-blue-300';
+  if (carte.toLowerCase().includes('ferrero')) return 'hover:border-amber-300';
+  return 'hover:border-gray-300';
+}
+
+const emptyForm = {
+  matricule: '',
+  nom: '',
+  prenom: '',
+  carte: '',
+  fonction: '',
+  role: '',
+  numero: '',
+  natureContrat: 'CDI',
+  ville: '',
+  actif: true,
+};
 
 export default function PersonnelPage() {
   const {
@@ -71,7 +98,8 @@ export default function PersonnelPage() {
     resetFilter,
   } = usePersonnel();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<Personnel | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
@@ -81,79 +109,45 @@ export default function PersonnelPage() {
   const [villeFilter, setVilleFilter] = useState('');
   const [availableCartes, setAvailableCartes] = useState<string[]>([]);
   const [availableVilles, setAvailableVilles] = useState<string[]>([]);
-  const [formData, setFormData] = useState({
-    matricule: '',
-    nom: '',
-    prenom: '',
-    carte: '',
-    fonction: '',
-    role: '',
-    numero: '',
-    natureContrat: 'CDI',
-    ville: '',
-    actif: true,
-  });
+  const [formData, setFormData] = useState({ ...emptyForm });
 
-  // Accumuler toutes les cartes et villes jamais rencontrées
   useEffect(() => {
     setAvailableCartes(prev => {
-      const newCartes = personnel
-        .map(p => p.carte)
-        .filter(Boolean) as string[];
-      const allCartes = new Set([...prev, ...newCartes]);
-      return Array.from(allCartes).sort();
+      const next = new Set([...prev, ...personnel.map(p => p.carte).filter(Boolean) as string[]]);
+      return Array.from(next).sort();
     });
-    
     setAvailableVilles(prev => {
-      const newVilles = personnel
-        .map(p => p.ville)
-        .filter(Boolean) as string[];
-      const allVilles = new Set([...prev, ...newVilles]);
-      return Array.from(allVilles).sort();
+      const next = new Set([...prev, ...personnel.map(p => p.ville).filter(Boolean) as string[]]);
+      return Array.from(next).sort();
     });
+    // Sync selected person if updated
+    if (selectedPerson) {
+      const updated = personnel.find(p => p.id === selectedPerson.id);
+      if (updated) setSelectedPerson(updated);
+    }
   }, [personnel]);
 
-  // Liste des villes/cartes pour les listes originales (utilisées pour options uniquement)
-  const villes = Array.from(new Set(personnel.map(p => p.ville).filter(Boolean)));
-
-  const cartes = Array.from(new Set(personnel.map(p => p.carte).filter(Boolean)));
-  
-  const handleOpenDialog = (person?: typeof personnel[0]) => {
-    if (person) {
-      setEditingId(person.id);
-      setFormData({
-        matricule: person.matricule,
-        nom: person.nom,
-        prenom: person.prenom,
-        carte: person.carte || '',
-        fonction: person.fonction || '',
-        role: person.role || '',
-        numero: person.numero || '',
-        natureContrat: person.natureContrat,
-        ville: person.ville || '',
-        actif: person.actif,
-      });
-    } else {
-      setEditingId(null);
-      setFormData({
-        matricule: '',
-        nom: '',
-        prenom: '',
-        carte: '',
-        fonction: '',
-        role: '',
-        numero: '',
-        natureContrat: 'CDI',
-        ville: '',
-        actif: true,
-      });
-    }
-    setIsDialogOpen(true);
+  const openAdd = () => {
+    setEditingId(null);
+    setFormData({ ...emptyForm });
+    setIsFormOpen(true);
   };
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingId(null);
+  const openEdit = (person: Personnel) => {
+    setEditingId(person.id);
+    setFormData({
+      matricule: person.matricule,
+      nom: person.nom,
+      prenom: person.prenom,
+      carte: person.carte || '',
+      fonction: person.fonction || '',
+      role: person.role || '',
+      numero: person.numero || '',
+      natureContrat: person.natureContrat,
+      ville: person.ville || '',
+      actif: person.actif,
+    });
+    setIsFormOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,13 +158,13 @@ export default function PersonnelPage() {
       } else {
         await addPersonnel(formData);
       }
-      handleCloseDialog();
-    } catch (error) {
-      // Error handled by context
+      setIsFormOpen(false);
+    } catch {
+      // handled by context
     }
   };
 
-  const handleDelete = (id: string) => {
+  const askDelete = (id: string) => {
     setIdToDelete(id);
     setDeleteConfirmOpen(true);
   };
@@ -179,8 +173,9 @@ export default function PersonnelPage() {
     if (idToDelete) {
       try {
         await deletePersonnel(idToDelete);
-      } catch (error) {
-        // Error handled by context
+        if (selectedPerson?.id === idToDelete) setSelectedPerson(null);
+      } catch {
+        // handled by context
       }
     }
     setDeleteConfirmOpen(false);
@@ -188,320 +183,272 @@ export default function PersonnelPage() {
   };
 
   const handleSearch = () => {
-    if (searchTerm.trim()) {
-      searchByNom(searchTerm);
-    } else {
-      resetFilter();
-    }
+    if (searchTerm.trim()) searchByNom(searchTerm);
+    else resetFilter();
   };
 
   const handleContractChange = (value: string) => {
-    if (value === 'all') {
-      resetFilter();
-      setContractFilter('');
-    } else {
-      setContractFilter(value);
-      setCarteFilter('');
-      setVilleFilter('');
-      filterByContrat(value);
-    }
+    if (value === 'all') { resetFilter(); setContractFilter(''); }
+    else { setContractFilter(value); setCarteFilter(''); setVilleFilter(''); filterByContrat(value); }
   };
 
   const handleCarteChange = (value: string) => {
-    if (value === 'all') {
-      resetFilter();
-      setCarteFilter('');
-    } else {
-      setCarteFilter(value);
-      setContractFilter('');
-      setVilleFilter('');
-      filterByCarte(value);
-    }
+    if (value === 'all') { resetFilter(); setCarteFilter(''); }
+    else { setCarteFilter(value); setContractFilter(''); setVilleFilter(''); filterByCarte(value); }
   };
 
   const handleVilleChange = (value: string) => {
-    if (value === 'all') {
-      resetFilter();
-      setVilleFilter('');
-    } else {
-      setVilleFilter(value);
-      setContractFilter('');
-      setCarteFilter('');
-      filterByVille(value);
-    }
+    if (value === 'all') { resetFilter(); setVilleFilter(''); }
+    else { setVilleFilter(value); setContractFilter(''); setCarteFilter(''); filterByVille(value); }
   };
 
-  const getContractBadgeVariant = (contrat: string) => {
-    switch (contrat) {
-      case 'CDI':
-        return 'default';
-      case 'CDD':
-        return 'secondary';
-      case 'Int':
-        return 'outline';
-      default:
-        return 'outline';
-    }
+  const handleReset = () => {
+    setSearchTerm('');
+    setContractFilter('');
+    setCarteFilter('');
+    setVilleFilter('');
+    resetFilter();
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header avec statistiques */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="p-4 md:p-6 space-y-6">
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion du Personnel</h1>
-          <p className="text-gray-600 mt-1">Gérez les employés de l'entreprise</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gestion du Personnel</h1>
+          <p className="text-gray-500 text-sm mt-1">Gérez et consultez les profils de l'équipe</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-[#f7a800] hover:bg-[#e09800]">
-          <UserPlus className="w-4 h-4 mr-2" />
-          Ajouter un Personnel
-        </Button>
+        <button
+          onClick={openAdd}
+          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Ajouter un profil
+        </button>
       </div>
 
-      {/* Statistiques */}
+      {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Personnel</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <Users className="w-5 h-5 text-blue-600" />
             </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                <UserCheck className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Actifs</p>
-                <p className="text-2xl font-bold text-green-600">{stats.actifs}</p>
-              </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-semibold">Total</p>
+              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
             </div>
-          </Card>
-
-          <Card className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <UserX className="w-6 h-6 text-gray-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Inactifs</p>
-                <p className="text-2xl font-bold text-gray-600">{stats.inactifs}</p>
-              </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+              <UserCheck className="w-5 h-5 text-green-600" />
             </div>
-          </Card>
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-semibold">Actifs</p>
+              <p className="text-xl font-bold text-green-600">{stats.actifs}</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              <UserX className="w-5 h-5 text-gray-500" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-semibold">Inactifs</p>
+              <p className="text-xl font-bold text-gray-500">{stats.inactifs}</p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Barre de recherche et filtres */}
-      <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="flex-1 flex gap-2">
+      {/* Filters */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex gap-2 flex-1 min-w-[200px]">
             <Input
               placeholder="Rechercher par nom..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="flex-1"
             />
-            <Button onClick={handleSearch} variant="outline">
-              <Search className="w-4 h-4" />
-            </Button>
+            <button onClick={handleSearch} className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <Search className="w-4 h-4 text-gray-600" />
+            </button>
           </div>
-
-          <div className="flex gap-2">
-            <Select value={contractFilter} onValueChange={handleContractChange}>
+          <Select value={contractFilter} onValueChange={handleContractChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Contrat" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              {NATURE_CONTRATS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {availableCartes.length > 0 && (
+            <Select value={carteFilter} onValueChange={handleCarteChange}>
               <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Type contrat" />
+                <SelectValue placeholder="Carte" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les contrats</SelectItem>
-                {NATURE_CONTRATS.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">Toutes</SelectItem>
+                {availableCartes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
-            
-            {availableCartes.length > 0 && (
-              <Select value={carteFilter} onValueChange={handleCarteChange}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Carte" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les cartes</SelectItem>
-                  {availableCartes.map((carte) => (
-                    <SelectItem key={carte} value={carte}>
-                      {carte}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {availableVilles.length > 0 && (
-              <Select value={villeFilter} onValueChange={handleVilleChange}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Ville" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes les villes</SelectItem>
-                  {availableVilles.map((ville) => (
-                    <SelectItem key={ville} value={ville}>
-                      {ville}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <Button onClick={showActifsOnly} variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Actifs
-            </Button>
-
-            <Button onClick={resetFilter} variant="outline">
-              Réinitialiser
-            </Button>
-          </div>
+          )}
+          {availableVilles.length > 0 && (
+            <Select value={villeFilter} onValueChange={handleVilleChange}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Ville" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                {availableVilles.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <button onClick={showActifsOnly} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <Filter className="w-4 h-4" /> Actifs
+          </button>
+          <button onClick={handleReset} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+            <RotateCcw className="w-4 h-4" /> Réinitialiser
+          </button>
         </div>
-      </Card>
+      </div>
 
-      {/* Table du personnel */}
-      <Card>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Matricule</TableHead>
-                <TableHead>Nom Complet</TableHead>
-                <TableHead>Carte</TableHead>
-                <TableHead>Contrat</TableHead>
-                <TableHead>Fonction</TableHead>
-                <TableHead>Rôle</TableHead>
-                <TableHead>Téléphone</TableHead>
-                <TableHead>Ville</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                    Chargement...
-                  </TableCell>
-                </TableRow>
-              ) : personnel.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                    Aucun personnel trouvé
-                  </TableCell>
-                </TableRow>
-              ) : (
-                personnel.map((person) => (
-                  <TableRow key={person.id}>
-                    <TableCell className="font-medium">{person.matricule}</TableCell>
-                    <TableCell>
-                      <p className="font-medium">{person.prenom} {person.nom}</p>
-                    </TableCell>
-                    <TableCell>
-                      {person.carte && (
-                        <Badge variant="outline">
-                          {person.carte}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getContractBadgeVariant(person.natureContrat)}>
-                        {person.natureContrat}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {person.fonction && (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Briefcase className="w-3 h-3 text-gray-400" />
-                          {person.fonction}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {person.role && (
-                        <span className="text-sm">{person.role}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {person.numero && (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Phone className="w-3 h-3 text-gray-400" />
-                          {person.numero}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {person.ville && (
-                        <div className="flex items-center gap-1 text-sm">
-                          <MapPin className="w-3 h-3 text-gray-400" />
-                          {person.ville}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={person.actif ? 'default' : 'secondary'}>
-                        {person.actif ? 'Actif' : 'Inactif'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => togglePersonnel(person.id)}
-                        >
-                          {person.actif ? (
-                            <UserX className="w-4 h-4" />
-                          ) : (
-                            <UserCheck className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenDialog(person)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(person.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+      {/* Cards Grid */}
+      {isLoading ? (
+        <div className="text-center py-16 text-gray-400">Chargement...</div>
+      ) : personnel.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">Aucun personnel trouvé</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {personnel.map(person => (
+            <div
+              key={person.id}
+              onClick={() => setSelectedPerson(person)}
+              className={`bg-white rounded-xl border border-gray-100 shadow-sm p-5 cursor-pointer transition-all hover:shadow-md ${getCarteBorderColor(person.carte)} hover:border hover:-translate-y-0.5`}
+            >
+              {/* Top: avatar + name + status */}
+              <div className="flex items-start gap-3 mb-4">
+                <div className={`w-11 h-11 rounded-full ${getCarteColor(person.carte)} flex items-center justify-center text-white font-bold text-base shrink-0`}>
+                  {getInitials(person.prenom, person.nom)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-900 truncate">{person.prenom} {person.nom}</p>
+                  <p className="text-xs text-gray-400 font-mono">{person.matricule}</p>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${person.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {person.actif ? 'Actif' : 'Inactif'}
+                </span>
+              </div>
+
+              {/* Role */}
+              {person.role && (
+                <p className="text-sm text-gray-600 font-medium mb-3 truncate">{person.role}</p>
               )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
 
-      {/* Dialog de confirmation de suppression */}
+              {/* Badges */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {person.carte && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-100 font-medium">
+                    {person.carte}
+                  </span>
+                )}
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                  {person.natureContrat}
+                </span>
+              </div>
+
+              {/* Footer: ville + chevron */}
+              <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
+                {person.ville ? (
+                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{person.ville}</span>
+                ) : <span />}
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Detail Modal ─────────────────────────────────────────────────────── */}
+      <Dialog open={!!selectedPerson} onOpenChange={(open) => !open && setSelectedPerson(null)}>
+        <DialogContent className="max-w-md">
+          {selectedPerson && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-full ${getCarteColor(selectedPerson.carte)} flex items-center justify-center text-white font-bold text-xl`}>
+                    {getInitials(selectedPerson.prenom, selectedPerson.nom)}
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl">{selectedPerson.prenom} {selectedPerson.nom}</DialogTitle>
+                    <p className="text-sm text-gray-500 font-mono">{selectedPerson.matricule}</p>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="grid grid-cols-2 gap-3 py-4">
+                {[
+                  { icon: <Briefcase className="w-4 h-4" />, label: 'Rôle', value: selectedPerson.role },
+                  { icon: <Briefcase className="w-4 h-4" />, label: 'Fonction', value: selectedPerson.fonction },
+                  { icon: null, label: 'Carte', value: selectedPerson.carte },
+                  { icon: null, label: 'Contrat', value: selectedPerson.natureContrat },
+                  { icon: <MapPin className="w-4 h-4" />, label: 'Ville', value: selectedPerson.ville },
+                  { icon: <Phone className="w-4 h-4" />, label: 'Téléphone', value: selectedPerson.numero },
+                ].map(({ icon, label, value }) => value ? (
+                  <div key={label} className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 uppercase font-semibold mb-1">{label}</p>
+                    <p className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
+                      {icon && <span className="text-gray-400">{icon}</span>}
+                      {value}
+                    </p>
+                  </div>
+                ) : null)}
+                <div className="bg-gray-50 rounded-lg p-3 col-span-2">
+                  <p className="text-xs text-gray-400 uppercase font-semibold mb-1">Statut</p>
+                  <span className={`text-sm font-semibold ${selectedPerson.actif ? 'text-green-600' : 'text-gray-500'}`}>
+                    {selectedPerson.actif ? 'Actif' : 'Inactif'}
+                  </span>
+                </div>
+              </div>
+
+              <DialogFooter className="flex gap-2 sm:justify-between">
+                <button
+                  onClick={() => togglePersonnel(selectedPerson.id)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  {selectedPerson.actif ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                  {selectedPerson.actif ? 'Désactiver' : 'Activer'}
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { openEdit(selectedPerson); setSelectedPerson(null); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" /> Modifier
+                  </button>
+                  <button
+                    onClick={() => { askDelete(selectedPerson.id); setSelectedPerson(null); }}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" /> Supprimer
+                  </button>
+                </div>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Confirm ────────────────────────────────────────────────────── */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer le personnel</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer ce profil ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer ce personnel ? Cette action ne peut pas être annulée.
+              Cette action est irréversible. Le profil sera définitivement supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <DialogFooter>
@@ -513,80 +460,54 @@ export default function PersonnelPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog d'ajout/édition */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* ── Add / Edit Form ───────────────────────────────────────────────────── */}
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingId ? 'Modifier le Personnel' : 'Ajouter un Personnel'}
-            </DialogTitle>
-            <DialogDescription>
-              Remplissez les informations du personnel
-            </DialogDescription>
+            <DialogTitle>{editingId ? 'Modifier le profil' : 'Ajouter un profil'}</DialogTitle>
+            <DialogDescription>Remplissez les informations du personnel</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
               <div className="space-y-2">
                 <Label htmlFor="matricule">Matricule *</Label>
-                <Input
-                  id="matricule"
-                  value={formData.matricule}
+                <Input id="matricule" value={formData.matricule}
                   onChange={(e) => setFormData({ ...formData, matricule: e.target.value })}
-                  required
-                  placeholder="EMP001"
-                />
+                  required placeholder="P001" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="natureContrat">Type de Contrat *</Label>
-                <Select
-                  value={formData.natureContrat}
-                  onValueChange={(value) => setFormData({ ...formData, natureContrat: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={formData.natureContrat}
+                  onValueChange={(v) => setFormData({ ...formData, natureContrat: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {NATURE_CONTRATS.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
+                    {NATURE_CONTRATS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="nom">Nom *</Label>
-                <Input
-                  id="nom"
-                  value={formData.nom}
+                <Input id="nom" value={formData.nom}
                   onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                  required
-                  placeholder="Dupont"
-                />
+                  required placeholder="Dupont" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="prenom">Prénom *</Label>
-                <Input
-                  id="prenom"
-                  value={formData.prenom}
+                <Input id="prenom" value={formData.prenom}
                   onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
-                  required
-                  placeholder="Jean"
-                />
+                  required placeholder="Jean" />
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="carte">Carte</Label>
-                <Select
-                  value={formData.carte}
-                  onValueChange={(value) => setFormData({ ...formData, carte: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir une carte" />
-                  </SelectTrigger>
+                <Select value={formData.carte}
+                  onValueChange={(v) => setFormData({ ...formData, carte: v })}>
+                  <SelectTrigger><SelectValue placeholder="Choisir une carte" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Coca Cola">Coca Cola</SelectItem>
                     <SelectItem value="Magnum">Magnum</SelectItem>
@@ -594,54 +515,39 @@ export default function PersonnelPage() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="fonction">Fonction</Label>
-                <Input
-                  id="fonction"
-                  value={formData.fonction}
+                <Input id="fonction" value={formData.fonction}
                   onChange={(e) => setFormData({ ...formData, fonction: e.target.value })}
-                  placeholder="Commercial Senior"
-                />
+                  placeholder="Commercial Senior" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="role">Rôle</Label>
-                <Input
-                  id="role"
-                  value={formData.role}
+                <Input id="role" value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  placeholder="Vendeur"
-                />
+                  placeholder="Vendeur" />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="numero">Téléphone</Label>
-                <Input
-                  id="numero"
-                  type="tel"
-                  value={formData.numero}
+                <Input id="numero" type="tel" value={formData.numero}
                   onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                  placeholder="0612345678"
-                />
+                  placeholder="0612345678" />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="ville">Ville</Label>
-                <Input
-                  id="ville"
-                  value={formData.ville}
+                <Input id="ville" value={formData.ville}
                   onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
-                  placeholder="Paris"
-                />
+                  placeholder="Casablanca" />
               </div>
-
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Annuler
-              </Button>
-              <Button type="submit" className="bg-[#f7a800] hover:bg-[#e09800]">
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Annuler</Button>
+              <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
                 {editingId ? 'Mettre à jour' : 'Ajouter'}
               </Button>
             </DialogFooter>

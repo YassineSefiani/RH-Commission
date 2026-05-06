@@ -11,7 +11,7 @@ const brandCards = [
   { 
     id: 'coca-cola', 
     name: 'Coca Cola', 
-    image: cocaBg, 
+    image:  cocaBg, 
     description: 'Gestion des livraisons et commissions pour la gamme Coca-Cola.'
   },
   { 
