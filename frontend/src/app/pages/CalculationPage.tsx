@@ -5,7 +5,7 @@ import { FileSpreadsheet, ExternalLink } from 'lucide-react';
 // Import des images selon tes chemins
 import cocaBg from '../assets/coca cola.png';
 import ferreroBg from '../assets/ferrero rocher.png';
-import magnumBg from '../assets/magnum.png';
+import wallsBg from '../assets/walls.jpg';
 
 const brandCards = [
   { 
@@ -15,16 +15,16 @@ const brandCards = [
     description: 'Gestion des livraisons et commissions pour la gamme Coca-Cola.'
   },
   { 
+    id: 'walls', 
+    name: 'Wall\'s', 
+    image: wallsBg, 
+    description: 'Calcul des commissions saisonnières et volume Wall\'s.'
+  },
+  { 
     id: 'ferrero-rocher', 
     name: 'Ferrero Rocher', 
     image: ferreroBg, 
     description: 'Suivi des objectifs et primes pour les produits Ferrero.'
-  },
-  { 
-    id: 'magnum', 
-    name: 'Magnum', 
-    image: magnumBg, 
-    description: 'Calcul des commissions saisonnières et volume Magnum.'
   },
 ];
 

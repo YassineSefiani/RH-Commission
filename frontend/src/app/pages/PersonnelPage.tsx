@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { usePersonnel } from '../context/PersonnelContext';
 import { Personnel } from '../services/personnelApi';
+import { usePresence } from '../context/PresenceContext';
+import { useUser } from '../context/UserContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -41,9 +42,9 @@ import {
   MapPin,
   Briefcase,
   Phone,
-  X,
   ChevronRight,
   RotateCcw,
+  Calendar,
 } from 'lucide-react';
 
 const NATURE_CONTRATS = ['CDI', 'Int'];
@@ -81,6 +82,24 @@ const emptyForm = {
   actif: true,
 };
 
+const emptyPresenceForm = {
+  date: new Date().toISOString().split('T')[0],
+  matriculeCamion: '',
+  canal: '',
+  livreur1Id: '',
+  livreur1Matricule: '',
+  livreur1Nom: '',
+  livreur1Prenom: '',
+  livreur2Id: '',
+  livreur2Matricule: '',
+  livreur2Nom: '',
+  livreur2Prenom: '',
+  livreur3Id: '',
+  livreur3Matricule: '',
+  livreur3Nom: '',
+  livreur3Prenom: '',
+};
+
 export default function PersonnelPage() {
   const {
     personnel,
@@ -98,11 +117,15 @@ export default function PersonnelPage() {
     resetFilter,
   } = usePersonnel();
 
+  const { user } = useUser();
+  const { addPresenceRecord } = usePresence();
+
   const [selectedPerson, setSelectedPerson] = useState<Personnel | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
+  const [isPresenceDialogOpen, setIsPresenceDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [contractFilter, setContractFilter] = useState('');
   const [carteFilter, setCarteFilter] = useState('');
@@ -110,6 +133,7 @@ export default function PersonnelPage() {
   const [availableCartes, setAvailableCartes] = useState<string[]>([]);
   const [availableVilles, setAvailableVilles] = useState<string[]>([]);
   const [formData, setFormData] = useState({ ...emptyForm });
+  const [presenceForm, setPresenceForm] = useState({ ...emptyPresenceForm });
 
   useEffect(() => {
     setAvailableCartes(prev => {
@@ -120,7 +144,6 @@ export default function PersonnelPage() {
       const next = new Set([...prev, ...personnel.map(p => p.ville).filter(Boolean) as string[]]);
       return Array.from(next).sort();
     });
-    // Sync selected person if updated
     if (selectedPerson) {
       const updated = personnel.find(p => p.id === selectedPerson.id);
       if (updated) setSelectedPerson(updated);
@@ -182,6 +205,50 @@ export default function PersonnelPage() {
     setIdToDelete(null);
   };
 
+  const handlePresenceSelect = (field: 'livreur1' | 'livreur2' | 'livreur3', id: string) => {
+    if (id === 'none') {
+      setPresenceForm(prev => ({
+        ...prev,
+        [`${field}Id`]: '',
+        [`${field}Matricule`]: '',
+        [`${field}Nom`]: '',
+        [`${field}Prenom`]: '',
+      }));
+      return;
+    }
+    const person = personnel.find(p => p.id === id);
+    setPresenceForm(prev => ({
+      ...prev,
+      [`${field}Id`]: id,
+      [`${field}Matricule`]: person?.matricule || '',
+      [`${field}Nom`]: person?.nom || '',
+      [`${field}Prenom`]: person?.prenom || '',
+    }));
+  };
+
+  const handlePresenceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await addPresenceRecord({
+      date: presenceForm.date,
+      matriculeCamion: presenceForm.matriculeCamion,
+      canal: presenceForm.canal,
+      livreur1Id: presenceForm.livreur1Id,
+      livreur1Matricule: presenceForm.livreur1Matricule,
+      livreur1Nom: presenceForm.livreur1Nom,
+      livreur1Prenom: presenceForm.livreur1Prenom,
+      livreur2Id: presenceForm.livreur2Id,
+      livreur2Matricule: presenceForm.livreur2Matricule,
+      livreur2Nom: presenceForm.livreur2Nom,
+      livreur2Prenom: presenceForm.livreur2Prenom,
+      livreur3Id: presenceForm.livreur3Id,
+      livreur3Matricule: presenceForm.livreur3Matricule,
+      livreur3Nom: presenceForm.livreur3Nom,
+      livreur3Prenom: presenceForm.livreur3Prenom,
+    });
+    setIsPresenceDialogOpen(false);
+    setPresenceForm({ ...emptyPresenceForm });
+  };
+
   const handleSearch = () => {
     if (searchTerm.trim()) searchByNom(searchTerm);
     else resetFilter();
@@ -219,13 +286,24 @@ export default function PersonnelPage() {
           <h1 className="text-2xl font-bold text-gray-900">Gestion du Personnel</h1>
           <p className="text-gray-500 text-sm mt-1">Gérez et consultez les profils de l'équipe</p>
         </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          Ajouter un profil
-        </button>
+        <div className="flex flex-wrap gap-2 justify-end">
+          {user?.superRole === 'DISPATCHER' && (
+            <button
+              onClick={() => setIsPresenceDialogOpen(true)}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <Calendar className="w-4 h-4" />
+              Fiche de Présence
+            </button>
+          )}
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            Ajouter un profil
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -327,9 +405,8 @@ export default function PersonnelPage() {
             <div
               key={person.id}
               onClick={() => setSelectedPerson(person)}
-              className={`bg-white rounded-xl border border-gray-100 shadow-sm p-5 cursor-pointer transition-all hover:shadow-md ${getCarteBorderColor(person.carte)} hover:border hover:-translate-y-0.5`}
+              className={`bg-white rounded-xl border border-gray-100 shadow-sm p-5 cursor-pointer transition-all hover:shadow-md ${getCarteBorderColor(person.carte)} hover:-translate-y-0.5`}
             >
-              {/* Top: avatar + name + status */}
               <div className="flex items-start gap-3 mb-4">
                 <div className={`w-11 h-11 rounded-full ${getCarteColor(person.carte)} flex items-center justify-center text-white font-bold text-base shrink-0`}>
                   {getInitials(person.prenom, person.nom)}
@@ -343,12 +420,10 @@ export default function PersonnelPage() {
                 </span>
               </div>
 
-              {/* Role */}
               {person.role && (
                 <p className="text-sm text-gray-600 font-medium mb-3 truncate">{person.role}</p>
               )}
 
-              {/* Badges */}
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {person.carte && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-100 font-medium">
@@ -360,7 +435,6 @@ export default function PersonnelPage() {
                 </span>
               </div>
 
-              {/* Footer: ville + chevron */}
               <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
                 {person.ville ? (
                   <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{person.ville}</span>
@@ -460,6 +534,80 @@ export default function PersonnelPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ── Fiche de Présence (DISPATCHER) ───────────────────────────────────── */}
+      <Dialog open={isPresenceDialogOpen} onOpenChange={setIsPresenceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Fiche de Présence</DialogTitle>
+            <DialogDescription>
+              Enregistrez la présence des livreurs pour la tournée du jour.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handlePresenceSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input value={presenceForm.date} readOnly />
+              </div>
+              <div className="space-y-2">
+                <Label>Matricule du Camion</Label>
+                <Input
+                  value={presenceForm.matriculeCamion}
+                  onChange={(e) => setPresenceForm({ ...presenceForm, matriculeCamion: e.target.value })}
+                  placeholder="EX: TRK123"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Canal</Label>
+                <Input
+                  value={presenceForm.canal}
+                  onChange={(e) => setPresenceForm({ ...presenceForm, canal: e.target.value })}
+                  placeholder="Ex: Retail"
+                />
+              </div>
+            </div>
+
+            {(['livreur1', 'livreur2', 'livreur3'] as const).map((field, index) => {
+              const label = index === 0 ? 'Livreur' : `Aide Livreur ${index}`;
+              const selectedId = presenceForm[`${field}Id`];
+              const selectedMatricule = presenceForm[`${field}Matricule`];
+              return (
+                <div key={field} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>{label}</Label>
+                    <Select value={selectedId} onValueChange={(v) => handlePresenceSelect(field, v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Sélectionner ${label}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucun</SelectItem>
+                        {personnel.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.prenom} {p.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Matricule</Label>
+                    <Input value={selectedMatricule} readOnly placeholder="Auto" />
+                  </div>
+                </div>
+              );
+            })}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsPresenceDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Add / Edit Form ───────────────────────────────────────────────────── */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -470,16 +618,14 @@ export default function PersonnelPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
               <div className="space-y-2">
-                <Label htmlFor="matricule">Matricule *</Label>
-                <Input id="matricule" value={formData.matricule}
+                <Label>Matricule *</Label>
+                <Input value={formData.matricule}
                   onChange={(e) => setFormData({ ...formData, matricule: e.target.value })}
                   required placeholder="P001" />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="natureContrat">Type de Contrat *</Label>
+                <Label>Type de Contrat *</Label>
                 <Select value={formData.natureContrat}
                   onValueChange={(v) => setFormData({ ...formData, natureContrat: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -488,58 +634,51 @@ export default function PersonnelPage() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="nom">Nom *</Label>
-                <Input id="nom" value={formData.nom}
+                <Label>Nom *</Label>
+                <Input value={formData.nom}
                   onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                   required placeholder="Dupont" />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="prenom">Prénom *</Label>
-                <Input id="prenom" value={formData.prenom}
+                <Label>Prénom *</Label>
+                <Input value={formData.prenom}
                   onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
                   required placeholder="Jean" />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="carte">Carte</Label>
+                <Label>Carte</Label>
                 <Select value={formData.carte}
                   onValueChange={(v) => setFormData({ ...formData, carte: v })}>
                   <SelectTrigger><SelectValue placeholder="Choisir une carte" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Coca Cola">Coca Cola</SelectItem>
-                    <SelectItem value="Magnum">Magnum</SelectItem>
+                    <SelectItem value="Wall's">Wall's</SelectItem>
                     <SelectItem value="Ferrero Rocher">Ferrero Rocher</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="fonction">Fonction</Label>
-                <Input id="fonction" value={formData.fonction}
+                <Label>Fonction</Label>
+                <Input value={formData.fonction}
                   onChange={(e) => setFormData({ ...formData, fonction: e.target.value })}
                   placeholder="Commercial Senior" />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="role">Rôle</Label>
-                <Input id="role" value={formData.role}
+                <Label>Rôle</Label>
+                <Input value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   placeholder="Vendeur" />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="numero">Téléphone</Label>
-                <Input id="numero" type="tel" value={formData.numero}
+                <Label>Téléphone</Label>
+                <Input type="tel" value={formData.numero}
                   onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
                   placeholder="0612345678" />
               </div>
-
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ville">Ville</Label>
-                <Input id="ville" value={formData.ville}
+                <Label>Ville</Label>
+                <Input value={formData.ville}
                   onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
                   placeholder="Casablanca" />
               </div>

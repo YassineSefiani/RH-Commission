@@ -2,25 +2,34 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { LogIn } from 'lucide-react';
 import logo from '../assets/logo-on-black.png';
+import { useUser, AVAILABLE_USERS } from '../context/UserContext';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
     
-    // Mock authentication - en production, ceci serait géré par un backend
-    if (email && password) {
-      // Simuler une connexion réussie
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', email);
+    const success = await login(email, password);
+    
+    if (success) {
       navigate('/dashboard');
     } else {
-      setError('Veuillez remplir tous les champs');
+      setError('Email ou mot de passe incorrect');
     }
+    setIsLoading(false);
+  };
+
+  const handleQuickLogin = (userEmail: string, userPassword: string) => {
+    setEmail(userEmail);
+    setPassword(userPassword);
   };
 
   return (
@@ -76,16 +85,31 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition"
+              disabled={isLoading}
+              className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
               style={{ backgroundColor: '#f7a800' }}
             >
               <LogIn className="w-5 h-5" />
-              Se connecter
+              {isLoading ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Utilisez n'importe quel email et mot de passe pour tester</p>
+          {/* Quick Login Buttons */}
+          <div className="mt-6 pt-6 border-t">
+            <p className="text-xs text-gray-500 text-center mb-3">Connexion rapide</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {AVAILABLE_USERS.map((user) => (
+                <button
+                  key={user.email}
+                  type="button"
+                  onClick={() => handleQuickLogin(user.email, user.password)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-full border transition-colors hover:bg-gray-50"
+                  style={{ borderColor: '#e5e7eb' }}
+                >
+                  <span className="font-semibold">{user.superRole}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

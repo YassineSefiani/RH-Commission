@@ -17,6 +17,9 @@ public class Constraint {
     
     @Column(nullable = false)
     private String type; // commission, performance_bonus, delivery_bonus, penalty
+
+    @Column(nullable = false)
+    private String carte;
     
     @Column(name = "constraint_value")
     private Double value;

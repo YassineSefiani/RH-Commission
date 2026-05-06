@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { constraintsApi, mapApiConstraintToFrontend, mapFrontendConstraintToApi } from '../services/api';
 import { toast } from 'sonner';
+import { useUser } from '../context/UserContext';
 
 let constraintsInitPromise: Promise<void> | null = null;
 
@@ -8,6 +9,7 @@ export interface Constraint {
   id: string;
   name: string;
   type: 'commission_quantitative' | 'commission_retour' | 'commission_triage';
+  carte: 'Coca Cola' | 'Ferrero Rocher' | "Wall's";
   value: number;
   valueType: 'percentage' | 'fixed';
   condition: string;
@@ -17,169 +19,214 @@ export interface Constraint {
 
 interface ConstraintsContextType {
   constraints: Constraint[];
-  addConstraint: (constraint: Omit<Constraint, 'id'>) => void;
-  updateConstraint: (id: string, constraint: Partial<Constraint>) => void;
-  deleteConstraint: (id: string) => void;
-  toggleConstraint: (id: string) => void;
+  isLoading: boolean;
+  addConstraint: (constraint: Omit<Constraint, 'id'>) => Promise<void>;
+  updateConstraint: (id: string, constraint: Partial<Constraint>) => Promise<void>;
+  deleteConstraint: (id: string) => Promise<void>;
+  toggleConstraint: (id: string) => Promise<void>;
+  loadConstraints: () => Promise<void>;
 }
 
 const ConstraintsContext = createContext<ConstraintsContextType | undefined>(undefined);
 
-const INITIAL_CONSTRAINTS: Constraint[] = [
+const INITIAL_CONSTRAINTS: Omit<Constraint, 'id'>[] = [
+  // ============================================
+  // COCA COLA - COMMISSIONS QUANTITATIVES
+  // ============================================
   {
-    id: '1',
     name: 'Commission Quantitative - Livreur CDI',
     type: 'commission_quantitative',
+    carte: 'Coca Cola',
     value: 18,
     valueType: 'percentage',
     condition: 'Livreur CDI - 0.18 x Volume Reçu',
     active: true,
+    ruleGroups: [{ id: 'rg1', logic: 'AND', rules: [{ id: 'r1', field: 'role', operator: '==', value: 'Livreur' }, { id: 'r2', field: 'contract', operator: '==', value: 'CDI' }] }]
   },
   {
-    id: '2',
     name: 'Commission Quantitative - Livreur GMS CDI',
     type: 'commission_quantitative',
+    carte: 'Coca Cola',
     value: 11,
     valueType: 'percentage',
     condition: 'Livreur GMS CDI - 0.11 x Volume Reçu',
     active: true,
+    ruleGroups: [{ id: 'rg2', logic: 'AND', rules: [{ id: 'r3', field: 'role', operator: '==', value: 'Livreur GMS' }, { id: 'r4', field: 'contract', operator: '==', value: 'CDI' }] }]
   },
   {
-    id: '3',
     name: 'Commission Quantitative - Aide Livreur CDI',
     type: 'commission_quantitative',
+    carte: 'Coca Cola',
     value: 12,
     valueType: 'percentage',
     condition: 'Aide Livreur CDI - 0.12 x Volume Reçu',
     active: true,
+    ruleGroups: [{ id: 'rg3', logic: 'AND', rules: [{ id: 'r5', field: 'role', operator: '==', value: 'Aide Livreur' }, { id: 'r6', field: 'contract', operator: '==', value: 'CDI' }] }]
   },
   {
-    id: '4',
     name: 'Commission Quantitative - Livreur INT',
     type: 'commission_quantitative',
+    carte: 'Coca Cola',
     value: 12,
     valueType: 'percentage',
     condition: 'Livreur INT - 0.12 x Volume Reçu',
     active: true,
+    ruleGroups: [{ id: 'rg4', logic: 'AND', rules: [{ id: 'r7', field: 'role', operator: '==', value: 'Livreur' }, { id: 'r8', field: 'contract', operator: '==', value: 'INT' }] }]
   },
   {
-    id: '5',
     name: 'Commission Quantitative - Livreur GMS INT',
     type: 'commission_quantitative',
+    carte: 'Coca Cola',
     value: 11,
     valueType: 'percentage',
     condition: 'Livreur GMS INT - 0.11 x Volume Reçu',
     active: true,
+    ruleGroups: [{ id: 'rg5', logic: 'AND', rules: [{ id: 'r9', field: 'role', operator: '==', value: 'Livreur GMS' }, { id: 'r10', field: 'contract', operator: '==', value: 'INT' }] }]
   },
   {
-    id: '6',
     name: 'Commission Quantitative - Aide Livreur INT',
     type: 'commission_quantitative',
+    carte: 'Coca Cola',
     value: 8,
     valueType: 'percentage',
     condition: 'Aide Livreur INT - 0.08 x Volume Reçu',
     active: true,
+    ruleGroups: [{ id: 'rg6', logic: 'AND', rules: [{ id: 'r11', field: 'role', operator: '==', value: 'Aide Livreur' }, { id: 'r12', field: 'contract', operator: '==', value: 'INT' }] }]
   },
+
+  // ============================================
+  // COCA COLA - RETOUR & TRIAGE
+  // ============================================
   {
-    id: '7',
     name: 'Commission Retour - Coca Cola',
     type: 'commission_retour',
+    carte: 'Coca Cola',
     value: 250,
     valueType: 'fixed',
-    condition: 'CDI - Livreur/Aide livreur - Taux retour < 1% = 250 DH, 1-2% = 150 DH',
+    condition: 'CDI - Taux retour < 1% = 250 DH, 1-2% = 150 DH',
     active: true,
+    ruleGroups: [{ id: 'rg7', logic: 'AND', rules: [{ id: 'r13', field: 'returns', operator: '<', value: '1' }, { id: 'r14', field: 'contract', operator: '==', value: 'CDI' }] }]
   },
   {
-    id: '8',
     name: 'Commission Triage - Coca Cola',
     type: 'commission_triage',
+    carte: 'Coca Cola',
     value: 200,
     valueType: 'fixed',
-    condition: 'CDI - Livreur/Aide livreur - Au moins 15 jours travaillés - Taux triage > 70% = 200 DH',
+    condition: 'CDI - Taux triage > 70% = 200 DH',
     active: true,
+    ruleGroups: [{ id: 'rg8', logic: 'AND', rules: [{ id: 'r15', field: 'performance', operator: '>', value: '70' }, { id: 'r16', field: 'contract', operator: '==', value: 'CDI' }] }]
   },
+
+  // ============================================
+  // WALL'S - COMMERCIALE & ENCADREMENT
+  // ============================================
+  {
+    name: "Commission Commerciale Wall's - Vendeur",
+    type: 'commission_quantitative',
+    carte: "Wall's",
+    value: 1.5,
+    valueType: 'percentage',
+    condition: "Vendeur CDI - 1.50% du CA réalisé mensuel (sans condition)",
+    active: true,
+    ruleGroups: [{ id: 'rg9', logic: 'AND', rules: [{ id: 'r17', field: 'role', operator: '==', value: 'Vendeur' }] }]
+  },
+  {
+    name: "Commission Encadrement Wall's - Superviseur/Area",
+    type: 'commission_quantitative',
+    carte: "Wall's",
+    value: 1,
+    valueType: 'percentage',
+    condition: "Paliers CA/Target: Retail (0.7-1%), HORECA (0.6%), Area (0.4-0.7%), MT (Fixe 4k-10k)",
+    active: true,
+    ruleGroups: [{ id: 'rg10', logic: 'OR', rules: [{ id: 'r18', field: 'role', operator: '==', value: 'Superviseur' }, { id: 'r19', field: 'role', operator: '==', value: 'Area Manager' }] }]
+  },
+
+  // ============================================
+  // FERRERO - COMMERCIALE & FIXES
+  // ============================================
+  {
+    name: 'Commission Commerciale Ferrero - Vendeur',
+    type: 'commission_quantitative',
+    carte: 'Ferrero Rocher',
+    value: 2,
+    valueType: 'percentage',
+    condition: "Paliers CA/Target: <70% (0%), 70% (1%), 80% (1.5%), 90% (1.8%), >100% (2%)",
+    active: true,
+    ruleGroups: [{ id: 'rg11', logic: 'AND', rules: [{ id: 'r20', field: 'role', operator: '==', value: 'Vendeur' }, { id: 'r21', field: 'performance', operator: '>=', value: '70' }] }]
+  },
+  {
+    name: 'Commission Commerciale Ferrero - Fixes (Gros/Sup/Area)',
+    type: 'commission_quantitative',
+    carte: 'Ferrero Rocher',
+    value: 10000,
+    valueType: 'fixed',
+    condition: "Fixes selon palier CA/Target: Vendeur Gros (max 8.5k), Sup (max 7.5k), Area (max 10k)",
+    active: true,
+    ruleGroups: [{ id: 'rg12', logic: 'OR', rules: [{ id: 'r22', field: 'role', operator: '==', value: 'Vendeur Gros' }, { id: 'r23', field: 'role', operator: '==', value: 'Superviseur' }, { id: 'r24', field: 'role', operator: '==', value: 'Area Manager' }] }]
+  }
 ];
 
 export function ConstraintsProvider({ children }: { children: ReactNode }) {
   const [constraints, setConstraints] = useState<Constraint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Charger les contraintes depuis l'API au démarrage
-  useEffect(() => {
-    loadConstraints();
-  }, []);
+  const { isAuthenticated, isLoading: isAuthLoading } = useUser();
 
   const loadConstraints = async () => {
     try {
       setIsLoading(true);
-      console.log('🔄 Chargement des contraintes depuis l\'API...');
       const apiConstraints = await constraintsApi.getAll();
-      console.log('📊 Contraintes reçues de l\'API:', apiConstraints.length, apiConstraints);
       const mappedConstraints = apiConstraints.map(mapApiConstraintToFrontend);
-      console.log('🗺️ Contraintes mappées:', mappedConstraints.length, mappedConstraints);
-      setConstraints(mappedConstraints);
-
-      // Si aucune contrainte n'existe, créer les contraintes initiales
+      
       if (mappedConstraints.length === 0) {
-        console.log('⚠️ Aucune contrainte trouvée, création des contraintes initiales...');
+        console.log('⚠️ Aucune contrainte trouvée, initialisation...');
         await initializeDefaultConstraints();
-        const reloadedConstraints = await constraintsApi.getAll();
-        const mappedReloaded = reloadedConstraints.map(mapApiConstraintToFrontend);
-        setConstraints(mappedReloaded);
+        const reloaded = await constraintsApi.getAll();
+        setConstraints(reloaded.map(mapApiConstraintToFrontend));
       } else {
-        console.log('✅ Contraintes existantes chargées:', mappedConstraints.length);
+        setConstraints(mappedConstraints);
       }
     } catch (error) {
-      console.error('❌ Erreur lors du chargement des contraintes:', error);
-      toast.error('Impossible de charger les contraintes. Vérifiez que le backend est démarré.');
-      // En cas d'erreur, utiliser les contraintes par défaut en local
-      setConstraints(INITIAL_CONSTRAINTS);
+      console.error('❌ Erreur chargement contraintes:', error);
+      if (isAuthenticated) toast.error('Erreur lors de la récupération des contraintes.');
+      setConstraints([]); // Fallback
     } finally {
       setIsLoading(false);
     }
   };
 
-  const initializeDefaultConstraints = async () => {
-    if (constraintsInitPromise) {
-      return constraintsInitPromise;
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadConstraints();
+    } else if (!isAuthLoading) {
+      setIsLoading(false);
     }
+  }, [isAuthenticated, isAuthLoading]);
 
+  const initializeDefaultConstraints = async () => {
+    if (constraintsInitPromise) return constraintsInitPromise;
     constraintsInitPromise = (async () => {
       try {
-        const existing = await constraintsApi.getAll();
-        if (existing.length > 0) {
-          console.log('⚠️ Contraintes déjà initialisées, skipping...');
-          return;
+        for (const constraint of INITIAL_CONSTRAINTS) {
+          await constraintsApi.create(mapFrontendConstraintToApi(constraint));
         }
-
-        console.log('🏗️ Création des contraintes initiales...');
-        await Promise.all(
-          INITIAL_CONSTRAINTS.map(constraint =>
-            constraintsApi.create(mapFrontendConstraintToApi(constraint))
-          )
-        );
-        toast.success('Contraintes initiales créées avec succès');
+        toast.success('Contraintes initialisées');
       } catch (error) {
-        console.error('❌ Erreur lors de l\'initialisation des contraintes:', error);
-        throw error;
+        console.error('❌ Erreur initialisation:', error);
       } finally {
         constraintsInitPromise = null;
       }
     })();
-
     return constraintsInitPromise;
   };
 
   const addConstraint = async (constraint: Omit<Constraint, 'id'>) => {
     try {
-      const apiConstraint = mapFrontendConstraintToApi(constraint);
-      const created = await constraintsApi.create(apiConstraint);
-      const newConstraint = mapApiConstraintToFrontend(created);
-      setConstraints(prev => [...prev, newConstraint]);
-      toast.success('Contrainte ajoutée avec succès');
+      const created = await constraintsApi.create(mapFrontendConstraintToApi(constraint));
+      setConstraints(prev => [...prev, mapApiConstraintToFrontend(created)]);
+      toast.success('Contrainte ajoutée');
     } catch (error) {
-      console.error('Erreur lors de l\'ajout de la contrainte:', error);
-      toast.error('Impossible d\'ajouter la contrainte');
+      toast.error("Erreur lors de l'ajout");
       throw error;
     }
   };
@@ -187,82 +234,49 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
   const updateConstraint = async (id: string, updates: Partial<Constraint>) => {
     try {
       const numericId = parseInt(id, 10);
-      const currentConstraint = constraints.find(c => c.id === id);
-      if (!currentConstraint) {
-        throw new Error('Contrainte non trouvée');
-      }
+      const current = constraints.find(c => c.id === id);
+      if (!current) return;
       
-      const updatedConstraint = { ...currentConstraint, ...updates };
-      const apiConstraint = mapFrontendConstraintToApi(updatedConstraint);
-      const updated = await constraintsApi.update(numericId, apiConstraint);
-      const mappedConstraint = mapApiConstraintToFrontend(updated);
+      const updatedData = { ...current, ...updates };
+      const updated = await constraintsApi.update(numericId, mapFrontendConstraintToApi(updatedData));
       
-      setConstraints(prev =>
-        prev.map(c => (c.id === id ? mappedConstraint : c))
-      );
-      toast.success('Contrainte mise à jour avec succès');
+      setConstraints(prev => prev.map(c => (c.id === id ? mapApiConstraintToFrontend(updated) : c)));
+      toast.success('Contrainte mise à jour');
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de la contrainte:', error);
-      toast.error('Impossible de mettre à jour la contrainte');
+      toast.error('Erreur lors de la mise à jour');
       throw error;
     }
   };
 
   const deleteConstraint = async (id: string) => {
     try {
-      const numericId = parseInt(id, 10);
-      await constraintsApi.delete(numericId);
+      await constraintsApi.delete(parseInt(id, 10));
       setConstraints(prev => prev.filter(c => c.id !== id));
-      toast.success('Contrainte supprimée avec succès');
+      toast.success('Contrainte supprimée');
     } catch (error) {
-      console.error('Erreur lors de la suppression de la contrainte:', error);
-      toast.error('Impossible de supprimer la contrainte');
-      throw error;
+      toast.error('Erreur lors de la suppression');
     }
   };
 
   const toggleConstraint = async (id: string) => {
     try {
-      const numericId = parseInt(id, 10);
-      const toggled = await constraintsApi.toggle(numericId);
-      const mappedConstraint = mapApiConstraintToFrontend(toggled);
-      
-      setConstraints(prev =>
-        prev.map(c => (c.id === id ? mappedConstraint : c))
-      );
-      toast.success(`Contrainte ${mappedConstraint.active ? 'activée' : 'désactivée'}`);
+      const toggled = await constraintsApi.toggle(parseInt(id, 10));
+      setConstraints(prev => prev.map(c => (c.id === id ? mapApiConstraintToFrontend(toggled) : c)));
     } catch (error) {
-      console.error('Erreur lors du changement d\'état de la contrainte:', error);
-      toast.error('Impossible de changer l\'état de la contrainte');
-      throw error;
+      toast.error('Erreur de changement d\'état');
     }
   };
-
-  // Afficher un loader pendant le chargement initial
-  if (isLoading) {
-    return (
-      <ConstraintsContext.Provider
-        value={{
-          constraints: [],
-          addConstraint,
-          updateConstraint,
-          deleteConstraint,
-          toggleConstraint,
-        }}
-      >
-        {children}
-      </ConstraintsContext.Provider>
-    );
-  }
 
   return (
     <ConstraintsContext.Provider
       value={{
         constraints,
+        isLoading,
         addConstraint,
         updateConstraint,
         deleteConstraint,
         toggleConstraint,
+        loadConstraints,
       }}
     >
       {children}
@@ -272,8 +286,6 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
 
 export function useConstraints() {
   const context = useContext(ConstraintsContext);
-  if (context === undefined) {
-    throw new Error('useConstraints must be used within a ConstraintsProvider');
-  }
+  if (!context) throw new Error('useConstraints must be used within a ConstraintsProvider');
   return context;
 }

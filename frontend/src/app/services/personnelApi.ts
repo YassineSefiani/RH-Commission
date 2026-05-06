@@ -22,6 +22,38 @@ export interface PersonnelStats {
   inactifs: number;
 }
 
+// Helper pour obtenir le rôle de l'utilisateur
+function getUserRole(): string {
+  const userStr = localStorage.getItem('user');
+  console.log('🔍 [personnelApi] user from localStorage:', userStr);
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      console.log('🔍 [personnelApi] parsed user:', user);
+      return user.superRole || '';
+    } catch (e) {
+      console.error('🔍 [personnelApi] error parsing user:', e);
+      return '';
+    }
+  }
+  console.log('🔍 [personnelApi] no user in localStorage');
+  return '';
+}
+
+// Helper pour les headers avec rôle utilisateur
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  const role = getUserRole();
+  console.log('🔍 [personnelApi] getHeaders - role:', role);
+  if (role) {
+    headers['X-User-Role'] = role;
+  }
+  console.log('🔍 [personnelApi] headers:', headers);
+  return headers;
+}
+
 // Helper pour gérer les erreurs
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -111,9 +143,7 @@ export const personnelApi = {
   create: async (personnel: Omit<ApiPersonnel, 'id'>): Promise<ApiPersonnel> => {
     const response = await fetch(`${API_BASE_URL}/personnel`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getHeaders(),
       body: JSON.stringify(personnel),
     });
     return handleResponse<ApiPersonnel>(response);
@@ -123,9 +153,7 @@ export const personnelApi = {
   update: async (id: number, personnel: Partial<ApiPersonnel>): Promise<ApiPersonnel> => {
     const response = await fetch(`${API_BASE_URL}/personnel/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getHeaders(),
       body: JSON.stringify(personnel),
     });
     return handleResponse<ApiPersonnel>(response);
@@ -135,6 +163,7 @@ export const personnelApi = {
   toggle: async (id: number): Promise<ApiPersonnel> => {
     const response = await fetch(`${API_BASE_URL}/personnel/${id}/toggle`, {
       method: 'PATCH',
+      headers: getHeaders(),
     });
     return handleResponse<ApiPersonnel>(response);
   },
@@ -143,6 +172,7 @@ export const personnelApi = {
   delete: async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/personnel/${id}`, {
       method: 'DELETE',
+      headers: getHeaders(),
     });
     await handleResponse<void>(response);
   },
