@@ -48,6 +48,7 @@ export interface ApiConstraint {
   id?: number;
   name: string;
   type: 'commission_quantitative' | 'commission_retour';
+  carte: "Coca Cola" | "Wall's" | "Ferrero Rocher";
   value: number;
   valueType: 'percentage' | 'fixed';
   condition: string;
@@ -211,6 +212,7 @@ export function mapApiConstraintToFrontend(apiConstraint: ApiConstraint) {
     id: apiConstraint.id?.toString() || '',
     name: apiConstraint.name,
     type: apiConstraint.type,
+    carte: (apiConstraint.carte || 'Coca Cola') as "Coca Cola" | "Wall's" | "Ferrero Rocher",
     value: apiConstraint.value,
     valueType: apiConstraint.valueType,
     condition: apiConstraint.condition,
@@ -224,6 +226,7 @@ export function mapFrontendConstraintToApi(frontendConstraint: any): Omit<ApiCon
   return {
     name: frontendConstraint.name,
     type: frontendConstraint.type,
+    carte: frontendConstraint.carte as "Coca Cola" | "Wall's" | "Ferrero Rocher",
     value: frontendConstraint.value,
     valueType: frontendConstraint.valueType,
     condition: frontendConstraint.condition,

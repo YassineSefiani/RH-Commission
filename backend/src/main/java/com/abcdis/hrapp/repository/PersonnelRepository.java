@@ -27,6 +27,12 @@ public interface PersonnelRepository extends JpaRepository<Personnel, Long> {
     
     // Recherche par statut actif
     List<Personnel> findByActif(Boolean actif);
+
+    /**
+     * AJOUT : Compter le nombre de personnels selon leur statut
+     * Cette méthode règle l'erreur dans le contrôleur.
+     */
+    long countByActif(Boolean actif);
     
     // Recherche par fonction
     List<Personnel> findByFonction(String fonction);

@@ -1,90 +1,102 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { toast } from 'sonner';
-
-export interface PresenceRecord {
-  id: string;
-  date: string;
-  matriculeCamion: string;
-  canal: string;
-  livreur1Id: string;
-  livreur1Matricule: string;
-  livreur1Nom: string;
-  livreur1Prenom: string;
-  livreur2Id: string;
-  livreur2Matricule: string;
-  livreur2Nom: string;
-  livreur2Prenom: string;
-  livreur3Id: string;
-  livreur3Matricule: string;
-  livreur3Nom: string;
-  livreur3Prenom: string;
-}
+import { 
+  presenceApi, 
+  PresenceRecord, 
+  mapApiToPresenceRecord, 
+  mapPresenceRecordToApi 
+} from '../services/presenceApi';
 
 interface PresenceContextType {
   presenceRecords: PresenceRecord[];
-  addPresenceRecord: (record: Omit<PresenceRecord, 'id'>) => void;
-  deletePresenceRecord: (id: string) => void;
-  clearPresenceRecords: () => void;
+  isLoading: boolean;
+  addPresenceRecord: (record: Omit<PresenceRecord, 'id'>) => Promise<void>;
+  deletePresenceRecord: (id: string) => Promise<void>;
+  refreshRecords: () => Promise<void>;
+  // Note: clearPresenceRecords est souvent supprimé car on ne vide pas une DB entière comme un localStorage
 }
 
 const PresenceContext = createContext<PresenceContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'presenceRecords';
-
-function loadSavedRecords(): PresenceRecord[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored) as PresenceRecord[];
-  } catch (error) {
-    console.error('Erreur lors du chargement des fiches de présence:', error);
-    return [];
-  }
-}
-
 export function PresenceProvider({ children }: { children: ReactNode }) {
   const [presenceRecords, setPresenceRecords] = useState<PresenceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
+  /**
+   * CHARGEMENT : Récupère les données depuis le Backend
+   */
+  const refreshRecords = async () => {
+    try {
+      setIsLoading(true);
+      const apiData = await presenceApi.getAll();
+      // On convertit les données du format API (ID numérique) au format Frontend (ID string)
+      const formattedRecords = apiData.map(mapApiToPresenceRecord);
+      setPresenceRecords(formattedRecords);
+    } catch (error) {
+      console.error('Erreur lors du chargement des présences:', error);
+      // On évite le toast d'erreur au chargement initial pour ne pas gêner l'utilisateur
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Charger les données dès que le Provider est monté
   useEffect(() => {
-    setPresenceRecords(loadSavedRecords());
+    refreshRecords();
   }, []);
 
-  useEffect(() => {
+  /**
+   * AJOUT : Envoie la fiche au serveur
+   */
+  const addPresenceRecord = async (record: Omit<PresenceRecord, 'id'>) => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(presenceRecords));
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde des fiches de présence:', error);
+      // Transformation vers le format attendu par le Backend (LocalDate, etc.)
+      const apiInput = mapPresenceRecordToApi(record);
+      
+      // Appel API POST
+      const savedApiRecord = await presenceApi.create(apiInput);
+      
+      // Re-conversion pour l'affichage local (pour récupérer l'ID généré par la DB)
+      const newRecord = mapApiToPresenceRecord(savedApiRecord);
+      
+      setPresenceRecords((prev) => [newRecord, ...prev]);
+      toast.success('Fiche de présence enregistrée sur le serveur');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'ajout:', error);
+      const message = error.message.includes('403') 
+        ? "Accès refusé : Rôle insuffisant" 
+        : "Erreur lors de l'enregistrement";
+      toast.error(message);
+      throw error; // Permet de garder le dialogue ouvert si l'enregistrement échoue
     }
-  }, [presenceRecords]);
-
-  const addPresenceRecord = (record: Omit<PresenceRecord, 'id'>) => {
-    const newRecord: PresenceRecord = {
-      id: Date.now().toString(),
-      ...record,
-    };
-    setPresenceRecords((prev) => [newRecord, ...prev]);
-    toast.success('Fiche de présence enregistrée');
   };
 
-  const deletePresenceRecord = (id: string) => {
-    setPresenceRecords((prev) => prev.filter((record) => record.id !== id));
-    toast.success('Fiche de présence supprimée');
-  };
+  /**
+   * SUPPRESSION : Supprime sur le serveur
+   */
+  const deletePresenceRecord = async (id: string) => {
+    try {
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) throw new Error("ID invalide");
 
-  const clearPresenceRecords = () => {
-    if (!confirm('Supprimer toutes les fiches de présence ?')) return;
-    setPresenceRecords([]);
-    toast.success('Toutes les fiches de présence ont été supprimées');
+      await presenceApi.delete(numericId);
+      
+      setPresenceRecords((prev) => prev.filter((record) => record.id !== id));
+      toast.success('Fiche de présence supprimée du serveur');
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error('Impossible de supprimer la fiche');
+    }
   };
 
   return (
     <PresenceContext.Provider
       value={{
         presenceRecords,
+        isLoading,
         addPresenceRecord,
         deletePresenceRecord,
-        clearPresenceRecords,
+        refreshRecords,
       }}
     >
       {children}

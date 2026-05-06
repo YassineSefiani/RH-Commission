@@ -17,20 +17,16 @@ export default function ConstraintsPage() {
   const { constraints, deleteConstraint, toggleConstraint } = useConstraints();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
+  // Changement du filtre Type vers Carte
+  const [filterCarte, setFilterCarte] = useState<string>('all');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [idToDelete, setIdToDelete] = useState<string | null>(null);
 
-  const typeLabels: Record<Constraint['type'], string> = {
-    commission_quantitative: 'Commission Quantitative',
-    commission_retour: 'Commission Retour',
-    commission_triage: 'Commission Triage',
-  };
-
-  const typeColors: Record<Constraint['type'], string> = {
-    commission_quantitative: 'bg-amber-100 text-amber-800',
-    commission_retour: 'bg-red-100 text-red-800',
-    commission_triage: 'bg-green-100 text-green-800',
+  // Couleurs basées sur la Carte (Brand Colors)
+  const carteColors: Record<string, string> = {
+    'Coca Cola': 'bg-red-100 text-red-800',
+    'Ferrero Rocher': 'bg-amber-100 text-amber-800',
+    "Wall's": 'bg-blue-100 text-blue-800',
   };
 
   const handleDelete = (id: string) => {
@@ -48,9 +44,10 @@ export default function ConstraintsPage() {
 
   const filteredConstraints = constraints.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         c.condition.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || c.type === filterType;
-    return matchesSearch && matchesType;
+                          c.condition.toLowerCase().includes(searchTerm.toLowerCase());
+    // Filtrage par carte au lieu du type
+    const matchesCarte = filterCarte === 'all' || c.carte === filterCarte;
+    return matchesSearch && matchesCarte;
   });
 
   return (
@@ -58,8 +55,8 @@ export default function ConstraintsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Commissions Quantitatives</h1>
-          <p className="text-gray-600 mt-1">Définir les règles de calcul des commissions basées sur le volume reçu</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gestion des Commissions</h1>
+          <p className="text-gray-600 mt-1">Gérez les règles de calcul par carte (Coca Cola, Ferrero, Wall's)</p>
         </div>
         <button
           onClick={() => navigate('/constraints/new')}
@@ -67,7 +64,7 @@ export default function ConstraintsPage() {
           style={{ backgroundColor: '#f7a800' }}
         >
           <Plus className="w-5 h-5" />
-          Nouvelle Commission Quantitative
+          Nouvelle Règle
         </button>
       </div>
 
@@ -78,21 +75,22 @@ export default function ConstraintsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher..."
+              placeholder="Rechercher une règle ou une condition..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
             />
           </div>
+          {/* Sélecteur par Carte */}
           <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            value={filterCarte}
+            onChange={(e) => setFilterCarte(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
           >
-            <option value="all">Tous les types</option>
-            <option value="commission_quantitative">Commission Quantitative</option>
-            <option value="commission_retour">Commission Retour</option>
-            <option value="commission_triage">Commission Triage</option>
+            <option value="all">Toutes les Cartes</option>
+            <option value="Coca Cola">Coca Cola</option>
+            <option value="Ferrero Rocher">Ferrero Rocher</option>
+            <option value="Wall's">Wall's</option>
           </select>
         </div>
       </div>
@@ -104,8 +102,8 @@ export default function ConstraintsPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Nom</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Type</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Taux (%)</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Carte</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Valeur</th>
                 <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Condition</th>
                 <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Statut</th>
                 <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase">Actions</th>
@@ -115,23 +113,23 @@ export default function ConstraintsPage() {
               {filteredConstraints.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500">
-                    Aucune contrainte trouvée
+                    Aucune règle trouvée pour cette carte
                   </td>
                 </tr>
               ) : (
                 filteredConstraints.map((constraint) => (
-                  <tr key={constraint.id} className="hover:bg-gray-50">
+                  <tr key={constraint.id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6">
                       <span className="font-medium text-gray-900">{constraint.name}</span>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${typeColors[constraint.type]}`}>
-                        {typeLabels[constraint.type]}
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${carteColors[constraint.carte] || 'bg-gray-100 text-gray-800'}`}>
+                        {constraint.carte}
                       </span>
                     </td>
                     <td className="py-4 px-6">
                       <span className="font-semibold text-gray-900">
-                        {constraint.valueType === 'percentage' ? `${constraint.value}%` : `${constraint.value}MAD`}
+                        {constraint.valueType === 'percentage' ? `${constraint.value}%` : `${constraint.value} MAD`}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -140,7 +138,7 @@ export default function ConstraintsPage() {
                     <td className="py-4 px-6 text-center">
                       <button
                         onClick={() => toggleConstraint(constraint.id)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
                           constraint.active ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       >
@@ -156,12 +154,14 @@ export default function ConstraintsPage() {
                         <button
                           onClick={() => navigate('/constraints/new', { state: { constraint } })}
                           className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition"
+                          title="Modifier"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(constraint.id)}
                           className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -179,15 +179,18 @@ export default function ConstraintsPage() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer la contrainte</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer la règle</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer cette contrainte ? Cette action ne peut pas être annulée.
+              Êtes-vous sûr de vouloir supprimer cette règle de commission ? Cette action est irréversible et pourrait affecter les calculs futurs.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex justify-end gap-3">
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Supprimer
+          <div className="flex justify-end gap-3 p-4">
+            <AlertDialogCancel className="rounded-lg">Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+                onClick={confirmDelete} 
+                className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2"
+            >
+              Confirmer la suppression
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
