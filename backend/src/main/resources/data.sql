@@ -8,12 +8,12 @@ VALUES
   ('P001', 'Bennani',   'Youssef',   'Coca Cola',      'Distribution', 'Livreur',     '0600000001', 'CDI', 'Casablanca', TRUE),
   ('P002', 'El Idrissi','Sara',      'Coca Cola',      'Distribution', 'Aide Livreur','0600000002', 'CDI', 'Rabat',      TRUE),
   ('P003', 'Moussaoui', 'Karim',     'Coca Cola',      'Distribution', 'Livreur',     '0600000003', 'Int', 'Marrakech',  TRUE),
-  ('P004', 'Novo',      'Ahmed',     'Magnum',         'Commercial',   'Vendeur',     '0600000004', 'CDI', 'Fès',        TRUE),
-  ('P005', 'Sidi',      'Fatima',    'Magnum',         'GT',           'Superviseur', '0600000005', 'CDI', 'Tanger',     TRUE),
+  ('P004', 'Novo',      'Ahmed',     'Wall''s',         'Commercial',   'Vendeur',     '0600000004', 'CDI', 'Fès',        TRUE),
+  ('P005', 'Sidi',      'Fatima',    'Wall''s',         'GT',           'Superviseur', '0600000005', 'CDI', 'Tanger',     TRUE),
   ('P006', 'Belaid',    'Mohammed',  'Ferrero Rocher', 'Commercial',   'Vendeur Gros','0600000006', 'CDI', 'Agadir',     TRUE),
   ('P007', 'Radi',      'Laila',     'Ferrero Rocher', 'Commercial',   'Superviseur', '0600000007', 'CDI', 'Meknès',     TRUE),
   ('P008', 'Tazi',      'Ismail',    'Coca Cola',      'Distribution', 'Livreur GMS', '0600000008', 'CDI', 'Oujda',      TRUE),
-  ('P009', 'Karim',     'Nadia',     'Magnum',         'HORECA',       'Area Manager','0600000009', 'CDI', 'Tétouan',    TRUE);
+  ('P009', 'Karim',     'Nadia',     'Wall''s',         'HORECA',       'Area Manager','0600000009', 'CDI', 'Tétouan',    TRUE);
 
 -- ─── VOLUMES COCA COLA (2026-05) ──────────────────────────────────────────────
 MERGE INTO volume_distribution (matricule, periode, volume_charge, volume_retourne, joures_travailles)
@@ -32,21 +32,21 @@ VALUES
   ('P002', '2026-05', 0.72),  -- >= 70% → R03 = 200 MAD
   ('P008', '2026-05', 0.90);  -- >= 70% → R03 = 200 MAD
 
--- ─── OBJECTIFS MAGNUM (2026-05) ───────────────────────────────────────────────
+-- ─── OBJECTIFS Wall''s (2026-05) ───────────────────────────────────────────────
 MERGE INTO objectif_commercial (matricule, periode, carte, target)
 KEY(matricule, periode, carte)
 VALUES
-  ('P004', '2026-05', 'Magnum', 100000.0),   -- Vendeur
-  ('P005', '2026-05', 'Magnum', 500000.0),   -- Superviseur GT
-  ('P009', '2026-05', 'Magnum', 300000.0);   -- Area Manager
+  ('P004', '2026-05', 'Wall''s', 100000.0),   -- Vendeur
+  ('P005', '2026-05', 'Wall''s', 500000.0),   -- Superviseur GT
+  ('P009', '2026-05', 'Wall''s', 300000.0);   -- Area Manager
 
--- ─── RÉALISATIONS MAGNUM (2026-05) ────────────────────────────────────────────
+-- ─── RÉALISATIONS Wall''s (2026-05) ────────────────────────────────────────────
 MERGE INTO realisation_commerciale (matricule, periode, carte, ca_realise)
 KEY(matricule, periode, carte)
 VALUES
-  ('P004', '2026-05', 'Magnum', 115000.0),   -- ratio=1.15 → R05: 115000*1.5%=1725 MAD
-  ('P005', '2026-05', 'Magnum', 480000.0),   -- ratio=0.96 → R06 GT: 480000*0.9%=4320 MAD
-  ('P009', '2026-05', 'Magnum', 330000.0);   -- ratio=1.10 → Area: 330000*0.7%=2310 MAD
+  ('P004', '2026-05', 'Wall''s', 115000.0),   -- ratio=1.15 → R05: 115000*1.5%=1725 MAD
+  ('P005', '2026-05', 'Wall''s', 480000.0),   -- ratio=0.96 → R06 GT: 480000*0.9%=4320 MAD
+  ('P009', '2026-05', 'Wall''s', 330000.0);   -- ratio=1.10 → Area: 330000*0.7%=2310 MAD
 
 -- ─── OBJECTIFS FERRERO (2026-05) ──────────────────────────────────────────────
 MERGE INTO objectif_commercial (matricule, periode, carte, target)

@@ -24,20 +24,26 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
+
+            .headers(headers ->
+                headers.frameOptions(frame -> frame.disable())
+            )
+
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/users/login", "/api/users/validate").permitAll()
+                .requestMatchers("/api/users/login", "/api/users/validate", "/h2-console/**").permitAll()
                 .requestMatchers("/api/**").permitAll()
                 .anyRequest().authenticated()
             );
-        
+
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174", "http://localhost:5175"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

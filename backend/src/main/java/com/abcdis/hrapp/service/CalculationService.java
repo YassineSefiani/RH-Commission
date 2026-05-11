@@ -79,9 +79,10 @@ public class CalculationService {
         List<Personnel> equipe = personnelRepository.findByCarteAndActifTrue(carte);
         List<EmployeeResult> resultats = new ArrayList<>();
 
-        if (carte.toUpperCase().equals("COKE")) {
+        String carteUp = carte.toUpperCase();
+        if (carteUp.contains("COCA") || carteUp.equals("COKE")) {
             for (Personnel emp : equipe) resultats.add(calculerCoke(emp, periode));
-        } else if (carte.toUpperCase().equals("FERRERO")) {
+        } else if (carteUp.contains("FERRERO")) {
             boolean tousAuDessus100 = equipe.stream()
                     .allMatch(emp -> getRatio(emp, carte, periode) > 1.0);
             for (Personnel emp : equipe) resultats.add(calculerFerrero(emp, carte, periode, tousAuDessus100));

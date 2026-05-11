@@ -98,8 +98,31 @@ export default function BrandCalculationPage() {
       }
 
       const resultData = await response.json();
-      setResults(resultData.resultats);
-      toast.success("Calcul sauvegardé avec succès !");
+      const resultats: EmployeeCalculationResult[] = resultData.resultats || [];
+      setResults(resultats);
+
+      // Sauvegarde dans l'historique
+      for (const res of resultats) {
+        try {
+          await addCalculation({
+            employeeName: `${res.prenom} ${res.nom}`,
+            employeeRole: res.role || '',
+            baseSalary: 0,
+            totalSales: 0,
+            deliveries: 0,
+            returns: 0,
+            commissions: res.commissions,
+            bonuses: res.bonuses,
+            penalties: res.penalties,
+            finalSalary: res.finalSalary,
+            constraintsApplied: activeConstraints.map(c => c.name),
+            details: res.detail || [],
+          });
+        } catch {
+          // un échec d'historique ne bloque pas l'affichage
+        }
+      }
+      toast.success(`Calcul terminé — ${resultats.length} employé(s) traité(s)`);
     } catch (error) {
       console.error("Erreur lors du calcul groupé :", error);
       toast.error("Erreur de calcul, veuillez réessayer.");
