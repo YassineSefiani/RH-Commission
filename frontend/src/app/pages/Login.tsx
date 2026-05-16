@@ -16,9 +16,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
     const success = await login(email, password);
-    
     if (success) {
       navigate('/dashboard');
     } else {
@@ -33,86 +31,108 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white">
-      <div className="w-full max-w-md p-8">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Logo et titre */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 mb-4">
-              <img src={logo} alt="ABC DIS Logo" className="w-full h-full object-contain" />
+    <div className="abc-login-shell">
+      {/* Left decorative panel */}
+      <aside className="abc-login-aside">
+        <div className="abc-login-aside-top">
+          <div className="abc-login-brand">
+            <div className="abc-logo-wrap">
+              <img src={logo} alt="ABC DIS" />
             </div>
-            <h1 className="font-bold text-gray-900 text-[24px]">Systeme de Gestion RH</h1>
-            
+            <div className="abc-brand-text">
+              <span className="abc-brand-name" style={{ color: '#fff' }}>ABC DIS</span>
+              <span className="abc-brand-tagline" style={{ color: 'rgba(255,255,255,0.55)' }}>Gestion RH</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="abc-login-aside-mid">
+          <p className="abc-login-eyebrow">Suite RH commerciale</p>
+          <h1 className="abc-login-headline">
+            Pilotez vos<br />commissions<br />avec précision.
+          </h1>
+
+          <div className="abc-login-stat-pills">
+            <div className="abc-login-stat">
+              <span className="abc-mono abc-login-stat-num">2.4M MAD</span>
+              <span className="abc-login-stat-lbl">ventes générées</span>
+            </div>
+            <div className="abc-login-stat">
+              <span className="abc-mono abc-login-stat-num">182k MAD</span>
+              <span className="abc-login-stat-lbl">commissions versées</span>
+            </div>
+            <div className="abc-login-stat">
+              <span className="abc-mono abc-login-stat-num">24</span>
+              <span className="abc-login-stat-lbl">commerciaux actifs</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="abc-login-aside-bot">
+          <span className="abc-login-foot">© 2026 ABC DIS · Casablanca, MA</span>
+        </div>
+      </aside>
+
+      {/* Right form panel */}
+      <section className="abc-login-form-wrap">
+        <div className="abc-login-form-inner">
+          <div className="abc-login-form-head">
+            <h2 className="abc-login-title">Connexion</h2>
+            <p className="abc-sub">Accédez à votre espace de gestion des commissions</p>
           </div>
 
-          {/* Formulaire de connexion */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
+              <div className="abc-login-error">{error}</div>
             )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
+            <div className="abc-login-form-field">
+              <label htmlFor="email">Email</label>
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition"
-                placeholder="votre.email@abcdis.com"
+                placeholder="vous@abcdis.com"
                 required
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Mot de passe
-              </label>
+            <div className="abc-login-form-field">
+              <label htmlFor="password">Mot de passe</label>
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition"
                 placeholder="••••••••"
                 required
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3 px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
-              style={{ backgroundColor: '#f7a800' }}
-            >
-              <LogIn className="w-5 h-5" />
+            <button type="submit" className="abc-login-cta" disabled={isLoading}>
+              <LogIn size={16} />
               {isLoading ? 'Connexion...' : 'Se connecter'}
             </button>
           </form>
 
-          {/* Quick Login Buttons */}
-          <div className="mt-6 pt-6 border-t">
-            <p className="text-xs text-gray-500 text-center mb-3">Connexion rapide</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {AVAILABLE_USERS.map((user) => (
+          <div className="abc-login-quicklogin">
+            <p className="abc-login-quicklogin-label">Connexion rapide</p>
+            <div className="abc-login-quicklogin-btns">
+              {AVAILABLE_USERS.map((u) => (
                 <button
-                  key={user.email}
+                  key={u.email}
                   type="button"
-                  onClick={() => handleQuickLogin(user.email, user.password)}
-                  className="px-3 py-1.5 text-xs font-medium rounded-full border transition-colors hover:bg-gray-50"
-                  style={{ borderColor: '#e5e7eb' }}
+                  className="abc-login-quickbtn"
+                  onClick={() => handleQuickLogin(u.email, u.password)}
                 >
-                  <span className="font-semibold">{user.superRole}</span>
+                  {u.superRole}
                 </button>
               ))}
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

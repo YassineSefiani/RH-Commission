@@ -278,7 +278,7 @@ export default function PersonnelPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="abc-page-inner abc-stack-lg">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

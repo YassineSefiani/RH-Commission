@@ -20,7 +20,7 @@ export default function PresencePage() {
   }, [presenceRecords.length]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="abc-page-inner abc-stack-lg">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Fiches de Présence</h1>

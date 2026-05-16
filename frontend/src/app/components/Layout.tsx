@@ -1,10 +1,10 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
-import { 
-  LayoutDashboard, 
-  Settings, 
-  Calculator, 
-  History, 
+import {
+  LayoutDashboard,
+  Settings,
+  Calculator,
+  History,
   FileText,
   ClipboardList,
   LogOut,
@@ -23,8 +23,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile
-  const [isHovered, setIsHovered] = useState(false); // Desktop Hover
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useUser();
 
   const handleLogout = () => {
@@ -32,177 +31,111 @@ export default function Layout({ children }: LayoutProps) {
     navigate('/');
   };
 
-  // Définition des items avec restrictions par rôle
   const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/personnel', label: 'Personnel', icon: Users },
-    { path: '/presence', label: 'Fiches Présence', icon: ClipboardList },
-    { 
-      path: '/constraints', 
-      label: 'Contraintes', 
-      icon: FileText, 
-      allowedRoles: ['ADMIN', 'ADV'] 
-    },
-    { 
-      path: '/calculation', 
-      label: 'Calcul', 
-      icon: Calculator, 
-      allowedRoles: ['ADMIN', 'ADV'] 
-    },
-    { path: '/history', label: 'Historique', icon: History },
-    { path: '/settings', label: 'Paramètres', icon: Settings },
+    { path: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
+    { path: '/personnel',   label: 'Personnel',        icon: Users },
+    { path: '/presence',    label: 'Fiches Présence',  icon: ClipboardList },
+    { path: '/constraints', label: 'Contraintes',      icon: FileText,    allowedRoles: ['ADMIN', 'ADV'] },
+    { path: '/calculation', label: 'Calcul',           icon: Calculator,  allowedRoles: ['ADMIN', 'ADV'] },
+    { path: '/history',     label: 'Historique',       icon: History },
+    { path: '/settings',    label: 'Paramètres',       icon: Settings },
   ];
 
-  // Filtrage des éléments du menu selon le rôle de l'utilisateur
   const filteredMenuItems = menuItems.filter(item => {
-    // Si aucune restriction n'est définie, tout le monde voit l'item
     if (!item.allowedRoles) return true;
-    // Sinon, on vérifie si le rôle de l'utilisateur est autorisé
     return user && item.allowedRoles.includes(user.superRole);
   });
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex overflow-hidden">
-      {/* Sidebar Desktop */}
-      <aside 
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className={`hidden md:flex md:flex-col fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out border-r shadow-2xl ${
-          isHovered ? 'w-64' : 'w-20'
-        }`}
-        style={{ backgroundColor: '#18324B' }}
-      >
-        {/* Logo Section */}
-        <div className="h-16 flex items-center px-4 overflow-hidden border-b flex-shrink-0" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-          <div className="flex items-center gap-4 min-w-[200px]">
-            <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center p-1.5 bg-white border-2" style={{ borderColor: '#f7a800' }}>
-              <img src={logo} alt="ABC DIS" className="w-full h-full object-contain" />
-            </div>
-            <div className={`transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-              <h1 className="font-bold text-white whitespace-nowrap">ABC DIS</h1>
-              <p className="text-xs text-gray-400 whitespace-nowrap">Gestion RH</p>
-            </div>
+  const currentLabel = filteredMenuItems.find(item => item.path === location.pathname)?.label || 'ABC DIS';
+
+  const initials = user
+    ? `${user.prenom?.charAt(0) || ''}${user.nom?.charAt(0) || ''}`.toUpperCase() || user.email?.charAt(0).toUpperCase()
+    : 'U';
+
+  const Sidebar = () => (
+    <aside className="abc-sidebar">
+      <div className="abc-sidebar-brand">
+        <div className="abc-logo-wrap">
+          <img src={logo} alt="ABC DIS" />
+        </div>
+        <div className="abc-brand-text">
+          <span className="abc-brand-name">ABC DIS</span>
+          <span className="abc-brand-tagline">Gestion RH</span>
+        </div>
+      </div>
+
+      <div className="abc-sidebar-section-label">Menu</div>
+      <nav className="abc-sidebar-nav">
+        {filteredMenuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`abc-navitem ${isActive ? 'is-active' : ''}`}
+              onClick={() => setMobileOpen(false)}
+            >
+              <Icon size={16} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="abc-sidebar-foot">
+        <div className="abc-userchip">
+          <div
+            className="abc-avatar abc-avatar-sm"
+            style={{ background: 'var(--brand)', color: 'var(--brand-fg)', width: 32, height: 32, fontSize: 12 }}
+          >
+            {initials}
+          </div>
+          <div className="abc-userchip-text">
+            <span className="abc-userchip-name">
+              {user ? `${user.prenom} ${user.nom}` : 'Utilisateur'}
+            </span>
+            <span className="abc-userchip-mail">{user?.email || ''}</span>
           </div>
         </div>
+        <button className="abc-iconbtn" onClick={handleLogout} title="Déconnexion">
+          <LogOut size={14} />
+        </button>
+      </div>
+    </aside>
+  );
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
-          {filteredMenuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex items-center gap-4 px-3 py-3 rounded-lg text-sm font-medium transition-all group ${
-                  isActive ? 'text-white' : 'text-gray-300 hover:text-white hover:bg-white/5'
-                }`}
-                style={{
-                  backgroundColor: isActive ? '#f7a800' : 'transparent',
-                }}
-              >
-                <Icon className={`w-6 h-6 flex-shrink-0 transition-transform ${!isActive && 'group-hover:scale-110'}`} />
-                <span className={`transition-all duration-300 whitespace-nowrap ${isHovered ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
+  return (
+    <div className="abc-app">
+      <Sidebar />
 
-        {/* User section */}
-        <div className="p-4 border-t flex-shrink-0" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-          <div className="flex items-center gap-4 overflow-hidden mb-3">
-            <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-sm font-medium" style={{ backgroundColor: '#f7a800' }}>
-              {user?.prenom?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-            </div>
-            <div className={`transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-              <p className="text-sm font-medium text-gray-200 truncate w-32">
-                {user ? `${user.prenom} ${user.nom}` : user?.email}
-              </p>
-            </div>
+      {/* Mobile scrim */}
+      {mobileOpen && (
+        <div className="abc-mobile-scrim" onClick={() => setMobileOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <Sidebar />
           </div>
           <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-4 px-2 py-2 text-sm text-gray-300 rounded-lg transition-colors hover:text-white hover:bg-white/10"
+            style={{ position: 'absolute', top: 16, right: 16, color: '#fff', background: 'none', border: 'none', cursor: 'pointer' }}
+            onClick={() => setMobileOpen(false)}
           >
-            <LogOut className="w-6 h-6 flex-shrink-0" />
-            <span className={`transition-opacity duration-300 whitespace-nowrap ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-              Déconnexion
-            </span>
+            <X size={22} />
           </button>
-        </div>
-      </aside>
-
-      {/* Spacer Desktop */}
-      <div className={`hidden md:block transition-all duration-300 flex-shrink-0 ${isHovered ? 'w-64' : 'w-20'}`} />
-
-      {/* Sidebar Mobile */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-[60] md:hidden">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 flex flex-col shadow-xl" style={{ backgroundColor: '#18324B' }}>
-            <div className="h-16 flex items-center justify-between px-6 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center p-1.5 bg-white border-2" style={{ borderColor: '#f7a800' }}>
-                  <img src={logo} alt="ABC DIS" className="w-full h-full object-contain" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-white">ABC DIS</h1>
-                  <p className="text-xs text-gray-300">Gestion RH</p>
-                </div>
-              </div>
-              <button onClick={() => setSidebarOpen(false)}>
-                <X className="w-6 h-6 text-gray-300" />
-              </button>
-            </div>
-
-            <nav className="flex-1 px-3 py-4 space-y-1">
-              {filteredMenuItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium ${
-                      isActive ? 'text-white' : 'text-gray-300'
-                    }`}
-                    style={{ backgroundColor: isActive ? '#f7a800' : 'transparent' }}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="p-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-3 text-sm text-gray-300 rounded-lg bg-white/5">
-                <LogOut className="w-5 h-5" />
-                Déconnexion
-              </button>
-            </div>
-          </aside>
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        <header className="h-16 border-b flex items-center px-4 md:px-6 flex-shrink-0 z-40" style={{ backgroundColor: '#18324B', borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-          <button
-            className="md:hidden mr-4 p-2 hover:bg-white/10 rounded-lg transition-colors"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="w-6 h-6 text-gray-300" />
+      <div className="abc-main">
+        <header className="abc-topbar">
+          <button className="abc-iconbtn abc-mobile-only" onClick={() => setMobileOpen(true)}>
+            <Menu size={18} />
           </button>
-          <h2 className="text-xl font-bold text-white">
-            {filteredMenuItems.find(item => item.path === location.pathname)?.label || 'ABC DIS'}
-          </h2>
+          <span className="abc-topbar-title">{currentLabel}</span>
+          <div className="abc-topbar-right">
+            {/* placeholder for future actions */}
+          </div>
         </header>
 
-        <main className="flex-1 overflow-auto bg-gray-50 relative">
+        <main className="abc-page">
           {children}
         </main>
       </div>

@@ -1,248 +1,308 @@
-import { useState } from 'react';
-import { Search, Trash2, Calendar, User, DollarSign, Download, FileDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronDown, Download, FileDown, Loader2, Trash2, Search } from 'lucide-react';
 import { useHistory } from '../context/HistoryContext';
 import { exportHistoryPDF, exportSingleRecordPDF } from '../utils/pdfExport';
+import { toast } from 'sonner';
 
 export default function HistoryPage() {
   const { history, deleteCalculation, clearHistory } = useHistory();
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [search, setSearch] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
 
-  const filteredHistory = history.filter(record => {
-    const date = new Date(record.date);
-    const matchesSearch = record.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMonth = !selectedMonth || date.toLocaleDateString('fr-FR', { month: 'long' }) === selectedMonth.toLowerCase();
-    const matchesYear = !selectedYear || date.getFullYear().toString() === selectedYear;
-    return matchesSearch && matchesMonth && matchesYear;
-  });
+  const fc = (v: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(v);
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD' }).format(value);
-
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric', month: 'long', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
+  const filtered = useMemo(() => {
+    return history.filter((h) => {
+      const d = new Date(h.date);
+      const sMatch = h.employeeName.toLowerCase().includes(search.toLowerCase());
+      const mMatch = !selectedMonth || String(d.getMonth()) === selectedMonth;
+      const yMatch = !selectedYear || String(d.getFullYear()) === selectedYear;
+      return sMatch && mMatch && yMatch;
     });
+  }, [history, search, selectedMonth, selectedYear]);
 
-  const handleExportAll = () => {
-    if (filteredHistory.length === 0) return;
-    const suffix = searchTerm || selectedMonth || selectedYear ? 'filtre' : 'complet';
-    exportHistoryPDF(filteredHistory, `historique-commissions-${suffix}.pdf`);
+  // Group by month
+  const grouped = useMemo(() => {
+    const map = new Map<string, { date: Date; items: typeof history; total: number; count: number }>();
+    filtered.forEach((h) => {
+      const d = new Date(h.date);
+      const k = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!map.has(k)) map.set(k, { date: d, items: [], total: 0, count: 0 });
+      const g = map.get(k)!;
+      g.items.push(h);
+      g.total += h.finalSalary;
+      g.count += 1;
+    });
+    return [...map.values()].sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [filtered]);
+
+  const totalPayroll = filtered.reduce((s, h) => s + h.finalSalary, 0);
+  const totalComm    = filtered.reduce((s, h) => s + h.commissions, 0);
+
+  const handleExportAll = async () => {
+    if (filtered.length === 0) return;
+    setExporting('all');
+    try {
+      const suffix = search || selectedMonth || selectedYear ? 'filtre' : 'complet';
+      await exportHistoryPDF(filtered, `historique-commissions-${suffix}.pdf`);
+      toast.success('PDF téléchargé avec succès');
+    } catch {
+      toast.error('Erreur lors de la génération du PDF');
+    } finally {
+      setExporting(null);
+    }
   };
 
+  const handleExportOne = async (record: typeof history[0]) => {
+    setExporting(record.id);
+    try {
+      await exportSingleRecordPDF(record);
+      toast.success(`PDF de ${record.employeeName} téléchargé`);
+    } catch {
+      toast.error('Erreur lors de la génération du PDF');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const monthsOpts = [
+    { value: '', label: 'Tous les mois' },
+    ...['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
+      .map((m, i) => ({ value: String(i), label: m })),
+  ];
+
+  const formatDateLong = (d: string) =>
+    new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+  const getInitials = (name: string) =>
+    name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
+
   return (
-    <div className="p-4 md:p-6 space-y-6">
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Historique des Calculs</h1>
-          <p className="text-gray-600 mt-1">
-            {history.length} calcul{history.length > 1 ? 's' : ''} enregistré{history.length > 1 ? 's' : ''}
-          </p>
+    <div className="abc-page-inner abc-stack-lg">
+      {/* Stat strip */}
+      <div className="abc-stat-strip">
+        <div className="abc-stat-item">
+          <span className="abc-stat-num">{filtered.length}</span>
+          <span className="abc-stat-lbl">calculs</span>
         </div>
-
-        <div className="flex gap-2">
-          {/* Export tout (filtré) */}
-          <button
-            onClick={handleExportAll}
-            disabled={filteredHistory.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Exporter PDF
-            {filteredHistory.length > 0 && (
-              <span className="bg-orange-400 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                {filteredHistory.length}
-              </span>
-            )}
-          </button>
-
-          {/* Vider l'historique */}
-          {history.length > 0 && (
-            <button
-              onClick={clearHistory}
-              className="inline-flex items-center gap-2 px-4 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Vider
-            </button>
+        <span className="abc-stat-sep" />
+        <div className="abc-stat-item">
+          <span className="abc-stat-num">{fc(totalPayroll)}</span>
+          <span className="abc-stat-lbl">masse salariale</span>
+        </div>
+        <div className="abc-stat-item">
+          <span className="abc-stat-dot" style={{ background: 'var(--brand)' }} />
+          <span className="abc-stat-num">{fc(totalComm)}</span>
+          <span className="abc-stat-lbl">commissions</span>
+        </div>
+        <span className="abc-stat-spacer" />
+        <button
+          className="abc-btn abc-btn-primary abc-btn-sm"
+          onClick={handleExportAll}
+          disabled={filtered.length === 0 || exporting === 'all'}
+        >
+          {exporting === 'all' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+          {exporting === 'all' ? 'Génération…' : 'Exporter PDF'}
+          {filtered.length > 0 && exporting !== 'all' && (
+            <span style={{ background: 'rgba(0,0,0,0.15)', borderRadius: 999, padding: '1px 6px', fontSize: 10 }}>
+              {filtered.length}
+            </span>
           )}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un employé..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-          >
-            <option value="">Tous les mois</option>
-            {['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
-          >
-            <option value="">Toutes les années</option>
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
-          </select>
-        </div>
-
-        {/* Indicateur filtre actif */}
-        {(searchTerm || selectedMonth || selectedYear) && (
-          <p className="text-xs text-orange-600 mt-2 font-medium">
-            {filteredHistory.length} résultat(s) — l'export PDF reprendra uniquement cette sélection
-          </p>
+        </button>
+        {history.length > 0 && (
+          <button className="abc-btn abc-btn-secondary abc-btn-sm" onClick={() => { if (confirm('Vider tout l\'historique ?')) clearHistory(); }}>
+            <Trash2 size={13} />
+            Vider
+          </button>
         )}
       </div>
 
-      {/* History Cards */}
-      {filteredHistory.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-          <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <p className="text-gray-500">
+      {/* Filters */}
+      <div className="abc-card no-pad">
+        <div className="abc-table-toolbar">
+          <div className="abc-search">
+            <Search size={14} />
+            <input
+              placeholder="Rechercher un collaborateur…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="abc-toolbar-selects">
+            <select
+              className="abc-mini-select"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              {monthsOpts.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <select
+              className="abc-mini-select"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              <option value="">Toutes les années</option>
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+            {(search || selectedMonth || selectedYear) && (
+              <button
+                className="abc-btn abc-btn-ghost abc-btn-sm"
+                onClick={() => { setSearch(''); setSelectedMonth(''); setSelectedYear(''); }}
+              >
+                Réinitialiser
+              </button>
+            )}
+          </div>
+        </div>
+        {(search || selectedMonth || selectedYear) && filtered.length > 0 && (
+          <div style={{ padding: '6px 18px 10px', fontSize: 12, color: 'var(--brand-deep)' }}>
+            {filtered.length} résultat(s) — l'export PDF reprendra uniquement cette sélection
+          </div>
+        )}
+      </div>
+
+      {/* Timeline */}
+      {grouped.length === 0 ? (
+        <div className="abc-card abc-empty-card">
+          <Download size={32} strokeWidth={1.5} />
+          <p>
             {history.length === 0
-              ? "Aucun calcul enregistré. Effectuez un calcul dans la page Calcul pour voir l'historique."
-              : "Aucun résultat trouvé pour ces filtres."}
+              ? "Aucun calcul enregistré. Effectuez un calcul pour voir l'historique."
+              : "Aucun résultat pour ces filtres."}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
-          {filteredHistory.map((record) => (
-            <div key={record.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
-              <div className="p-6">
-
-                {/* En-tête card */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <User className="w-5 h-5 text-gray-400" />
-                      <h3 className="text-lg font-bold text-gray-900">{record.employeeName}</h3>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                        {record.employeeRole}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(record.date)}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 ml-4">
-                    <button
-                      onClick={() => exportSingleRecordPDF(record)}
-                      title="Exporter en PDF"
-                      className="p-2 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition"
-                    >
-                      <FileDown className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm("Supprimer ce calcul de l'historique ?")) {
-                          deleteCalculation(record.id);
-                        }
-                      }}
-                      title="Supprimer"
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-blue-600 mb-1">Ventes</p>
-                    <p className="font-bold text-blue-900">{formatCurrency(record.totalSales)}</p>
-                  </div>
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <p className="text-xs text-green-600 mb-1">Livraisons</p>
-                    <p className="font-bold text-green-900">{record.deliveries}</p>
-                  </div>
-                  <div className="p-3 bg-red-50 rounded-lg">
-                    <p className="text-xs text-red-600 mb-1">Retours</p>
-                    <p className="font-bold text-red-900">{record.returns}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-orange-50">
-                    <p className="text-xs text-orange-600 mb-1">Salaire de base</p>
-                    <p className="font-bold text-orange-700">{formatCurrency(record.baseSalary)}</p>
-                  </div>
-                </div>
-
-                {/* Détail commissions */}
-                <div className="space-y-2 mb-4">
-                  {record.commissions > 0 && (
-                    <div className="flex justify-between items-center py-2 border-t border-gray-100">
-                      <span className="text-sm text-gray-700">Commissions</span>
-                      <span className="font-semibold text-green-600">+ {formatCurrency(record.commissions)}</span>
-                    </div>
-                  )}
-                  {record.bonuses > 0 && (
-                    <div className="flex justify-between items-center py-2 border-t border-gray-100">
-                      <span className="text-sm text-gray-700">Bonus</span>
-                      <span className="font-semibold text-green-600">+ {formatCurrency(record.bonuses)}</span>
-                    </div>
-                  )}
-                  {record.penalties > 0 && (
-                    <div className="flex justify-between items-center py-2 border-t border-gray-100">
-                      <span className="text-sm text-gray-700">Pénalités</span>
-                      <span className="font-semibold text-red-600">- {formatCurrency(record.penalties)}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Contraintes */}
-                {record.constraintsApplied && record.constraintsApplied.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs text-gray-600 mb-2">Contraintes appliquées :</p>
-                    <div className="flex flex-wrap gap-2">
-                      {record.constraintsApplied.map((c, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">{c}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Salaire final */}
-                <div className="pt-4 border-t-2 border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-orange-500" />
-                      <span className="text-lg font-bold text-gray-900">SALAIRE FINAL</span>
-                    </div>
-                    <span className="text-2xl font-bold text-orange-500">
-                      {formatCurrency(record.finalSalary)}
-                    </span>
-                  </div>
-                </div>
-
+        grouped.map((g) => (
+          <div key={g.date.toISOString()} className="abc-month-block">
+            <div className="abc-month-head">
+              <div className="abc-month-title">
+                <span className="abc-eyebrow">
+                  {g.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                </span>
+                <span className="abc-h3">{g.count} calcul{g.count > 1 ? 's' : ''}</span>
+              </div>
+              <div className="abc-month-total">
+                <span className="abc-eyebrow">Total versé</span>
+                <span className="abc-month-total-num">{fc(g.total)}</span>
               </div>
             </div>
-          ))}
-        </div>
+
+            <div className="abc-history-list">
+              {g.items.map((h) => {
+                const isOpen = expanded === h.id;
+                const initials = getInitials(h.employeeName);
+                return (
+                  <div key={h.id} className={`abc-history-row ${isOpen ? 'is-open' : ''}`}>
+                    <button
+                      type="button"
+                      className="abc-history-summary"
+                      onClick={() => setExpanded(isOpen ? null : h.id)}
+                    >
+                      <div
+                        className="abc-avatar abc-avatar-md"
+                        style={{ background: 'var(--brand)', color: 'var(--brand-fg)' }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="abc-history-info">
+                        <span className="abc-history-name">{h.employeeName}</span>
+                        <span className="abc-history-meta">{formatDateLong(h.date)} · {h.employeeRole}</span>
+                      </div>
+
+                      <div className="abc-history-stats">
+                        <div className="abc-history-stat">
+                          <span className="abc-history-stat-lbl">Ventes</span>
+                          <span className="abc-mono">{fc(h.totalSales)}</span>
+                        </div>
+                        <div className="abc-history-stat is-amber">
+                          <span className="abc-history-stat-lbl">Commissions</span>
+                          <span className="abc-mono">{fc(h.commissions)}</span>
+                        </div>
+                        <div className="abc-history-stat is-emerald">
+                          <span className="abc-history-stat-lbl">Bonus</span>
+                          <span className="abc-mono">{fc(h.bonuses)}</span>
+                        </div>
+                        <div className="abc-history-stat is-rose">
+                          <span className="abc-history-stat-lbl">Pénalités</span>
+                          <span className="abc-mono">{fc(h.penalties)}</span>
+                        </div>
+                      </div>
+
+                      <div className="abc-history-final">
+                        <span className="abc-eyebrow">Salaire final</span>
+                        <span className="abc-history-final-num">{fc(h.finalSalary)}</span>
+                      </div>
+
+                      <span className={`abc-history-chevron ${isOpen ? 'is-open' : ''}`}>
+                        <ChevronDown size={16} />
+                      </span>
+                    </button>
+
+                    {isOpen && (
+                      <div className="abc-history-detail">
+                        {/* Formula */}
+                        <div className="abc-detail-stack">
+                          <span className="abc-eyebrow">Décomposition</span>
+                          <div className="abc-detail-formula">
+                            <span>{fc(h.baseSalary)}</span>
+                            <span className="abc-formula-op">+</span>
+                            <span className="abc-text-success">{fc(h.commissions)}</span>
+                            <span className="abc-formula-op">+</span>
+                            <span className="abc-text-success">{fc(h.bonuses)}</span>
+                            <span className="abc-formula-op">−</span>
+                            <span className="abc-text-danger">{fc(h.penalties)}</span>
+                            <span className="abc-formula-op">=</span>
+                            <strong>{fc(h.finalSalary)}</strong>
+                          </div>
+                        </div>
+
+                        {/* Constraints */}
+                        {h.constraintsApplied && h.constraintsApplied.length > 0 && (
+                          <div className="abc-detail-applied">
+                            <span className="abc-eyebrow">Contraintes appliquées</span>
+                            <div className="abc-chip-row">
+                              {h.constraintsApplied.map((c, i) => (
+                                <span key={i} className="abc-chip is-static">{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button
+                            className="abc-btn abc-btn-ghost abc-btn-sm"
+                            onClick={() => handleExportOne(h)}
+                            disabled={exporting === h.id}
+                          >
+                            {exporting === h.id ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+                            Exporter PDF
+                          </button>
+                          <button
+                            className="abc-btn abc-btn-danger abc-btn-sm"
+                            onClick={() => { if (confirm("Supprimer ce calcul ?")) deleteCalculation(h.id); }}
+                          >
+                            <Trash2 size={13} />
+                            Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))
       )}
     </div>
   );

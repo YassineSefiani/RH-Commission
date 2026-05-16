@@ -2,188 +2,151 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CalculationHistory } from '../context/HistoryContext';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Couleurs ────────────────────────────────────────────────────────────────
+const C_DARK:   [number, number, number] = [24, 50, 75];
+const C_ORANGE: [number, number, number] = [247, 168, 0];
+const C_LGRAY:  [number, number, number] = [170, 184, 198];
+const C_WHITE:  [number, number, number] = [255, 255, 255];
+const C_GREEN:  [number, number, number] = [22, 163, 74];
+const C_RED:    [number, number, number] = [220, 38, 38];
+const C_BODY:   [number, number, number] = [31, 41, 55];
+const C_ALT:    [number, number, number] = [248, 249, 250];
+const C_FGRAY:  [number, number, number] = [240, 244, 248];
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('fr-FR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value) + ' MAD';
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function fmt(v: number) {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' MAD';
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function fmtDateLong(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   });
 }
 
-function formatDateShort(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-// ─── Couleurs ──────────────────────────────────────────────────────────────────
-const ORANGE  = [247, 168,   0] as [number, number, number];
-const NAVY    = [ 24,  50,  75] as [number, number, number];
-const GRAY_BG = [248, 249, 250] as [number, number, number];
-const WHITE   = [255, 255, 255] as [number, number, number];
-const GREEN   = [ 22, 163,  74] as [number, number, number];
-const RED     = [220,  38,  38] as [number, number, number];
-
-// ─── En-tête commun ────────────────────────────────────────────────────────────
-function drawHeader(doc: jsPDF, subtitle: string) {
-  const pageW = doc.internal.pageSize.getWidth();
-
-  // Bande navy
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, pageW, 28, 'F');
-
-  // Titre
-  doc.setTextColor(...WHITE);
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ABCDIS — Rapport des Commissions', 14, 12);
-
-  // Sous-titre
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(subtitle, 14, 21);
-
-  // Date d'export (droite)
-  doc.setFontSize(8);
-  const now = new Date().toLocaleDateString('fr-FR', {
+function nowStr() {
+  return new Date().toLocaleDateString('fr-FR', {
     day: '2-digit', month: 'long', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
-  doc.text(`Exporté le ${now}`, pageW - 14, 21, { align: 'right' });
-
-  // Ligne orange
-  doc.setFillColor(...ORANGE);
-  doc.rect(0, 28, pageW, 2, 'F');
 }
 
-// ─── Pied de page ──────────────────────────────────────────────────────────────
-function drawFooter(doc: jsPDF) {
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const total = (doc.internal as any).getNumberOfPages();
+function lastY(doc: jsPDF, fallback: number): number {
+  return (doc as any).lastAutoTable?.finalY ?? fallback;
+}
 
-  for (let i = 1; i <= total; i++) {
-    doc.setPage(i);
-    doc.setFillColor(...GRAY_BG);
-    doc.rect(0, pageH - 10, pageW, 10, 'F');
-    doc.setTextColor(150, 150, 150);
+// ─── En-tête commun ───────────────────────────────────────────────────────────
+function drawHeader(doc: jsPDF, subtitle: string, pageW: number, badge?: string): number {
+  const h = 22;
+  doc.setFillColor(...C_DARK);
+  doc.rect(0, 0, pageW, h, 'F');
+
+  doc.setTextColor(...C_WHITE);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('ABCDIS — Rapport des Commissions', 10, 9);
+
+  doc.setTextColor(...C_ORANGE);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(subtitle, 10, 16);
+
+  if (badge) {
+    const bW = doc.getTextWidth(badge) + 8;
+    const bX = pageW - 10 - bW;
+    doc.setFillColor(...C_ORANGE);
+    doc.roundedRect(bX, 5, bW, 6, 1.5, 1.5, 'F');
+    doc.setTextColor(...C_WHITE);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('ABCDIS — Document confidentiel', 14, pageH - 3.5);
-    doc.text(`Page ${i} / ${total}`, pageW - 14, pageH - 3.5, { align: 'right' });
+    doc.text(badge, bX + bW / 2, 9.2, { align: 'center' });
+  }
+
+  doc.setTextColor(...C_LGRAY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text(`Exporté le ${nowStr()}`, pageW - 10, 17, { align: 'right' });
+
+  return h;
+}
+
+// ─── Pied de page commun ──────────────────────────────────────────────────────
+function drawFooter(doc: jsPDF, pageW: number, pageH: number, rightText?: string) {
+  const fH = 10;
+  const y = pageH - fH;
+  doc.setFillColor(...C_DARK);
+  doc.rect(0, y, pageW, fH, 'F');
+  doc.setTextColor(...C_LGRAY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('Document confidentiel — ABCDIS', 10, y + 6);
+  if (rightText) {
+    doc.setTextColor(...C_WHITE);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(rightText, pageW - 10, y + 6, { align: 'right' });
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// EXPORT 1 : Tableau récapitulatif de tout l'historique (ou filtré)
+// EXPORT 1 : Tableau récapitulatif (historique complet ou filtré)
 // ═══════════════════════════════════════════════════════════════════════════════
 export function exportHistoryPDF(records: CalculationHistory[], filename = 'historique-commissions.pdf') {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
+  const pageW = 297;
+  const pageH = 210;
 
-  drawHeader(doc, `Historique complet — ${records.length} calcul(s)`);
+  const headerBottom = drawHeader(
+    doc,
+    'Historique complet des calculs de commissions',
+    pageW,
+    `${records.length} enregistrement(s)`,
+  );
 
-  // Totaux
-  const totalComm    = records.reduce((s, r) => s + r.commissions, 0);
-  const totalBonus   = records.reduce((s, r) => s + r.bonuses, 0);
-  const totalPenal   = records.reduce((s, r) => s + r.penalties, 0);
-  const totalFinal   = records.reduce((s, r) => s + r.finalSalary, 0);
+  const totalComm  = records.reduce((s, r) => s + r.commissions, 0);
+  const totalBonus = records.reduce((s, r) => s + r.bonuses, 0);
+  const totalPenal = records.reduce((s, r) => s + r.penalties, 0);
+  const totalFinal = records.reduce((s, r) => s + r.finalSalary, 0);
 
-  // Tableau principal
   autoTable(doc, {
-    startY: 36,
-    head: [[
-      'Employé', 'Rôle', 'Date', 'Commissions', 'Bonus', 'Pénalités', 'Salaire Final',
-    ]],
+    startY: headerBottom + 4,
+    margin: { left: 10, right: 10, bottom: 16 },
+    head: [['Employé', 'Rôle', 'Date', 'Commissions', 'Bonus', 'Pénalités', 'Salaire Final']],
     body: records.map(r => [
       r.employeeName,
-      r.employeeRole,
-      formatDateShort(r.date),
-      formatCurrency(r.commissions),
-      formatCurrency(r.bonuses),
-      r.penalties > 0 ? formatCurrency(r.penalties) : '—',
-      formatCurrency(r.finalSalary),
+      r.employeeRole || '—',
+      fmtDate(r.date),
+      fmt(r.commissions),
+      fmt(r.bonuses),
+      r.penalties > 0 ? fmt(r.penalties) : '—',
+      fmt(r.finalSalary),
     ]),
     foot: [[
-      { content: 'TOTAL', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
-      { content: formatCurrency(totalComm),  styles: { fontStyle: 'bold', textColor: GREEN } },
-      { content: formatCurrency(totalBonus), styles: { fontStyle: 'bold', textColor: GREEN } },
-      { content: totalPenal > 0 ? formatCurrency(totalPenal) : '—', styles: { fontStyle: 'bold', textColor: RED } },
-      { content: formatCurrency(totalFinal), styles: { fontStyle: 'bold', textColor: ORANGE, fontSize: 11 } },
+      `TOTAL (${records.length} employé(s))`, '', '',
+      fmt(totalComm),
+      fmt(totalBonus),
+      totalPenal > 0 ? fmt(totalPenal) : '—',
+      fmt(totalFinal),
     ]],
-    headStyles: {
-      fillColor: NAVY,
-      textColor: WHITE,
-      fontStyle: 'bold',
-      fontSize: 9,
-    },
-    footStyles: {
-      fillColor: GRAY_BG,
-      fontSize: 9,
-    },
-    bodyStyles: { fontSize: 8.5 },
-    alternateRowStyles: { fillColor: [252, 252, 252] },
-    columnStyles: {
-      0: { cellWidth: 42 },
-      1: { cellWidth: 38 },
-      2: { cellWidth: 28 },
-      3: { halign: 'right', cellWidth: 36 },
-      4: { halign: 'right', cellWidth: 30 },
-      5: { halign: 'right', cellWidth: 30 },
-      6: { halign: 'right', cellWidth: 38, fontStyle: 'bold', textColor: ORANGE },
-    },
-    margin: { left: 14, right: 14 },
     showFoot: 'lastPage',
+    headStyles: { fillColor: C_DARK, textColor: C_WHITE, fontStyle: 'bold', fontSize: 8 },
+    footStyles: { fillColor: C_FGRAY, textColor: C_DARK, fontStyle: 'bold', fontSize: 8 },
+    bodyStyles: { fontSize: 8, textColor: C_BODY },
+    alternateRowStyles: { fillColor: C_ALT },
+    columnStyles: {
+      3: { textColor: C_GREEN, fontStyle: 'bold', halign: 'right' },
+      4: { textColor: C_GREEN, fontStyle: 'bold', halign: 'right' },
+      5: { textColor: C_RED, halign: 'right' },
+      6: { textColor: C_ORANGE, fontStyle: 'bold', fontSize: 9, halign: 'right' },
+    },
   });
 
-  // Encadré résumé en bas
-  const finalY = (doc as any).lastAutoTable.finalY + 8;
-  const boxH = 22;
-  if (finalY + boxH < doc.internal.pageSize.getHeight() - 14) {
-    doc.setFillColor(...GRAY_BG);
-    doc.roundedRect(14, finalY, pageW - 28, boxH, 3, 3, 'F');
-    doc.setFontSize(8);
-    doc.setTextColor(...NAVY);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Résumé', 20, finalY + 7);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-
-    const cols = [
-      { label: 'Nb calculs',    value: String(records.length) },
-      { label: 'Total Comm.',   value: formatCurrency(totalComm),   color: GREEN  },
-      { label: 'Total Bonus',   value: formatCurrency(totalBonus),  color: GREEN  },
-      { label: 'Total Pénal.',  value: formatCurrency(totalPenal),  color: RED    },
-      { label: 'MASSE SALARIALE', value: formatCurrency(totalFinal), color: ORANGE },
-    ];
-    const colW = (pageW - 28) / cols.length;
-    cols.forEach((col, i) => {
-      const x = 14 + i * colW + colW / 2;
-      doc.setTextColor(120, 120, 120);
-      doc.setFont('helvetica', 'normal');
-      doc.text(col.label, x, finalY + 13, { align: 'center' });
-      doc.setTextColor(...(col.color ?? NAVY));
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text(col.value, x, finalY + 19, { align: 'center' });
-      doc.setFontSize(8);
-    });
-  }
-
-  drawFooter(doc);
+  drawFooter(doc, pageW, pageH, `MASSE SALARIALE TOTALE : ${fmt(totalFinal)}`);
   doc.save(filename);
 }
 
@@ -192,95 +155,85 @@ export function exportHistoryPDF(records: CalculationHistory[], filename = 'hist
 // ═══════════════════════════════════════════════════════════════════════════════
 export function exportSingleRecordPDF(record: CalculationHistory) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
+  const pageW = 210;
+  const pageH = 297;
 
-  drawHeader(doc, `Fiche de commission — ${record.employeeName}`);
+  const headerBottom = drawHeader(
+    doc,
+    `Fiche de commission — ${record.employeeName}`,
+    pageW,
+  );
 
-  let y = 38;
+  // ─── Zone identité employé ─────────────────────────────────────────────────
+  const infoY = headerBottom + 4;
+  const infoH = 22;
+  doc.setFillColor(248, 249, 250);
+  doc.rect(10, infoY, pageW - 20, infoH, 'F');
 
-  // ── Identité employé ──
-  doc.setFillColor(...GRAY_BG);
-  doc.roundedRect(14, y, pageW - 28, 24, 3, 3, 'F');
-
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(...C_BODY);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text(record.employeeName, 22, y + 9);
+  doc.setFontSize(14);
+  doc.text(record.employeeName, 14, infoY + 8);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(80, 80, 80);
-  doc.text(record.employeeRole || 'N/A', 22, y + 16);
-  doc.text(`Date du calcul : ${formatDate(record.date)}`, 22, y + 22);
+  doc.setTextColor(107, 114, 128);
+  doc.text(record.employeeRole || 'N/A', 14, infoY + 14);
+  doc.text(`Calcul du ${fmtDateLong(record.date)}`, 14, infoY + 20);
 
-  y += 32;
+  // Badge salaire final
+  const bW = 58;
+  const bX = pageW - 12 - bW;
+  doc.setFillColor(...C_DARK);
+  doc.roundedRect(bX, infoY + 2, bW, 18, 3, 3, 'F');
+  doc.setTextColor(...C_ORANGE);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.text('SALAIRE FINAL', bX + bW / 2, infoY + 9, { align: 'center' });
+  doc.setTextColor(...C_WHITE);
+  doc.setFontSize(10);
+  doc.text(fmt(record.finalSalary), bX + bW / 2, infoY + 17, { align: 'center' });
 
-  // ── Tableau de détail ──
-  const details: [string, string][] = [];
+  // ─── Tableau de détail ─────────────────────────────────────────────────────
+  const detailRows: string[][] = [];
+  if (record.baseSalary > 0)  detailRows.push(['Salaire de base', fmt(record.baseSalary)]);
+  if (record.commissions > 0) detailRows.push(['Commissions', `+ ${fmt(record.commissions)}`]);
+  if (record.bonuses > 0)     detailRows.push(['Bonus', `+ ${fmt(record.bonuses)}`]);
+  if (record.penalties > 0)   detailRows.push(['Pénalités', `- ${fmt(record.penalties)}`]);
 
-  if (record.commissions > 0)
-    details.push(['Commissions', formatCurrency(record.commissions)]);
-  if (record.bonuses > 0)
-    details.push(['Bonus', formatCurrency(record.bonuses)]);
-  if (record.penalties > 0)
-    details.push(['Pénalités', '- ' + formatCurrency(record.penalties)]);
-
-  // Détail règles si disponible
   if (Array.isArray(record.details) && record.details.length > 0) {
     record.details.forEach((d: any) => {
-      const label = d.code ? `${d.code} — ${d.libelle ?? d.name ?? ''}` : (d.libelle ?? d.name ?? 'Règle');
-      const amount = d.montant ?? d.amount ?? 0;
-      details.push([`  ${label}`, formatCurrency(amount)]);
+      const label = d.code
+        ? `${d.code} — ${d.libelle ?? d.name ?? 'Règle'}`
+        : (d.libelle ?? d.name ?? 'Règle');
+      detailRows.push([label, fmt(d.montant ?? d.amount ?? 0)]);
     });
   }
 
   autoTable(doc, {
-    startY: y,
+    startY: infoY + infoH + 4,
+    margin: { left: 10, right: 10, bottom: 16 },
     head: [['Élément de rémunération', 'Montant']],
-    body: details,
-    headStyles: {
-      fillColor: NAVY,
-      textColor: WHITE,
-      fontStyle: 'bold',
-      fontSize: 9,
-    },
-    bodyStyles: { fontSize: 9 },
-    alternateRowStyles: { fillColor: [252, 252, 252] },
-    columnStyles: {
-      0: { cellWidth: 130 },
-      1: { halign: 'right', cellWidth: 50 },
-    },
-    margin: { left: 14, right: 14 },
+    body: detailRows.length > 0 ? detailRows : [['Aucun détail disponible', '—']],
+    headStyles: { fillColor: C_DARK, textColor: C_WHITE, fontStyle: 'bold', fontSize: 9 },
+    bodyStyles: { fontSize: 9, textColor: C_BODY },
+    alternateRowStyles: { fillColor: C_ALT },
+    columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
   });
 
-  const afterTable = (doc as any).lastAutoTable.finalY + 10;
-
-  // ── Encadré salaire final ──
-  doc.setFillColor(...ORANGE);
-  doc.roundedRect(14, afterTable, pageW - 28, 18, 3, 3, 'F');
-
-  doc.setTextColor(...WHITE);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('SALAIRE FINAL (COMMISSIONS)', 22, afterTable + 8);
-  doc.setFontSize(14);
-  doc.text(formatCurrency(record.finalSalary), pageW - 22, afterTable + 11, { align: 'right' });
-
-  // ── Contraintes appliquées ──
-  if (record.constraintsApplied && record.constraintsApplied.length > 0) {
-    const cY = afterTable + 28;
-    doc.setTextColor(...NAVY);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('Contraintes appliquées :', 14, cY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(80, 80, 80);
+  // ─── Contraintes appliquées ────────────────────────────────────────────────
+  if (record.constraintsApplied?.length) {
+    const cy = lastY(doc, pageH - 50) + 8;
     doc.setFontSize(8);
-    const tags = record.constraintsApplied.join('   •   ');
-    doc.text(tags, 14, cY + 6, { maxWidth: pageW - 28 });
+    doc.setTextColor(107, 114, 128);
+    doc.setFont('helvetica', 'italic');
+    doc.text(
+      `Contraintes appliquées : ${record.constraintsApplied.join(', ')}`,
+      10, cy,
+    );
   }
 
-  drawFooter(doc);
-  const safeName = record.employeeName.replace(/\s+/g, '_');
-  doc.save(`commission_${safeName}_${formatDateShort(record.date).replace(/\//g, '-')}.pdf`);
+  drawFooter(doc, pageW, pageH);
+  const safeName = record.employeeName.replace(/[^a-zA-Z0-9\-_]/g, '_');
+  doc.save(`commission_${safeName}_${fmtDate(record.date).replace(/\//g, '-')}.pdf`);
 }

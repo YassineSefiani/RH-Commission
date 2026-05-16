@@ -1,388 +1,225 @@
 import { useMemo } from 'react';
-import { Users, TrendingUp, DollarSign, Calculator } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Users, TrendingUp, DollarSign, Calculator, Award, BarChart2 } from 'lucide-react';
+import {
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 import { useHistory } from '../context/HistoryContext';
 
 export default function DashboardPage() {
   const { history } = useHistory();
 
-  // Calculer les KPI à partir des données réelles
-  const kpiData = useMemo(() => {
-    if (history.length === 0) {
-      return {
-        totalCalculations: 0,
-        totalSales: 0,
-        totalSalaries: 0,
-        totalCommissions: 0,
-        uniqueEmployees: 0,
-      };
-    }
+  const fc = (v: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(v);
 
-    const totalCalculations = history.length;
-    const totalSales = history.reduce((sum, h) => sum + h.totalSales, 0);
-    const totalSalaries = history.reduce((sum, h) => sum + h.finalSalary, 0);
-    const totalCommissions = history.reduce((sum, h) => sum + h.commissions, 0);
-    const uniqueEmployees = new Set(history.map(h => h.employeeName)).size;
-
+  const kpi = useMemo(() => {
+    if (history.length === 0) return { totalCalcs: 0, totalSales: 0, totalPayroll: 0, totalCommissions: 0, uniqueEmps: 0 };
     return {
-      totalCalculations,
-      totalSales,
-      totalSalaries,
-      totalCommissions,
-      uniqueEmployees,
+      totalCalcs:       history.length,
+      totalSales:       history.reduce((s, h) => s + h.totalSales, 0),
+      totalPayroll:     history.reduce((s, h) => s + h.finalSalary, 0),
+      totalCommissions: history.reduce((s, h) => s + h.commissions, 0),
+      uniqueEmps:       new Set(history.map(h => h.employeeName)).size,
     };
   }, [history]);
 
-  // Données mensuelles pour les graphiques
   const monthlyData = useMemo(() => {
-    const monthsMap = new Map<string, { sales: number; commissions: number; salaries: number; count: number; date: Date }>();
-
+    const map = new Map<string, { sales: number; commissions: number; payroll: number; count: number; date: Date }>();
     history.forEach(h => {
-      const date = new Date(h.date);
-      const monthKey = date.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-      
-      const existing = monthsMap.get(monthKey) || { sales: 0, commissions: 0, salaries: 0, count: 0, date };
-      monthsMap.set(monthKey, {
-        sales: existing.sales + h.totalSales,
-        commissions: existing.commissions + h.commissions,
-        salaries: existing.salaries + h.finalSalary,
-        count: existing.count + 1,
-        date: existing.date, // Garder la date originale pour le tri
-      });
+      const d = new Date(h.date);
+      const k = d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+      const ex = map.get(k) || { sales: 0, commissions: 0, payroll: 0, count: 0, date: d };
+      map.set(k, { ...ex, sales: ex.sales + h.totalSales, commissions: ex.commissions + h.commissions, payroll: ex.payroll + h.finalSalary, count: ex.count + 1 });
     });
-
-    return Array.from(monthsMap.entries())
-      .map(([month, data]) => ({
-        month,
-        ventes: data.sales,
-        commissions: data.commissions,
-        salaires: data.salaries,
-        calculs: data.count,
-        sortDate: data.date, // Date pour le tri
-      }))
-      .sort((a, b) => a.sortDate.getTime() - b.sortDate.getTime()) // Tri par date réelle
-      .slice(-6); // Derniers 6 mois
+    return [...map.entries()]
+      .sort(([, a], [, b]) => a.date.getTime() - b.date.getTime())
+      .slice(-6)
+      .map(([month, d]) => ({ month, ...d }));
   }, [history]);
 
-  // Top performers basés sur les données réelles
   const topPerformers = useMemo(() => {
-    const employeeMap = new Map<string, {
-      name: string;
-      role: string;
-      totalSales: number;
-      totalCommissions: number;
-      totalSalary: number;
-      count: number;
-    }>();
-
+    const map = new Map<string, { name: string; role: string; commissions: number; finalSalary: number; count: number }>();
     history.forEach(h => {
-      const existing = employeeMap.get(h.employeeName) || {
-        name: h.employeeName,
-        role: h.employeeRole,
-        totalSales: 0,
-        totalCommissions: 0,
-        totalSalary: 0,
-        count: 0,
-      };
-
-      employeeMap.set(h.employeeName, {
-        name: h.employeeName,
-        role: h.employeeRole,
-        totalSales: existing.totalSales + h.totalSales,
-        totalCommissions: existing.totalCommissions + h.commissions,
-        totalSalary: existing.totalSalary + h.finalSalary,
-        count: existing.count + 1,
-      });
+      const ex = map.get(h.employeeName) || { name: h.employeeName, role: h.employeeRole, commissions: 0, finalSalary: 0, count: 0 };
+      map.set(h.employeeName, { ...ex, commissions: ex.commissions + h.commissions, finalSalary: ex.finalSalary + h.finalSalary, count: ex.count + 1 });
     });
-
-    return Array.from(employeeMap.values())
-      .sort((a, b) => b.totalCommissions - a.totalCommissions)
-      .slice(0, 5);
+    return [...map.values()].sort((a, b) => b.commissions - a.commissions).slice(0, 5);
   }, [history]);
 
-  // Distribution par rôle
-  const roleDistribution = useMemo(() => {
-    const roleMap = new Map<string, number>();
+  const recentActivity = history.slice(0, 5);
+  const maxComm = topPerformers[0]?.commissions || 1;
 
-    history.forEach(h => {
-      roleMap.set(h.employeeRole, (roleMap.get(h.employeeRole) || 0) + 1);
-    });
-
-    const colors = ['#f7a800', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
-    return Array.from(roleMap.entries()).map(([name, value], index) => ({
-      name,
-      value,
-      color: colors[index % colors.length],
-    }));
-  }, [history]);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'MAD',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const kpiCards = [
+    { label: 'Masse salariale', value: fc(kpi.totalPayroll), icon: DollarSign, tone: 'amber' },
+    { label: 'Total ventes',    value: fc(kpi.totalSales),   icon: TrendingUp, tone: 'blue' },
+    { label: 'Commissions',     value: fc(kpi.totalCommissions), icon: Award, tone: 'emerald' },
+    { label: 'Calculs',         value: String(kpi.totalCalcs),   icon: BarChart2, tone: 'violet' },
+  ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Calculs Effectués</p>
-              <p className="text-3xl font-bold text-gray-900">{kpiData.totalCalculations}</p>
+    <div className="abc-page-inner abc-stack-lg">
+      {/* KPI grid */}
+      <div className="abc-kpi-grid">
+        {kpiCards.map((k) => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className="abc-card abc-kpi">
+              <div className="abc-kpi-head">
+                <span className="abc-kpi-label">{k.label}</span>
+                <span className={`abc-kpi-icon abc-kpi-icon-${k.tone}`}>
+                  <Icon size={14} />
+                </span>
+              </div>
+              <div className="abc-kpi-value">{k.value}</div>
             </div>
-            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#f7a80020' }}>
-              <Calculator className="w-6 h-6" style={{ color: '#f7a800' }} />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Total Ventes</p>
-              <p className="text-3xl font-bold text-gray-900">{formatCurrency(kpiData.totalSales)}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Salaires Totaux</p>
-              <p className="text-3xl font-bold text-gray-900">{formatCurrency(kpiData.totalSalaries)}</p>
-            </div>
-            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-1">Commissions</p>
-              <p className="text-3xl font-bold text-gray-900">{formatCurrency(kpiData.totalCommissions)}</p>
-            </div>
-            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#f7a80020' }}>
-              <DollarSign className="w-6 h-6" style={{ color: '#f7a800' }} />
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
       {history.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-gray-100">
-          <Calculator className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Aucune donnée disponible</h3>
-          <p className="text-gray-600 mb-4">
-            Effectuez des calculs dans la page "Calcul" pour voir les statistiques et graphiques s'afficher ici.
-          </p>
+        <div className="abc-card abc-empty-card">
+          <Calculator size={36} strokeWidth={1.5} />
+          <p>Aucune donnée disponible. Effectuez des calculs pour voir les statistiques.</p>
         </div>
       ) : (
         <>
-          {/* Charts Row 1 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Évolution des ventes */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Ventes</h3>
-              {monthlyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" stroke="#6b7280" fontSize={12} />
-                    <YAxis stroke="#6b7280" fontSize={12} />
-                    <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                    />
-                    <Legend />
-                    <Line type="monotone" dataKey="ventes" stroke="#3b82f6" strokeWidth={2} name="Ventes" dot={{ r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-gray-400">
-                  Pas assez de données
+          {/* Charts row */}
+          <div className="abc-grid-2-3">
+            <div className="abc-card">
+              <div className="abc-sechead">
+                <div>
+                  <h3 className="abc-h3">Évolution des ventes</h3>
+                  <p className="abc-sub abc-sub-tight">6 derniers mois</p>
                 </div>
-              )}
+              </div>
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} />
+                  <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                  <Tooltip
+                    formatter={(v: number) => fc(v)}
+                    contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Line type="monotone" dataKey="sales" stroke="#3b82f6" strokeWidth={2} name="Ventes" dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="commissions" stroke="var(--brand)" strokeWidth={2} name="Commissions" dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
 
-            {/* Évolution des commissions */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Évolution des Commissions</h3>
-              {monthlyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" stroke="#6b7280" fontSize={12} />
-                    <YAxis stroke="#6b7280" fontSize={12} />
-                    <Tooltip 
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                    />
-                    <Legend />
-                    <Bar dataKey="commissions" fill="#f7a800" name="Commissions" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-gray-400">
-                  Pas assez de données
+            <div className="abc-card no-pad">
+              <div className="abc-top-card-head">
+                <div>
+                  <h3 className="abc-h3">Activité récente</h3>
+                  <p className="abc-sub abc-sub-tight">Derniers calculs</p>
                 </div>
-              )}
+              </div>
+              <ul className="abc-activity-list">
+                {recentActivity.map((h) => {
+                  const initials = h.employeeName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+                  const date = new Date(h.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                  return (
+                    <li key={h.id} className="abc-activity-row">
+                      <div
+                        className="abc-avatar abc-avatar-sm"
+                        style={{ background: 'var(--brand)', color: 'var(--brand-fg)', width: 30, height: 30, fontSize: 11 }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="abc-activity-info">
+                        <span className="abc-activity-name">{h.employeeName}</span>
+                        <span className="abc-activity-meta">{date} · {h.employeeRole}</span>
+                      </div>
+                      <span className="abc-mono abc-activity-amount">{fc(h.finalSalary)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           </div>
 
-          {/* Charts Row 2 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Distribution par rôle */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Calculs par Rôle</h3>
-              {roleDistribution.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={roleDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {roleDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-gray-400">
-                  Pas assez de données
+          {/* Commissions bar chart + Top performers */}
+          <div className="abc-grid-1-2">
+            <div className="abc-card">
+              <div className="abc-sechead">
+                <div>
+                  <h3 className="abc-h3">Commissions par mois</h3>
+                  <p className="abc-sub abc-sub-tight">Tendance des versements</p>
                 </div>
-              )}
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} />
+                  <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                  <Tooltip
+                    formatter={(v: number) => fc(v)}
+                    contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="commissions" fill="var(--brand)" radius={[6, 6, 0, 0]} name="Commissions" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
-            {/* Nombre de calculs par période */}
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Calculs par Période</h3>
-              {monthlyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="month" stroke="#6b7280" fontSize={12} />
-                    <YAxis stroke="#6b7280" fontSize={12} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                    />
-                    <Legend />
-                    <Bar dataKey="calculs" fill="#10b981" name="Nombre de calculs" radius={[8, 8, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-gray-400">
-                  Pas assez de données
+            {topPerformers.length > 0 && (
+              <div className="abc-card no-pad">
+                <div className="abc-top-card-head">
+                  <div>
+                    <h3 className="abc-h3">Top performers</h3>
+                    <p className="abc-sub abc-sub-tight">Par commissions totales</p>
+                  </div>
                 </div>
-              )}
-            </div>
+                <div className="abc-top-list">
+                  {topPerformers.map((p, i) => {
+                    const initials = p.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+                    const pct = (p.commissions / maxComm) * 100;
+                    const colors = ['var(--brand)', '#3b82f6', '#10b981', '#8b5cf6', '#f43f5e'];
+                    return (
+                      <div key={p.name} className="abc-top-row">
+                        <span className="abc-top-rank">{String(i + 1).padStart(2, '0')}</span>
+                        <div
+                          className="abc-avatar"
+                          style={{ background: colors[i], color: i === 0 ? 'var(--brand-fg)' : '#fff', width: 36, height: 36, fontSize: 12 }}
+                        >
+                          {initials}
+                        </div>
+                        <div className="abc-top-info">
+                          <span className="abc-top-name">{p.name}</span>
+                          <span className="abc-top-role">{p.role}</span>
+                        </div>
+                        <div className="abc-top-bar">
+                          <span style={{ width: `${pct}%`, background: colors[i] }} />
+                        </div>
+                        <div className="abc-top-value">
+                          <span className="abc-mono abc-top-value-amount">{fc(p.commissions)}</span>
+                          <span className="abc-top-value-label">{p.count} calcul{p.count > 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Top Performers */}
-          {topPerformers.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-bold text-gray-900">Top Performers</h3>
-                <p className="text-sm text-gray-600 mt-1">Employés avec les meilleures commissions</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Rang</th>
-                      <th className="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Employé</th>
-                      <th className="text-left py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Rôle</th>
-                      <th className="text-right py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Calculs</th>
-                      <th className="text-right py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Total Ventes</th>
-                      <th className="text-right py-3 px-6 text-xs font-semibold text-gray-600 uppercase">Commissions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {topPerformers.map((performer, index) => (
-                      <tr key={performer.name} className="hover:bg-gray-50">
-                        <td className="py-4 px-6">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full font-bold text-white text-sm"
-                            style={{ 
-                              backgroundColor: index === 0 ? '#f7a800' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : '#94a3b8' 
-                            }}
-                          >
-                            {index + 1}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="font-medium text-gray-900">{performer.name}</span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {performer.role}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <span className="font-medium text-gray-900">{performer.count}</span>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <span className="font-semibold text-gray-900">{formatCurrency(performer.totalSales)}</span>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <span className="font-bold" style={{ color: '#f7a800' }}>
-                            {formatCurrency(performer.totalCommissions)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {/* Summary row */}
+          <div className="abc-stat-strip">
+            <div className="abc-stat-item">
+              <span className="abc-stat-num">{kpi.uniqueEmps}</span>
+              <span className="abc-stat-lbl">employés uniques</span>
             </div>
-          )}
-
-          {/* Stats Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
-              <div className="flex items-center gap-3 mb-2">
-                <Users className="w-5 h-5 text-orange-600" />
-                <h4 className="font-bold text-orange-900">Employés Uniques</h4>
-              </div>
-              <p className="text-3xl font-bold text-orange-900">{kpiData.uniqueEmployees}</p>
-              <p className="text-sm text-orange-700 mt-1">ayant effectué des calculs</p>
+            <span className="abc-stat-sep" />
+            <div className="abc-stat-item is-amber">
+              <span className="abc-stat-dot" style={{ background: 'var(--brand)' }} />
+              <span className="abc-stat-num">{kpi.totalCalcs}</span>
+              <span className="abc-stat-lbl">calculs effectués</span>
             </div>
-
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-              <div className="flex items-center gap-3 mb-2">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-                <h4 className="font-bold text-blue-900">Ventes Moyennes</h4>
-              </div>
-              <p className="text-3xl font-bold text-blue-900">
-                {kpiData.totalCalculations > 0 ? formatCurrency(kpiData.totalSales / kpiData.totalCalculations) : '0 MAD'}
-              </p>
-              <p className="text-sm text-blue-700 mt-1">par calcul</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-              <div className="flex items-center gap-3 mb-2">
-                <DollarSign className="w-5 h-5 text-green-600" />
-                <h4 className="font-bold text-green-900">Commission Moyenne</h4>
-              </div>
-              <p className="text-3xl font-bold text-green-900">
-                {kpiData.totalCalculations > 0 ? formatCurrency(kpiData.totalCommissions / kpiData.totalCalculations) : '0 MAD'}
-              </p>
-              <p className="text-sm text-green-700 mt-1">par calcul</p>
+            <span className="abc-stat-sep" />
+            <div className="abc-stat-item">
+              <span className="abc-stat-num">
+                {kpi.totalCalcs > 0 ? fc(kpi.totalCommissions / kpi.totalCalcs) : '—'}
+              </span>
+              <span className="abc-stat-lbl">commission moyenne / calcul</span>
             </div>
           </div>
         </>

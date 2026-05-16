@@ -50,12 +50,12 @@ export default function CalculationPage() {
   };
 
   return (
-    <div className="p-6 md:p-8 space-y-8 bg-gray-50 min-h-screen">
+    <div className="abc-page-inner abc-stack-lg">
       {/* Header & Import Section */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="abc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Calcul par Marque</h1>
-          <p className="text-gray-500 mt-1">Choisissez une marque pour accéder au calcul spécifique ou importez vos données.</p>
+          <h1 className="abc-h2">Calcul par Marque</h1>
+          <p className="abc-sub abc-sub-tight">Choisissez une marque pour accéder au calcul spécifique ou importez vos données.</p>
         </div>
         
         <div className="flex flex-col items-end gap-2">
@@ -69,7 +69,7 @@ export default function CalculationPage() {
           <button
             type="button"
             onClick={handleImportClick}
-            className="flex items-center gap-3 rounded-xl bg-[#f7a800] px-6 py-3 text-sm font-bold text-white hover:bg-orange-600 transition-all shadow-md hover:shadow-orange-200 active:scale-95"
+            className="abc-btn abc-btn-primary"
           >
             <FileSpreadsheet className="w-5 h-5" />
             Importer un fichier Excel
@@ -84,7 +84,7 @@ export default function CalculationPage() {
       </div>
 
       {/* Brand Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>
         {brandCards.map((card) => (
           <button
             key={card.id}

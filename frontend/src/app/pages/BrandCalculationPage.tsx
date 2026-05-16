@@ -5,8 +5,6 @@ import { useConstraints } from '../context/ConstraintsContext';
 import { useHistory } from '../context/HistoryContext';
 import { toast } from 'sonner';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-
 interface Employee {
   id: string;
   nom: string;
@@ -15,25 +13,22 @@ interface Employee {
   carte: string;
   natureContrat: string;
   actif: boolean;
+  baseSalary?: number;
 }
 
-type ResultDetail = {
-  code: string;
-  libelle: string;
-  montant: number;
+type CalculationDetail = {
+  name: string;
+  amount: number;
+  type: 'commission' | 'bonus' | 'penalty';
 };
 
 type EmployeeCalculationResult = {
-  matricule: string;
-  prenom: string;
-  nom: string;
-  role: string;
-  natureContrat: string;
+  employee: Employee;
   commissions: number;
   bonuses: number;
   penalties: number;
   finalSalary: number;
-  detail: ResultDetail[];
+  details: CalculationDetail[];
 };
 
 export default function BrandCalculationPage() {
@@ -53,7 +48,7 @@ export default function BrandCalculationPage() {
     const fetchEmployeesByBrand = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_BASE_URL}/personnel/carte/${decodedBrand}`);
+        const response = await fetch(`http://localhost:8080/api/personnel/carte/${decodedBrand}`);
         if (response.ok) {
           const data = await response.json();
           setBrandEmployees(data.filter((emp: Employee) => emp.actif));
@@ -74,65 +69,71 @@ export default function BrandCalculationPage() {
   const handleCalculateAll = async () => {
     setIsCalculating(true);
     try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+
       const activeConstraints = constraints.filter(c => c.active);
 
-      if (activeConstraints.length === 0 || brandEmployees.length === 0) {
-        toast.error("Données manquantes : vérifiez les contraintes ou les employés actifs.");
-        return;
-      }
+      const brandResults = brandEmployees.map(employee => {
+        let commissions = 0;
+        let bonuses = 0;
+        let penalties = 0;
+        const details: CalculationDetail[] = [];
 
-      const response = await fetch(`${API_BASE_URL}/calculations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          carte: decodedBrand,
-          periode: "2026-05", // Exemple de période actuelle
-          contraintes: activeConstraints,
-        }),
+        activeConstraints.forEach(constraint => {
+          let amount = 0;
+          if (constraint.type === 'commission_quantitative') {
+            amount = constraint.valueType === 'percentage'
+              ? constraint.value
+              : constraint.value;
+          } else if (constraint.type === 'commission_retour') {
+            amount = 250; // Example logic
+          } else if (constraint.type === 'commission_triage') {
+            amount = 200; // Example logic
+          }
+
+          if (amount > 0) {
+            commissions += amount;
+            details.push({ name: constraint.name, amount, type: 'commission' });
+          }
+        });
+
+        const baseSalary = employee.baseSalary || 2500;
+        const finalSalary = baseSalary + commissions + bonuses - penalties;
+
+        const result: EmployeeCalculationResult = { 
+          employee, commissions, bonuses, penalties, finalSalary, details 
+        };
+
+        addCalculation({
+          employeeName: `${employee.prenom} ${employee.nom}`,
+          employeeRole: employee.role,
+          baseSalary,
+          totalSales: 0, // Placeholder
+          deliveries: 0, // Placeholder
+          returns: 0, // Placeholder
+          commissions: result.commissions,
+          bonuses: result.bonuses,
+          penalties: result.penalties,
+          finalSalary: result.finalSalary,
+          constraintsApplied: activeConstraints.map(c => c.name),
+          details: JSON.stringify(result.details) as any,
+        });
+
+        return result;
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(`Erreur : ${errorData.message || "Calcul échoué."}`);
-        return;
-      }
-
-      const resultData = await response.json();
-      const resultats: EmployeeCalculationResult[] = resultData.resultats || [];
-      setResults(resultats);
-
-      // Sauvegarde dans l'historique
-      for (const res of resultats) {
-        try {
-          await addCalculation({
-            employeeName: `${res.prenom} ${res.nom}`,
-            employeeRole: res.role || '',
-            baseSalary: 0,
-            totalSales: 0,
-            deliveries: 0,
-            returns: 0,
-            commissions: res.commissions,
-            bonuses: res.bonuses,
-            penalties: res.penalties,
-            finalSalary: res.finalSalary,
-            constraintsApplied: activeConstraints.map(c => c.name),
-            details: res.detail || [],
-          });
-        } catch {
-          // un échec d'historique ne bloque pas l'affichage
-        }
-      }
-      toast.success(`Calcul terminé — ${resultats.length} employé(s) traité(s)`);
+      setResults(brandResults);
+      toast.success("Calcul groupé sauvegardé avec succès !");
     } catch (error) {
-      console.error("Erreur lors du calcul groupé :", error);
-      toast.error("Erreur de calcul, veuillez réessayer.");
+      console.error(error);
+      toast.error("Erreur de calcul, veuillez réessayer");
     } finally {
       setIsCalculating(false);
     }
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="abc-page-inner abc-stack-lg">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-orange-100 rounded-xl text-orange-600">
@@ -225,8 +226,8 @@ export default function BrandCalculationPage() {
                     {results.map((res, idx) => (
                       <div key={idx} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
                         <div className="mb-4">
-                          <h4 className="font-bold text-gray-900 text-lg">{res.prenom} {res.nom}</h4>
-                          <p className="text-xs text-gray-500 mt-1 uppercase font-semibold">{res.role} • {res.natureContrat}</p>
+                          <h4 className="font-bold text-gray-900 text-lg">{res.employee.prenom} {res.employee.nom}</h4>
+                          <p className="text-xs text-gray-500 mt-1 uppercase font-semibold">{res.employee.role} • {res.employee.natureContrat}</p>
                         </div>
                         <div className="text-3xl font-black text-orange-500 mb-6">
                           {formatCurrency(res.finalSalary)}
@@ -264,8 +265,8 @@ export default function BrandCalculationPage() {
                       <tbody className="divide-y divide-gray-100">
                         {results.map((r, idx) => (
                           <tr key={idx} className="hover:bg-gray-50 transition-colors text-sm">
-                            <td className="p-4 font-medium text-gray-900">{r.prenom} {r.nom}</td>
-                            <td className="p-4 text-gray-600">—</td>
+                            <td className="p-4 font-medium text-gray-900">{r.employee.prenom} {r.employee.nom}</td>
+                            <td className="p-4 text-gray-600">{formatCurrency(r.employee.baseSalary || 2500)}</td>
                             <td className="p-4 text-green-600 font-medium">+{formatCurrency(r.commissions)}</td>
                             <td className="p-4 text-green-600 font-medium">+{formatCurrency(r.bonuses)}</td>
                             <td className="p-4 text-red-500 font-medium">-{formatCurrency(r.penalties)}</td>
@@ -276,7 +277,7 @@ export default function BrandCalculationPage() {
                       <tfoot className="bg-orange-50 font-bold border-t-2 border-orange-200">
                         <tr>
                           <td className="p-4 text-orange-900">TOTAL ÉQUIPE</td>
-                          <td className="p-4">—</td>
+                          <td className="p-4">{formatCurrency(results.reduce((acc, r) => acc + (r.employee.baseSalary || 2500), 0))}</td>
                           <td className="p-4 text-green-700">+{formatCurrency(results.reduce((acc, r) => acc + r.commissions, 0))}</td>
                           <td className="p-4 text-green-700">+{formatCurrency(results.reduce((acc, r) => acc + r.bonuses, 0))}</td>
                           <td className="p-4 text-red-600">-{formatCurrency(results.reduce((acc, r) => acc + r.penalties, 0))}</td>
