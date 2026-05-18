@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { User, Bell, Shield, Palette, Save } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { useLang } from '../context/LangContext';
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
+  const { lang, setLang, t } = useLang();
+  const s = t.settings;
+
   const [userSettings, setUserSettings] = useState({
     name: 'Administrateur RH',
     email: localStorage.getItem('userEmail') || '',
@@ -11,8 +17,6 @@ export default function SettingsPage() {
       push: false,
       weekly: true,
     },
-    theme: 'light',
-    language: 'fr',
   });
 
   const [saved, setSaved] = useState(false);
@@ -37,15 +41,15 @@ export default function SettingsPage() {
     <div className="abc-page-inner abc-stack-lg">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Paramètres</h1>
-        <p className="text-gray-600 mt-1">Gérer les préférences de votre compte</p>
+        <h1 className="text-2xl font-bold text-gray-900">{s.title}</h1>
+        <p className="text-gray-600 mt-1">{s.subtitle}</p>
       </div>
 
       {/* Success Message */}
       {saved && (
         <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
           <Save className="w-5 h-5" />
-          <span>Paramètres enregistrés avec succès!</span>
+          <span>{s.savedMsg}</span>
         </div>
       )}
 
@@ -56,13 +60,13 @@ export default function SettingsPage() {
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#f7a80020' }}>
               <User className="w-5 h-5" style={{ color: '#f7a800' }} />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Profil Utilisateur</h3>
+            <h3 className="text-lg font-bold text-gray-900">{s.profile}</h3>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nom complet
+                {s.fullName}
               </label>
               <input
                 type="text"
@@ -74,7 +78,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+                {s.email}
               </label>
               <input
                 type="email"
@@ -86,7 +90,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rôle
+                {s.role}
               </label>
               <select
                 value={userSettings.role}
@@ -107,14 +111,14 @@ export default function SettingsPage() {
             <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
               <Bell className="w-5 h-5 text-blue-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Notifications</h3>
+            <h3 className="text-lg font-bold text-gray-900">{s.notifications}</h3>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
               <div>
-                <p className="font-medium text-gray-900">Notifications Email</p>
-                <p className="text-xs text-gray-500">Recevoir des alertes par email</p>
+                <p className="font-medium text-gray-900">{s.emailNotif}</p>
+                <p className="text-xs text-gray-500">{s.emailNotifSub}</p>
               </div>
               <button
                 onClick={() => handleNotificationChange('email', !userSettings.notifications.email)}
@@ -132,8 +136,8 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
               <div>
-                <p className="font-medium text-gray-900">Notifications Push</p>
-                <p className="text-xs text-gray-500">Recevoir des notifications instantanées</p>
+                <p className="font-medium text-gray-900">{s.pushNotif}</p>
+                <p className="text-xs text-gray-500">{s.pushNotifSub}</p>
               </div>
               <button
                 onClick={() => handleNotificationChange('push', !userSettings.notifications.push)}
@@ -151,8 +155,8 @@ export default function SettingsPage() {
 
             <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
               <div>
-                <p className="font-medium text-gray-900">Rapport Hebdomadaire</p>
-                <p className="text-xs text-gray-500">Recevoir un rapport chaque semaine</p>
+                <p className="font-medium text-gray-900">{s.weeklyReport}</p>
+                <p className="text-xs text-gray-500">{s.weeklyReportSub}</p>
               </div>
               <button
                 onClick={() => handleNotificationChange('weekly', !userSettings.notifications.weekly)}
@@ -176,37 +180,35 @@ export default function SettingsPage() {
             <div className="w-10 h-10 bg-purple-50 rounded-full flex items-center justify-center">
               <Palette className="w-5 h-5 text-purple-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Apparence</h3>
+            <h3 className="text-lg font-bold text-gray-900">{s.appearance}</h3>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Thème
+                {s.theme}
               </label>
               <select
-                value={userSettings.theme}
-                onChange={(e) => setUserSettings({ ...userSettings, theme: e.target.value })}
+                value={theme}
+                onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
               >
-                <option value="light">Clair</option>
-                <option value="dark">Sombre</option>
-                <option value="auto">Automatique</option>
+                <option value="light">{s.themeLight}</option>
+                <option value="dark">{s.themeDark}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Langue
+                {s.language}
               </label>
               <select
-                value={userSettings.language}
-                onChange={(e) => setUserSettings({ ...userSettings, language: e.target.value })}
+                value={lang}
+                onChange={(e) => setLang(e.target.value as 'fr' | 'en')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none"
               >
                 <option value="fr">Français</option>
                 <option value="en">English</option>
-                <option value="es">Español</option>
               </select>
             </div>
           </div>
@@ -218,18 +220,18 @@ export default function SettingsPage() {
             <div className="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center">
               <Shield className="w-5 h-5 text-red-600" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Sécurité</h3>
+            <h3 className="text-lg font-bold text-gray-900">{s.security}</h3>
           </div>
 
           <div className="space-y-4">
             <button className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
-              Changer le mot de passe
+              {s.changePassword}
             </button>
             <button className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
-              Activer l'authentification à deux facteurs
+              {s.enable2FA}
             </button>
             <button className="w-full px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition">
-              Déconnecter tous les appareils
+              {s.logoutAll}
             </button>
           </div>
         </div>
@@ -248,15 +250,15 @@ export default function SettingsPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <p className="text-gray-600">Version</p>
+            <p className="text-gray-600">{s.version}</p>
             <p className="font-semibold text-gray-900">2.5.0</p>
           </div>
           <div>
-            <p className="text-gray-600">Dernière mise à jour</p>
+            <p className="text-gray-600">{s.lastUpdate}</p>
             <p className="font-semibold text-gray-900">27 Mars 2026</p>
           </div>
           <div>
-            <p className="text-gray-600">Licence</p>
+            <p className="text-gray-600">{s.licence}</p>
             <p className="font-semibold text-gray-900">Entreprise</p>
           </div>
         </div>
@@ -270,7 +272,7 @@ export default function SettingsPage() {
           style={{ backgroundColor: '#f7a800' }}
         >
           <Save className="w-5 h-5" />
-          Enregistrer les modifications
+          {s.saveBtn}
         </button>
       </div>
     </div>

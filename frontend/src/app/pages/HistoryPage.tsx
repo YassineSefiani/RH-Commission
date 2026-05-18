@@ -2,10 +2,13 @@ import { useState, useMemo } from 'react';
 import { ChevronDown, Download, FileDown, Loader2, Trash2, Search } from 'lucide-react';
 import { useHistory } from '../context/HistoryContext';
 import { exportHistoryPDF, exportSingleRecordPDF } from '../utils/pdfExport';
+import { useLang } from '../context/LangContext';
 import { toast } from 'sonner';
 
 export default function HistoryPage() {
   const { history, deleteCalculation, clearHistory } = useHistory();
+  const { t, lang } = useLang();
+  const h_ = t.history;
 
   const [search, setSearch] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -70,14 +73,15 @@ export default function HistoryPage() {
     }
   };
 
+  const monthsFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const monthsEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const monthsOpts = [
-    { value: '', label: 'Tous les mois' },
-    ...['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
-      .map((m, i) => ({ value: String(i), label: m })),
+    { value: '', label: lang === 'en' ? 'All months' : 'Tous les mois' },
+    ...(lang === 'en' ? monthsEn : monthsFr).map((m, i) => ({ value: String(i), label: m })),
   ];
 
   const formatDateLong = (d: string) =>
-    new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    new Date(d).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   const getInitials = (name: string) =>
     name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase();
@@ -88,17 +92,17 @@ export default function HistoryPage() {
       <div className="abc-stat-strip">
         <div className="abc-stat-item">
           <span className="abc-stat-num">{filtered.length}</span>
-          <span className="abc-stat-lbl">calculs</span>
+          <span className="abc-stat-lbl">{lang === 'en' ? 'calculations' : 'calculs'}</span>
         </div>
         <span className="abc-stat-sep" />
         <div className="abc-stat-item">
           <span className="abc-stat-num">{fc(totalPayroll)}</span>
-          <span className="abc-stat-lbl">masse salariale</span>
+          <span className="abc-stat-lbl">{lang === 'en' ? 'total payroll' : 'masse salariale'}</span>
         </div>
         <div className="abc-stat-item">
           <span className="abc-stat-dot" style={{ background: 'var(--brand)' }} />
           <span className="abc-stat-num">{fc(totalComm)}</span>
-          <span className="abc-stat-lbl">commissions</span>
+          <span className="abc-stat-lbl">{t.dashboard.commissions.toLowerCase()}</span>
         </div>
         <span className="abc-stat-spacer" />
         <button
@@ -107,7 +111,7 @@ export default function HistoryPage() {
           disabled={filtered.length === 0 || exporting === 'all'}
         >
           {exporting === 'all' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-          {exporting === 'all' ? 'Génération…' : 'Exporter PDF'}
+          {exporting === 'all' ? (lang === 'en' ? 'Generating…' : 'Génération…') : h_.exportPDF}
           {filtered.length > 0 && exporting !== 'all' && (
             <span style={{ background: 'rgba(0,0,0,0.15)', borderRadius: 999, padding: '1px 6px', fontSize: 10 }}>
               {filtered.length}
@@ -115,9 +119,9 @@ export default function HistoryPage() {
           )}
         </button>
         {history.length > 0 && (
-          <button className="abc-btn abc-btn-secondary abc-btn-sm" onClick={() => { if (confirm('Vider tout l\'historique ?')) clearHistory(); }}>
+          <button className="abc-btn abc-btn-secondary abc-btn-sm" onClick={() => { if (confirm(lang === 'en' ? 'Clear all history?' : "Vider tout l'historique ?")) clearHistory(); }}>
             <Trash2 size={13} />
-            Vider
+            {h_.clearAll}
           </button>
         )}
       </div>
@@ -128,7 +132,7 @@ export default function HistoryPage() {
           <div className="abc-search">
             <Search size={14} />
             <input
-              placeholder="Rechercher un collaborateur…"
+              placeholder={h_.search}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -148,7 +152,7 @@ export default function HistoryPage() {
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
             >
-              <option value="">Toutes les années</option>
+              <option value="">{lang === 'en' ? 'All years' : 'Toutes les années'}</option>
               <option value="2026">2026</option>
               <option value="2025">2025</option>
               <option value="2024">2024</option>
@@ -158,7 +162,7 @@ export default function HistoryPage() {
                 className="abc-btn abc-btn-ghost abc-btn-sm"
                 onClick={() => { setSearch(''); setSelectedMonth(''); setSelectedYear(''); }}
               >
-                Réinitialiser
+                {h_.reset}
               </button>
             )}
           </div>
@@ -176,8 +180,8 @@ export default function HistoryPage() {
           <Download size={32} strokeWidth={1.5} />
           <p>
             {history.length === 0
-              ? "Aucun calcul enregistré. Effectuez un calcul pour voir l'historique."
-              : "Aucun résultat pour ces filtres."}
+              ? h_.noHistorySub
+              : (lang === 'en' ? 'No results for these filters.' : 'Aucun résultat pour ces filtres.')}
           </p>
         </div>
       ) : (
@@ -186,12 +190,12 @@ export default function HistoryPage() {
             <div className="abc-month-head">
               <div className="abc-month-title">
                 <span className="abc-eyebrow">
-                  {g.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                  {g.date.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' })}
                 </span>
                 <span className="abc-h3">{g.count} calcul{g.count > 1 ? 's' : ''}</span>
               </div>
               <div className="abc-month-total">
-                <span className="abc-eyebrow">Total versé</span>
+                <span className="abc-eyebrow">{lang === 'en' ? 'Total paid' : 'Total versé'}</span>
                 <span className="abc-month-total-num">{fc(g.total)}</span>
               </div>
             </div>
@@ -220,25 +224,25 @@ export default function HistoryPage() {
 
                       <div className="abc-history-stats">
                         <div className="abc-history-stat">
-                          <span className="abc-history-stat-lbl">Ventes</span>
+                          <span className="abc-history-stat-lbl">{lang === 'en' ? 'Sales' : 'Ventes'}</span>
                           <span className="abc-mono">{fc(h.totalSales)}</span>
                         </div>
                         <div className="abc-history-stat is-amber">
-                          <span className="abc-history-stat-lbl">Commissions</span>
+                          <span className="abc-history-stat-lbl">{t.dashboard.commissions}</span>
                           <span className="abc-mono">{fc(h.commissions)}</span>
                         </div>
                         <div className="abc-history-stat is-emerald">
-                          <span className="abc-history-stat-lbl">Bonus</span>
+                          <span className="abc-history-stat-lbl">{lang === 'en' ? 'Bonus' : 'Bonus'}</span>
                           <span className="abc-mono">{fc(h.bonuses)}</span>
                         </div>
                         <div className="abc-history-stat is-rose">
-                          <span className="abc-history-stat-lbl">Pénalités</span>
+                          <span className="abc-history-stat-lbl">{lang === 'en' ? 'Penalties' : 'Pénalités'}</span>
                           <span className="abc-mono">{fc(h.penalties)}</span>
                         </div>
                       </div>
 
                       <div className="abc-history-final">
-                        <span className="abc-eyebrow">Salaire final</span>
+                        <span className="abc-eyebrow">{lang === 'en' ? 'Final salary' : 'Salaire final'}</span>
                         <span className="abc-history-final-num">{fc(h.finalSalary)}</span>
                       </div>
 
@@ -251,7 +255,7 @@ export default function HistoryPage() {
                       <div className="abc-history-detail">
                         {/* Formula */}
                         <div className="abc-detail-stack">
-                          <span className="abc-eyebrow">Décomposition</span>
+                          <span className="abc-eyebrow">{lang === 'en' ? 'Breakdown' : 'Décomposition'}</span>
                           <div className="abc-detail-formula">
                             <span>{fc(h.baseSalary)}</span>
                             <span className="abc-formula-op">+</span>
@@ -268,7 +272,7 @@ export default function HistoryPage() {
                         {/* Constraints */}
                         {h.constraintsApplied && h.constraintsApplied.length > 0 && (
                           <div className="abc-detail-applied">
-                            <span className="abc-eyebrow">Contraintes appliquées</span>
+                            <span className="abc-eyebrow">{lang === 'en' ? 'Applied constraints' : 'Contraintes appliquées'}</span>
                             <div className="abc-chip-row">
                               {h.constraintsApplied.map((c, i) => (
                                 <span key={i} className="abc-chip is-static">{c}</span>
@@ -285,14 +289,14 @@ export default function HistoryPage() {
                             disabled={exporting === h.id}
                           >
                             {exporting === h.id ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
-                            Exporter PDF
+                            {h_.exportPDF}
                           </button>
                           <button
                             className="abc-btn abc-btn-danger abc-btn-sm"
-                            onClick={() => { if (confirm("Supprimer ce calcul ?")) deleteCalculation(h.id); }}
+                            onClick={() => { if (confirm(lang === 'en' ? 'Delete this record?' : 'Supprimer ce calcul ?')) deleteCalculation(h.id); }}
                           >
                             <Trash2 size={13} />
-                            Supprimer
+                            {t.common.delete}
                           </button>
                         </div>
                       </div>

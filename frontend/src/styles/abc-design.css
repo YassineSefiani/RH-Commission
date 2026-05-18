@@ -65,6 +65,115 @@
   --sidebar-nav-text-active: var(--brand);
 }
 
+/* ── Dark theme (main content area only — sidebar stays dark always) ── */
+[data-theme="dark"] {
+  --bg:           #1a1714;
+  --bg-2:         #211e1a;
+  --surface:      #242019;
+  --surface-2:    #2d2921;
+  --surface-3:    #36312a;
+  --border:       #3a342c;
+  --border-strong:#4a4238;
+  --text:         #f0ebe0;
+  --text-2:       #c9c0b4;
+  --text-muted:   #8a8275;
+  --text-faint:   #5a5248;
+  --success:      #34d399;
+  --success-soft: rgba(52, 211, 153, 0.12);
+  --danger:       #f87171;
+  --danger-soft:  rgba(248, 113, 113, 0.12);
+  --info:         #60a5fa;
+  --info-soft:    rgba(96, 165, 250, 0.12);
+  --shadow-card:  0 1px 0 rgba(0, 0, 0, 0.20), 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-pop:   0 12px 36px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.30);
+
+  /* sidebar stays dark — same values as light */
+  --sidebar-bg: #0c0a08;
+  --sidebar-bg-2: #110d09;
+  --sidebar-border: #1a1612;
+  --sidebar-text: #f6f1e7;
+  --sidebar-text-muted: #8a8275;
+  --sidebar-nav-bg-active: rgba(247, 168, 0, 0.16);
+  --sidebar-nav-text-active: var(--brand);
+}
+
+/* ── Dark mode: override hardcoded Tailwind color classes inside main content ── */
+/* Scoped to .abc-main so sidebar (always dark) is unaffected */
+
+[data-theme="dark"] .abc-main .bg-white,
+[data-theme="dark"] .abc-main .bg-white\/80 { background-color: var(--surface) !important; }
+
+[data-theme="dark"] .abc-main .bg-gray-50  { background-color: var(--surface-2) !important; }
+[data-theme="dark"] .abc-main .bg-gray-100 { background-color: var(--surface-3) !important; }
+[data-theme="dark"] .abc-main .bg-gray-200 { background-color: var(--surface-3) !important; }
+
+[data-theme="dark"] .abc-main .text-gray-900,
+[data-theme="dark"] .abc-main .text-gray-800 { color: var(--text) !important; }
+[data-theme="dark"] .abc-main .text-gray-700 { color: var(--text-2) !important; }
+[data-theme="dark"] .abc-main .text-gray-600,
+[data-theme="dark"] .abc-main .text-gray-500 { color: var(--text-muted) !important; }
+[data-theme="dark"] .abc-main .text-gray-400 { color: var(--text-faint) !important; }
+
+[data-theme="dark"] .abc-main .border-gray-100,
+[data-theme="dark"] .abc-main .border-gray-200 { border-color: var(--border) !important; }
+[data-theme="dark"] .abc-main .border-gray-300 { border-color: var(--border-strong) !important; }
+
+[data-theme="dark"] .abc-main .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+
+/* Colored light backgrounds */
+[data-theme="dark"] .abc-main .bg-green-50   { background-color: var(--success-soft) !important; }
+[data-theme="dark"] .abc-main .bg-red-50     { background-color: var(--danger-soft) !important; }
+[data-theme="dark"] .abc-main .bg-blue-50    { background-color: var(--info-soft) !important; }
+[data-theme="dark"] .abc-main .bg-purple-50  { background-color: rgba(139,92,246,0.12) !important; }
+[data-theme="dark"] .abc-main .bg-orange-50  { background-color: var(--brand-soft) !important; }
+[data-theme="dark"] .abc-main .bg-orange-100 { background-color: rgba(247,168,0,0.18) !important; }
+[data-theme="dark"] .abc-main .border-orange-100,
+[data-theme="dark"] .abc-main .border-orange-200 { border-color: rgba(247,168,0,0.25) !important; }
+
+/* Colored text that needs to be lightened for contrast */
+[data-theme="dark"] .abc-main .text-green-700,
+[data-theme="dark"] .abc-main .text-green-800 { color: var(--success) !important; }
+[data-theme="dark"] .abc-main .text-green-600 { color: var(--success) !important; }
+[data-theme="dark"] .abc-main .border-green-100,
+[data-theme="dark"] .abc-main .border-green-200 { border-color: rgba(52,211,153,0.20) !important; }
+
+[data-theme="dark"] .abc-main .text-red-700,
+[data-theme="dark"] .abc-main .text-red-600 { color: var(--danger) !important; }
+[data-theme="dark"] .abc-main .border-red-100,
+[data-theme="dark"] .abc-main .border-red-200,
+[data-theme="dark"] .abc-main .border-red-300 { border-color: rgba(248,113,113,0.25) !important; }
+
+[data-theme="dark"] .abc-main .text-blue-600 { color: var(--info) !important; }
+[data-theme="dark"] .abc-main .text-purple-600 { color: #a78bfa !important; }
+
+/* Hover states */
+[data-theme="dark"] .abc-main .hover\:bg-gray-50:hover { background-color: var(--surface-2) !important; }
+[data-theme="dark"] .abc-main .hover\:bg-red-50:hover  { background-color: var(--danger-soft) !important; }
+[data-theme="dark"] .abc-main .hover\:border-orange-200:hover { border-color: rgba(247,168,0,0.35) !important; }
+[data-theme="dark"] .abc-main .hover\:shadow-md:hover  { box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important; }
+
+/* Inputs & selects */
+[data-theme="dark"] .abc-main input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] .abc-main select,
+[data-theme="dark"] .abc-main textarea {
+  background-color: var(--surface-2) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* Table stripes */
+[data-theme="dark"] .abc-main thead,
+[data-theme="dark"] .abc-main .bg-gray-50 th { background-color: var(--surface-2) !important; }
+[data-theme="dark"] .abc-main tbody tr:hover { background-color: var(--surface-2) !important; }
+[data-theme="dark"] .abc-main tfoot { background-color: rgba(247,168,0,0.08) !important; }
+
+/* Toggle buttons (the custom switch) */
+[data-theme="dark"] .abc-main .bg-gray-300 { background-color: var(--surface-3) !important; }
+
+/* Gradients that use orange */
+[data-theme="dark"] .abc-main .from-orange-50 { --tw-gradient-from: rgba(247,168,0,0.08) !important; }
+[data-theme="dark"] .abc-main .to-white { --tw-gradient-to: var(--surface) !important; }
+
 /* ── Typography helpers ── */
 .abc-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .abc-text-success { color: var(--success); }

@@ -1,37 +1,25 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { FileSpreadsheet, ExternalLink } from 'lucide-react';
+import { useLang } from '../context/LangContext';
 
 // Import des images selon tes chemins
 import cocaBg from '../assets/coca cola.png';
 import ferreroBg from '../assets/ferrero rocher.png';
 import wallsBg from '../assets/walls.jpg';
 
-const brandCards = [
-  { 
-    id: 'coca-cola', 
-    name: 'Coca Cola', 
-    image:  cocaBg, 
-    description: 'Gestion des livraisons et commissions pour la gamme Coca-Cola.'
-  },
-  { 
-    id: 'walls', 
-    name: 'Wall\'s', 
-    image: wallsBg, 
-    description: 'Calcul des commissions saisonnières et volume Wall\'s.'
-  },
-  { 
-    id: 'ferrero-rocher', 
-    name: 'Ferrero Rocher', 
-    image: ferreroBg, 
-    description: 'Suivi des objectifs et primes pour les produits Ferrero.'
-  },
-];
-
 export default function CalculationPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importedFileName, setImportedFileName] = useState<string>('');
+  const { t } = useLang();
+  const c = t.calculation;
+
+  const brandCards = [
+    { id: 'coca-cola',      name: 'Coca Cola',      image: cocaBg,    description: c.brandDescCoca },
+    { id: 'walls',          name: "Wall's",          image: wallsBg,   description: c.brandDescWalls },
+    { id: 'ferrero-rocher', name: 'Ferrero Rocher',  image: ferreroBg, description: c.brandDescFerrero },
+  ];
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -54,8 +42,8 @@ export default function CalculationPage() {
       {/* Header & Import Section */}
       <div className="abc-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="abc-h2">Calcul par Marque</h1>
-          <p className="abc-sub abc-sub-tight">Choisissez une marque pour accéder au calcul spécifique ou importez vos données.</p>
+          <h1 className="abc-h2">{c.title}</h1>
+          <p className="abc-sub abc-sub-tight">{c.subtitle}</p>
         </div>
         
         <div className="flex flex-col items-end gap-2">
@@ -72,7 +60,7 @@ export default function CalculationPage() {
             className="abc-btn abc-btn-primary"
           >
             <FileSpreadsheet className="w-5 h-5" />
-            Importer un fichier Excel
+            {c.importBtn}
           </button>
           {importedFileName && (
             <div className="flex items-center gap-2 text-xs font-medium text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
@@ -106,7 +94,7 @@ export default function CalculationPage() {
             {/* Contenu de la carte */}
             <div className="relative z-10 flex h-full flex-col justify-end p-8">
               <div className="mb-2 inline-block w-fit rounded-full bg-[#f7a800] px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
-                Secteur Distribution
+                {c.sector}
               </div>
               
               <h2 className="text-3xl font-black text-white mb-2">{card.name}</h2>
@@ -117,7 +105,7 @@ export default function CalculationPage() {
               
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 rounded-xl bg-white/20 px-4 py-2 text-xs font-bold text-white backdrop-blur-md border border-white/30 group-hover:bg-white group-hover:text-black transition-all">
-                  Ouvrir la gestion
+                  {c.openManagement}
                   <ExternalLink className="w-3 h-3" />
                 </span>
               </div>

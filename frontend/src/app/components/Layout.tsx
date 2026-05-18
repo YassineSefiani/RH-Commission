@@ -10,11 +10,15 @@ import {
   LogOut,
   Menu,
   X,
-  Users
+  Users,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import logo from '../assets/logo-on-black.png';
 import { BackendStatus } from './BackendStatus';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
+import { useLang } from '../context/LangContext';
 
 interface LayoutProps {
   children: ReactNode;
@@ -25,6 +29,8 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useUser();
+  const { theme, toggleTheme } = useTheme();
+  const { lang, setLang, t } = useLang();
 
   const handleLogout = () => {
     logout();
@@ -32,13 +38,13 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const menuItems = [
-    { path: '/dashboard',   label: 'Dashboard',       icon: LayoutDashboard },
-    { path: '/personnel',   label: 'Personnel',        icon: Users },
-    { path: '/presence',    label: 'Fiches Présence',  icon: ClipboardList },
-    { path: '/constraints', label: 'Contraintes',      icon: FileText,    allowedRoles: ['ADMIN', 'ADV'] },
-    { path: '/calculation', label: 'Calcul',           icon: Calculator,  allowedRoles: ['ADMIN', 'ADV'] },
-    { path: '/history',     label: 'Historique',       icon: History },
-    { path: '/settings',    label: 'Paramètres',       icon: Settings },
+    { path: '/dashboard',   label: t.nav.dashboard,   icon: LayoutDashboard },
+    { path: '/personnel',   label: t.nav.personnel,   icon: Users },
+    { path: '/presence',    label: t.nav.presence,    icon: ClipboardList },
+    { path: '/constraints', label: t.nav.constraints, icon: FileText,   allowedRoles: ['ADMIN', 'ADV'] },
+    { path: '/calculation', label: t.nav.calculation, icon: Calculator, allowedRoles: ['ADMIN', 'ADV'] },
+    { path: '/history',     label: t.nav.history,     icon: History },
+    { path: '/settings',    label: t.nav.settings,    icon: Settings },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
@@ -131,7 +137,22 @@ export default function Layout({ children }: LayoutProps) {
           </button>
           <span className="abc-topbar-title">{currentLabel}</span>
           <div className="abc-topbar-right">
-            {/* placeholder for future actions */}
+            <button
+              className="abc-iconbtn"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+              style={{ width: 34, height: 34 }}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+            <button
+              className="abc-iconbtn"
+              onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}
+              title="Changer de langue"
+              style={{ width: 34, height: 34, fontSize: 12, fontWeight: 700, letterSpacing: '0.03em' }}
+            >
+              {lang === 'fr' ? 'FR' : 'EN'}
+            </button>
           </div>
         </header>
 

@@ -5,9 +5,12 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { useHistory } from '../context/HistoryContext';
+import { useLang } from '../context/LangContext';
 
 export default function DashboardPage() {
   const { history } = useHistory();
+  const { t, lang } = useLang();
+  const d = t.dashboard;
 
   const fc = (v: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(v);
@@ -27,7 +30,7 @@ export default function DashboardPage() {
     const map = new Map<string, { sales: number; commissions: number; payroll: number; count: number; date: Date }>();
     history.forEach(h => {
       const d = new Date(h.date);
-      const k = d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+      const k = d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'short', year: 'numeric' });
       const ex = map.get(k) || { sales: 0, commissions: 0, payroll: 0, count: 0, date: d };
       map.set(k, { ...ex, sales: ex.sales + h.totalSales, commissions: ex.commissions + h.commissions, payroll: ex.payroll + h.finalSalary, count: ex.count + 1 });
     });
@@ -50,10 +53,10 @@ export default function DashboardPage() {
   const maxComm = topPerformers[0]?.commissions || 1;
 
   const kpiCards = [
-    { label: 'Masse salariale', value: fc(kpi.totalPayroll), icon: DollarSign, tone: 'amber' },
-    { label: 'Total ventes',    value: fc(kpi.totalSales),   icon: TrendingUp, tone: 'blue' },
-    { label: 'Commissions',     value: fc(kpi.totalCommissions), icon: Award, tone: 'emerald' },
-    { label: 'Calculs',         value: String(kpi.totalCalcs),   icon: BarChart2, tone: 'violet' },
+    { label: d.payroll,      value: fc(kpi.totalPayroll),      icon: DollarSign, tone: 'amber' },
+    { label: d.sales,        value: fc(kpi.totalSales),        icon: TrendingUp, tone: 'blue' },
+    { label: d.commissions,  value: fc(kpi.totalCommissions),  icon: Award,      tone: 'emerald' },
+    { label: d.calculations, value: String(kpi.totalCalcs),    icon: BarChart2,  tone: 'violet' },
   ];
 
   return (
@@ -79,7 +82,7 @@ export default function DashboardPage() {
       {history.length === 0 ? (
         <div className="abc-card abc-empty-card">
           <Calculator size={36} strokeWidth={1.5} />
-          <p>Aucune donnée disponible. Effectuez des calculs pour voir les statistiques.</p>
+          <p>{t.history.noHistorySub}</p>
         </div>
       ) : (
         <>
@@ -88,8 +91,8 @@ export default function DashboardPage() {
             <div className="abc-card">
               <div className="abc-sechead">
                 <div>
-                  <h3 className="abc-h3">Évolution des ventes</h3>
-                  <p className="abc-sub abc-sub-tight">6 derniers mois</p>
+                  <h3 className="abc-h3">{d.salesEvol}</h3>
+                  <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'Last 6 months' : '6 derniers mois'}</p>
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={240}>
@@ -101,8 +104,8 @@ export default function DashboardPage() {
                     formatter={(v: number) => fc(v)}
                     contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
                   />
-                  <Line type="monotone" dataKey="sales" stroke="#3b82f6" strokeWidth={2} name="Ventes" dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="commissions" stroke="var(--brand)" strokeWidth={2} name="Commissions" dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="sales" stroke="#3b82f6" strokeWidth={2} name={lang === 'en' ? 'Sales' : 'Ventes'} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="commissions" stroke="var(--brand)" strokeWidth={2} name={d.commissions} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -110,8 +113,8 @@ export default function DashboardPage() {
             <div className="abc-card no-pad">
               <div className="abc-top-card-head">
                 <div>
-                  <h3 className="abc-h3">Activité récente</h3>
-                  <p className="abc-sub abc-sub-tight">Derniers calculs</p>
+                  <h3 className="abc-h3">{d.recentActivity}</h3>
+                  <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'Latest calculations' : 'Derniers calculs'}</p>
                 </div>
               </div>
               <ul className="abc-activity-list">
@@ -143,8 +146,8 @@ export default function DashboardPage() {
             <div className="abc-card">
               <div className="abc-sechead">
                 <div>
-                  <h3 className="abc-h3">Commissions par mois</h3>
-                  <p className="abc-sub abc-sub-tight">Tendance des versements</p>
+                  <h3 className="abc-h3">{d.commissionsMonth}</h3>
+                  <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'Payment trend' : 'Tendance des versements'}</p>
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={200}>
@@ -156,7 +159,7 @@ export default function DashboardPage() {
                     formatter={(v: number) => fc(v)}
                     contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
                   />
-                  <Bar dataKey="commissions" fill="var(--brand)" radius={[6, 6, 0, 0]} name="Commissions" />
+                  <Bar dataKey="commissions" fill="var(--brand)" radius={[6, 6, 0, 0]} name={d.commissions} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -165,8 +168,8 @@ export default function DashboardPage() {
               <div className="abc-card no-pad">
                 <div className="abc-top-card-head">
                   <div>
-                    <h3 className="abc-h3">Top performers</h3>
-                    <p className="abc-sub abc-sub-tight">Par commissions totales</p>
+                    <h3 className="abc-h3">{d.topPerformers}</h3>
+                    <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'By total commissions' : 'Par commissions totales'}</p>
                   </div>
                 </div>
                 <div className="abc-top-list">
@@ -206,20 +209,20 @@ export default function DashboardPage() {
           <div className="abc-stat-strip">
             <div className="abc-stat-item">
               <span className="abc-stat-num">{kpi.uniqueEmps}</span>
-              <span className="abc-stat-lbl">employés uniques</span>
+              <span className="abc-stat-lbl">{lang === 'en' ? 'unique employees' : 'employés uniques'}</span>
             </div>
             <span className="abc-stat-sep" />
             <div className="abc-stat-item is-amber">
               <span className="abc-stat-dot" style={{ background: 'var(--brand)' }} />
               <span className="abc-stat-num">{kpi.totalCalcs}</span>
-              <span className="abc-stat-lbl">calculs effectués</span>
+              <span className="abc-stat-lbl">{lang === 'en' ? 'calculations done' : 'calculs effectués'}</span>
             </div>
             <span className="abc-stat-sep" />
             <div className="abc-stat-item">
               <span className="abc-stat-num">
                 {kpi.totalCalcs > 0 ? fc(kpi.totalCommissions / kpi.totalCalcs) : '—'}
               </span>
-              <span className="abc-stat-lbl">commission moyenne / calcul</span>
+              <span className="abc-stat-lbl">{lang === 'en' ? 'avg commission / calc' : 'commission moyenne / calcul'}</span>
             </div>
           </div>
         </>

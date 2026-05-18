@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Edit2, Trash2, Search, History } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useConstraints } from '../context/ConstraintsContext';
+import { useLang } from '../context/LangContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,8 @@ import {
 export default function ConstraintsPage() {
   const navigate = useNavigate();
   const { constraints, deleteConstraint, toggleConstraint } = useConstraints();
+  const { t } = useLang();
+  const c_ = t.constraints;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCarte, setFilterCarte] = useState<string>('all');
@@ -53,8 +56,8 @@ export default function ConstraintsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Commissions</h1>
-          <p className="text-gray-600 mt-1">Gérez les règles de calcul par carte (Coca Cola, Ferrero, Wall's)</p>
+          <h1 className="text-2xl font-bold text-gray-900">{c_.title}</h1>
+          <p className="text-gray-600 mt-1">{c_.subtitle}</p>
         </div>
         <button
           onClick={() => navigate('/constraints/new')}
@@ -62,7 +65,7 @@ export default function ConstraintsPage() {
           style={{ backgroundColor: '#f7a800' }}
         >
           <Plus className="w-5 h-5" />
-          Nouvelle Règle
+          {c_.newRule}
         </button>
       </div>
 
@@ -73,7 +76,7 @@ export default function ConstraintsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Rechercher une règle ou une condition..."
+              placeholder={c_.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
@@ -84,7 +87,7 @@ export default function ConstraintsPage() {
             onChange={(e) => setFilterCarte(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none bg-white transition-all"
           >
-            <option value="all">Toutes les Cartes</option>
+            <option value="all">{c_.allCards}</option>
             <option value="Coca Cola">Coca Cola</option>
             <option value="Ferrero Rocher">Ferrero Rocher</option>
             <option value="Wall's">Wall's</option>
@@ -98,19 +101,19 @@ export default function ConstraintsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Nom</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Carte</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Valeur</th>
-                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Condition</th>
-                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
-                <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">{c_.colName}</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">{c_.colCard}</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">{c_.colValue}</th>
+                <th className="text-left py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">{c_.colCondition}</th>
+                <th className="text-center py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">{c_.colStatus}</th>
+                <th className="text-right py-4 px-6 text-xs font-semibold text-gray-600 uppercase tracking-wider">{c_.colActions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredConstraints.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-gray-500">
-                    Aucune règle trouvée.
+                    {c_.noRules}
                   </td>
                 </tr>
               ) : (
@@ -154,7 +157,7 @@ export default function ConstraintsPage() {
                         <button
                           onClick={() => navigate(`/constraints/history/${constraint.id}`)}
                           className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                          title="Voir l'historique"
+                          title={c_.historyTooltip}
                         >
                           <History className="w-4 h-4" />
                         </button>
@@ -163,7 +166,7 @@ export default function ConstraintsPage() {
                         <button
                           onClick={() => navigate('/constraints/new', { state: { constraint } })}
                           className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
-                          title="Modifier"
+                          title={c_.editTooltip}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -172,7 +175,7 @@ export default function ConstraintsPage() {
                         <button
                           onClick={() => handleDelete(constraint.id)}
                           className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          title="Supprimer"
+                          title={c_.deleteTooltip}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -190,18 +193,18 @@ export default function ConstraintsPage() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent className="rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer la règle</AlertDialogTitle>
+            <AlertDialogTitle>{c_.deleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer cette règle de commission ? Cette action est irréversible et pourrait affecter les calculs de commissions en cours.
+              {c_.deleteDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-3 mt-4">
-            <AlertDialogCancel className="rounded-lg border-gray-200">Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-lg border-gray-200">{c_.cancel}</AlertDialogCancel>
             <AlertDialogAction 
                 onClick={confirmDelete} 
                 className="bg-red-600 hover:bg-red-700 text-white rounded-lg px-4 py-2 transition-colors"
             >
-              Confirmer la suppression
+              {c_.confirmDelete}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

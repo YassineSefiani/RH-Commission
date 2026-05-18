@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useConstraints } from '../context/ConstraintsContext';
 import { useHistory } from '../context/HistoryContext';
 import { toast } from 'sonner';
+import { useLang } from '../context/LangContext';
 
 interface Employee {
   id: string;
@@ -37,6 +38,8 @@ export default function BrandCalculationPage() {
   const { constraints } = useConstraints();
   const { addCalculation } = useHistory(); // Initialisation de l'historique
   const decodedBrand = decodeURIComponent(brand);
+  const { t } = useLang();
+  const b = t.brandCalc;
 
   const [brandEmployees, setBrandEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,7 +151,7 @@ export default function BrandCalculationPage() {
           onClick={() => navigate('/calculation')}
           className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Retour
+          <ArrowLeft className="w-4 h-4" /> {b.back}
         </button>
       </div>
 
@@ -157,9 +160,9 @@ export default function BrandCalculationPage() {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Membres de l'équipe</h2>
+              <h2 className="text-lg font-bold text-gray-900">{b.teamMembers}</h2>
               <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase">
-                {brandEmployees.length} Actif(s)
+                {brandEmployees.length} {b.active}
               </span>
             </div>
 
@@ -186,7 +189,7 @@ export default function BrandCalculationPage() {
               className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white py-3 px-4 rounded-lg font-bold hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCalculating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calculator className="w-5 h-5" />}
-              {isCalculating ? "Calcul en cours..." : "Lancer le calcul groupé"}
+              {isCalculating ? b.calculating : b.launchBtn}
             </button>
           </div>
         </div>
@@ -196,9 +199,9 @@ export default function BrandCalculationPage() {
           {results.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 h-full flex flex-col items-center justify-center text-center">
               <Calculator className="w-16 h-16 text-gray-200 mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Aucun calcul effectué</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{b.noCalc}</h3>
               <p className="text-gray-500 max-w-sm">
-                Utilisez le bouton "Lancer le calcul groupé" pour simuler les commissions de tous les membres de la carte {decodedBrand}.
+                {b.noCalcSub}
               </p>
             </div>
           ) : (
@@ -209,13 +212,13 @@ export default function BrandCalculationPage() {
                     onClick={() => setActiveTab('detail')} 
                     className={`pb-3 border-b-2 font-medium transition-colors ${activeTab === 'detail' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                   >
-                    Détail par employé
+                    {b.detailTab}
                   </button>
                   <button 
                     onClick={() => setActiveTab('recap')} 
                     className={`pb-3 border-b-2 font-medium transition-colors ${activeTab === 'recap' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                   >
-                    Récapitulatif global
+                    {b.recapTab}
                   </button>
                 </div>
               </div>
@@ -234,15 +237,15 @@ export default function BrandCalculationPage() {
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           <div className="bg-green-50 p-2.5 rounded-lg border border-green-100 text-center">
-                            <p className="text-[10px] text-green-600 uppercase font-bold mb-1">Commissions</p>
+                            <p className="text-[10px] text-green-600 uppercase font-bold mb-1">{b.commissions}</p>
                             <p className="font-bold text-green-700">{formatCurrency(res.commissions)}</p>
                           </div>
                           <div className="bg-green-50 p-2.5 rounded-lg border border-green-100 text-center">
-                            <p className="text-[10px] text-green-600 uppercase font-bold mb-1">Bonus</p>
+                            <p className="text-[10px] text-green-600 uppercase font-bold mb-1">{b.bonus}</p>
                             <p className="font-bold text-green-700">{formatCurrency(res.bonuses)}</p>
                           </div>
                           <div className={`p-2.5 rounded-lg border text-center ${res.penalties > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
-                            <p className={`text-[10px] uppercase font-bold mb-1 ${res.penalties > 0 ? 'text-red-600' : 'text-gray-500'}`}>Pénalités</p>
+                            <p className={`text-[10px] uppercase font-bold mb-1 ${res.penalties > 0 ? 'text-red-600' : 'text-gray-500'}`}>{b.penalties}</p>
                             <p className={`font-bold ${res.penalties > 0 ? 'text-red-700' : 'text-gray-700'}`}>{formatCurrency(res.penalties)}</p>
                           </div>
                         </div>
@@ -254,12 +257,12 @@ export default function BrandCalculationPage() {
                     <table className="w-full text-left border-collapse whitespace-nowrap">
                       <thead className="bg-gray-50">
                         <tr className="border-b border-gray-200 text-xs text-gray-600 uppercase tracking-wider">
-                          <th className="p-4 font-semibold">Employé</th>
-                          <th className="p-4 font-semibold">Sal. Base</th>
-                          <th className="p-4 font-semibold">Comm.</th>
-                          <th className="p-4 font-semibold">Bonus</th>
-                          <th className="p-4 font-semibold">Pénal.</th>
-                          <th className="p-4 font-bold text-orange-600">Net</th>
+                          <th className="p-4 font-semibold">{b.colEmployee}</th>
+                          <th className="p-4 font-semibold">{b.colBase}</th>
+                          <th className="p-4 font-semibold">{b.colComm}</th>
+                          <th className="p-4 font-semibold">{b.colBonus}</th>
+                          <th className="p-4 font-semibold">{b.colPenal}</th>
+                          <th className="p-4 font-bold text-orange-600">{b.colNet}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -276,7 +279,7 @@ export default function BrandCalculationPage() {
                       </tbody>
                       <tfoot className="bg-orange-50 font-bold border-t-2 border-orange-200">
                         <tr>
-                          <td className="p-4 text-orange-900">TOTAL ÉQUIPE</td>
+                          <td className="p-4 text-orange-900">{b.teamTotal}</td>
                           <td className="p-4">{formatCurrency(results.reduce((acc, r) => acc + (r.employee.baseSalary || 2500), 0))}</td>
                           <td className="p-4 text-green-700">+{formatCurrency(results.reduce((acc, r) => acc + r.commissions, 0))}</td>
                           <td className="p-4 text-green-700">+{formatCurrency(results.reduce((acc, r) => acc + r.bonuses, 0))}</td>

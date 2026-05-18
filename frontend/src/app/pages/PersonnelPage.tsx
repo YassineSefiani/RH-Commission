@@ -3,6 +3,7 @@ import { usePersonnel } from '../context/PersonnelContext';
 import { Personnel } from '../services/personnelApi';
 import { usePresence } from '../context/PresenceContext';
 import { useUser } from '../context/UserContext';
+import { useLang } from '../context/LangContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
@@ -119,6 +120,8 @@ export default function PersonnelPage() {
 
   const { user } = useUser();
   const { addPresenceRecord } = usePresence();
+  const { t } = useLang();
+  const p = t.personnel;
 
   const [selectedPerson, setSelectedPerson] = useState<Personnel | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -283,8 +286,8 @@ export default function PersonnelPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion du Personnel</h1>
-          <p className="text-gray-500 text-sm mt-1">Gérez et consultez les profils de l'équipe</p>
+          <h1 className="text-2xl font-bold text-gray-900">{p.title}</h1>
+          <p className="text-gray-500 text-sm mt-1">{p.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
           {user?.superRole === 'DISPATCHER' && (
@@ -293,7 +296,7 @@ export default function PersonnelPage() {
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
             >
               <Calendar className="w-4 h-4" />
-              Fiche de Présence
+              {p.presenceSheet}
             </button>
           )}
           <button
@@ -301,7 +304,7 @@ export default function PersonnelPage() {
             className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
           >
             <UserPlus className="w-4 h-4" />
-            Ajouter un profil
+            {p.addProfile}
           </button>
         </div>
       </div>
@@ -323,7 +326,7 @@ export default function PersonnelPage() {
               <UserCheck className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">Actifs</p>
+              <p className="text-xs text-gray-500 uppercase font-semibold">{p.activeFilter}</p>
               <p className="text-xl font-bold text-green-600">{stats.actifs}</p>
             </div>
           </div>
@@ -332,7 +335,7 @@ export default function PersonnelPage() {
               <UserX className="w-5 h-5 text-gray-500" />
             </div>
             <div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">Inactifs</p>
+              <p className="text-xs text-gray-500 uppercase font-semibold">{p.inactif}</p>
               <p className="text-xl font-bold text-gray-500">{stats.inactifs}</p>
             </div>
           </div>
@@ -344,7 +347,7 @@ export default function PersonnelPage() {
         <div className="flex flex-wrap gap-3">
           <div className="flex gap-2 flex-1 min-w-[200px]">
             <Input
-              placeholder="Rechercher par nom..."
+              placeholder={p.searchByName}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -360,7 +363,7 @@ export default function PersonnelPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous</SelectItem>
-              {NATURE_CONTRATS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              {NATURE_CONTRATS.map(ct => <SelectItem key={ct} value={ct}>{ct}</SelectItem>)}
             </SelectContent>
           </Select>
           {availableCartes.length > 0 && (
@@ -386,19 +389,19 @@ export default function PersonnelPage() {
             </Select>
           )}
           <button onClick={showActifsOnly} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-            <Filter className="w-4 h-4" /> Actifs
+            <Filter className="w-4 h-4" /> {p.activeFilter}
           </button>
           <button onClick={handleReset} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-            <RotateCcw className="w-4 h-4" /> Réinitialiser
+            <RotateCcw className="w-4 h-4" /> {p.reset}
           </button>
         </div>
       </div>
 
       {/* Cards Grid */}
       {isLoading ? (
-        <div className="text-center py-16 text-gray-400">Chargement...</div>
+        <div className="text-center py-16 text-gray-400">{p.loading}</div>
       ) : personnel.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">Aucun personnel trouvé</div>
+        <div className="text-center py-16 text-gray-400">{p.noPersonnel}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {personnel.map(person => (
@@ -416,7 +419,7 @@ export default function PersonnelPage() {
                   <p className="text-xs text-gray-400 font-mono">{person.matricule}</p>
                 </div>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${person.actif ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {person.actif ? 'Actif' : 'Inactif'}
+                  {person.actif ? p.actif : p.inactif}
                 </span>
               </div>
 
@@ -465,12 +468,12 @@ export default function PersonnelPage() {
 
               <div className="grid grid-cols-2 gap-3 py-4">
                 {[
-                  { icon: <Briefcase className="w-4 h-4" />, label: 'Rôle', value: selectedPerson.role },
-                  { icon: <Briefcase className="w-4 h-4" />, label: 'Fonction', value: selectedPerson.fonction },
-                  { icon: null, label: 'Carte', value: selectedPerson.carte },
-                  { icon: null, label: 'Contrat', value: selectedPerson.natureContrat },
-                  { icon: <MapPin className="w-4 h-4" />, label: 'Ville', value: selectedPerson.ville },
-                  { icon: <Phone className="w-4 h-4" />, label: 'Téléphone', value: selectedPerson.numero },
+                  { icon: <Briefcase className="w-4 h-4" />, label: p.role, value: selectedPerson.role },
+                  { icon: <Briefcase className="w-4 h-4" />, label: p.fonction, value: selectedPerson.fonction },
+                  { icon: null, label: p.carte, value: selectedPerson.carte },
+                  { icon: null, label: p.contractType, value: selectedPerson.natureContrat },
+                  { icon: <MapPin className="w-4 h-4" />, label: p.ville, value: selectedPerson.ville },
+                  { icon: <Phone className="w-4 h-4" />, label: p.telephone, value: selectedPerson.numero },
                 ].map(({ icon, label, value }) => value ? (
                   <div key={label} className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-400 uppercase font-semibold mb-1">{label}</p>
@@ -481,9 +484,9 @@ export default function PersonnelPage() {
                   </div>
                 ) : null)}
                 <div className="bg-gray-50 rounded-lg p-3 col-span-2">
-                  <p className="text-xs text-gray-400 uppercase font-semibold mb-1">Statut</p>
+                  <p className="text-xs text-gray-400 uppercase font-semibold mb-1">{p.statut}</p>
                   <span className={`text-sm font-semibold ${selectedPerson.actif ? 'text-green-600' : 'text-gray-500'}`}>
-                    {selectedPerson.actif ? 'Actif' : 'Inactif'}
+                    {selectedPerson.actif ? p.actif : p.inactif}
                   </span>
                 </div>
               </div>
@@ -494,20 +497,20 @@ export default function PersonnelPage() {
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   {selectedPerson.actif ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                  {selectedPerson.actif ? 'Désactiver' : 'Activer'}
+                  {selectedPerson.actif ? p.deactivate : p.activate}
                 </button>
                 <div className="flex gap-2">
                   <button
                     onClick={() => { openEdit(selectedPerson); setSelectedPerson(null); }}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    <Pencil className="w-4 h-4" /> Modifier
+                    <Pencil className="w-4 h-4" /> {p.edit}
                   </button>
                   <button
                     onClick={() => { askDelete(selectedPerson.id); setSelectedPerson(null); }}
                     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 hover:bg-red-100 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4" /> Supprimer
+                    <Trash2 className="w-4 h-4" /> {t.common.delete}
                   </button>
                 </div>
               </DialogFooter>
@@ -520,15 +523,15 @@ export default function PersonnelPage() {
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce profil ?</AlertDialogTitle>
+            <AlertDialogTitle>{p.deleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le profil sera définitivement supprimé.
+              {p.deleteDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <DialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Supprimer
+              {t.common.delete}
             </AlertDialogAction>
           </DialogFooter>
         </AlertDialogContent>
@@ -538,9 +541,9 @@ export default function PersonnelPage() {
       <Dialog open={isPresenceDialogOpen} onOpenChange={setIsPresenceDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Fiche de Présence</DialogTitle>
+            <DialogTitle>{p.presenceTitle}</DialogTitle>
             <DialogDescription>
-              Enregistrez la présence des livreurs pour la tournée du jour.
+              {p.presenceDesc}
             </DialogDescription>
           </DialogHeader>
 
@@ -551,7 +554,7 @@ export default function PersonnelPage() {
                 <Input value={presenceForm.date} readOnly />
               </div>
               <div className="space-y-2">
-                <Label>Matricule du Camion</Label>
+                <Label>{p.truckId}</Label>
                 <Input
                   value={presenceForm.matriculeCamion}
                   onChange={(e) => setPresenceForm({ ...presenceForm, matriculeCamion: e.target.value })}
@@ -559,7 +562,7 @@ export default function PersonnelPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Canal</Label>
+                <Label>{p.canal}</Label>
                 <Input
                   value={presenceForm.canal}
                   onChange={(e) => setPresenceForm({ ...presenceForm, canal: e.target.value })}
@@ -569,7 +572,7 @@ export default function PersonnelPage() {
             </div>
 
             {(['livreur1', 'livreur2', 'livreur3'] as const).map((field, index) => {
-              const label = index === 0 ? 'Livreur' : `Aide Livreur ${index}`;
+              const label = index === 0 ? p.livreur : `${p.aide} ${index}`;
               const selectedId = presenceForm[`${field}Id`];
               const selectedMatricule = presenceForm[`${field}Matricule`];
               return (
@@ -581,7 +584,7 @@ export default function PersonnelPage() {
                         <SelectValue placeholder={`Sélectionner ${label}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Aucun</SelectItem>
+                        <SelectItem value="none">{p.none}</SelectItem>
                         {personnel.map(p => (
                           <SelectItem key={p.id} value={p.id}>{p.prenom} {p.nom}</SelectItem>
                         ))}
@@ -598,10 +601,10 @@ export default function PersonnelPage() {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsPresenceDialogOpen(false)}>
-                Annuler
+                {t.common.cancel}
               </Button>
               <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-                Enregistrer
+                {p.save}
               </Button>
             </DialogFooter>
           </form>
@@ -612,45 +615,45 @@ export default function PersonnelPage() {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Modifier le profil' : 'Ajouter un profil'}</DialogTitle>
-            <DialogDescription>Remplissez les informations du personnel</DialogDescription>
+            <DialogTitle>{editingId ? p.editTitle : p.addTitle}</DialogTitle>
+            <DialogDescription>{p.formDesc}</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Matricule *</Label>
+                <Label>{p.matricule} *</Label>
                 <Input value={formData.matricule}
                   onChange={(e) => setFormData({ ...formData, matricule: e.target.value })}
                   required placeholder="P001" />
               </div>
               <div className="space-y-2">
-                <Label>Type de Contrat *</Label>
+                <Label>{p.contractType} *</Label>
                 <Select value={formData.natureContrat}
                   onValueChange={(v) => setFormData({ ...formData, natureContrat: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {NATURE_CONTRATS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    {NATURE_CONTRATS.map(ct => <SelectItem key={ct} value={ct}>{ct}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Nom *</Label>
+                <Label>{p.nom} *</Label>
                 <Input value={formData.nom}
                   onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                   required placeholder="Dupont" />
               </div>
               <div className="space-y-2">
-                <Label>Prénom *</Label>
+                <Label>{p.prenom} *</Label>
                 <Input value={formData.prenom}
                   onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
                   required placeholder="Jean" />
               </div>
               <div className="space-y-2">
-                <Label>Carte</Label>
+                <Label>{p.carte}</Label>
                 <Select value={formData.carte}
                   onValueChange={(v) => setFormData({ ...formData, carte: v })}>
-                  <SelectTrigger><SelectValue placeholder="Choisir une carte" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={p.chooseCard} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Coca Cola">Coca Cola</SelectItem>
                     <SelectItem value="Wall's">Wall's</SelectItem>
@@ -659,25 +662,25 @@ export default function PersonnelPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Fonction</Label>
+                <Label>{p.fonction}</Label>
                 <Input value={formData.fonction}
                   onChange={(e) => setFormData({ ...formData, fonction: e.target.value })}
                   placeholder="Commercial Senior" />
               </div>
               <div className="space-y-2">
-                <Label>Rôle</Label>
+                <Label>{p.role}</Label>
                 <Input value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   placeholder="Vendeur" />
               </div>
               <div className="space-y-2">
-                <Label>Téléphone</Label>
+                <Label>{p.telephone}</Label>
                 <Input type="tel" value={formData.numero}
                   onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
                   placeholder="0612345678" />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label>Ville</Label>
+                <Label>{p.ville}</Label>
                 <Input value={formData.ville}
                   onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
                   placeholder="Casablanca" />
@@ -685,9 +688,9 @@ export default function PersonnelPage() {
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Annuler</Button>
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>{t.common.cancel}</Button>
               <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-                {editingId ? 'Mettre à jour' : 'Ajouter'}
+                {editingId ? p.update : p.add}
               </Button>
             </DialogFooter>
           </form>

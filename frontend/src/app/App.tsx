@@ -5,19 +5,25 @@ import { HistoryProvider } from './context/HistoryContext';
 import { PersonnelProvider } from './context/PersonnelContext';
 import { PresenceProvider } from './context/PresenceContext';
 import { UserProvider } from './context/UserContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { LangProvider } from './context/LangContext';
 
 export default function App() {
   return (
-    <UserProvider>
-      <ConstraintsProvider>
-        <HistoryProvider>
-          <PersonnelProvider>
-            <PresenceProvider>
-              <RouterProvider router={router} />
-            </PresenceProvider>
-          </PersonnelProvider>
-        </HistoryProvider>
-      </ConstraintsProvider>
-    </UserProvider>
+    <ThemeProvider>
+      <LangProvider>
+        <UserProvider>
+          <ConstraintsProvider>
+            <HistoryProvider>
+              <PersonnelProvider>
+                <PresenceProvider>
+                  <RouterProvider router={router} />
+                </PresenceProvider>
+              </PersonnelProvider>
+            </HistoryProvider>
+          </ConstraintsProvider>
+        </UserProvider>
+      </LangProvider>
+    </ThemeProvider>
   );
 }

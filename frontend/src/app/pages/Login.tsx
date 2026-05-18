@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { LogIn } from 'lucide-react';
 import logo from '../assets/logo-on-black.png';
 import { useUser, AVAILABLE_USERS } from '../context/UserContext';
+import { useLang } from '../context/LangContext';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { t, lang } = useLang();
+  const l = t.login;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +23,7 @@ export default function Login() {
     if (success) {
       navigate('/dashboard');
     } else {
-      setError('Email ou mot de passe incorrect');
+      setError(l.error);
     }
     setIsLoading(false);
   };
@@ -77,8 +80,8 @@ export default function Login() {
       <section className="abc-login-form-wrap">
         <div className="abc-login-form-inner">
           <div className="abc-login-form-head">
-            <h2 className="abc-login-title">Connexion</h2>
-            <p className="abc-sub">Accédez à votre espace de gestion des commissions</p>
+            <h2 className="abc-login-title">{l.submit}</h2>
+            <p className="abc-sub">{t.login.subtitle}</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -87,7 +90,7 @@ export default function Login() {
             )}
 
             <div className="abc-login-form-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{l.email}</label>
               <input
                 id="email"
                 type="email"
@@ -99,7 +102,7 @@ export default function Login() {
             </div>
 
             <div className="abc-login-form-field">
-              <label htmlFor="password">Mot de passe</label>
+              <label htmlFor="password">{l.password}</label>
               <input
                 id="password"
                 type="password"
@@ -112,12 +115,12 @@ export default function Login() {
 
             <button type="submit" className="abc-login-cta" disabled={isLoading}>
               <LogIn size={16} />
-              {isLoading ? 'Connexion...' : 'Se connecter'}
+              {isLoading ? l.loading : l.submit}
             </button>
           </form>
 
           <div className="abc-login-quicklogin">
-            <p className="abc-login-quicklogin-label">Connexion rapide</p>
+            <p className="abc-login-quicklogin-label">{lang === 'fr' ? 'Connexion rapide' : 'Quick login'}</p>
             <div className="abc-login-quicklogin-btns">
               {AVAILABLE_USERS.map((u) => (
                 <button
