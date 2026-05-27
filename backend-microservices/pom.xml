@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+    ╔══════════════════════════════════════════════════════════════════════╗
+    ║          PROJET PARENT - ARCHITECTURE MICROSERVICES                  ║
+    ║          ABC DIS - Système de Gestion RH & Commissions               ║
+    ╠══════════════════════════════════════════════════════════════════════╣
+    ║  Ce fichier est le POM PARENT qui regroupe tous les microservices.   ║
+    ║  En Maven, un projet multi-module permet de partager des dépendances ║
+    ║  communes et de compiler tous les services en une seule commande :   ║
+    ║                                                                      ║
+    ║      mvn clean install                                               ║
+    ║                                                                      ║
+    ║  ARCHITECTURE MICROSERVICES :                                        ║
+    ║  ┌─────────────┐     ┌──────────────────────────────────────────┐   ║
+    ║  │   Frontend  │────▶│         API Gateway  :8080               │   ║
+    ║  │  React/TS   │     └──┬──────────┬──────────┬───────────┬────┘   ║
+    ║  └─────────────┘        │          │          │           │         ║
+    ║                    :8081│     :8082│     :8083│      :8084│         ║
+    ║                ┌────────┐  ┌───────┐  ┌──────┐  ┌────────┐        ║
+    ║                │  Auth  │  │Person │  │Commis│  │Présence│        ║
+    ║                │Service │  │nel    │  │sion  │  │Service │        ║
+    ║                └────────┘  └───────┘  └──────┘  └────────┘        ║
+    ╚══════════════════════════════════════════════════════════════════════╝
+    -->
+
+    <!-- Identifiant du projet parent -->
+    <groupId>com.abcdis</groupId>
+    <artifactId>rh-commission-microservices</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>ABC DIS - RH Commission Microservices</name>
+    <description>Architecture microservices JEE pour la gestion RH et les commissions commerciales</description>
+
+    <!-- Liste de tous les modules (microservices) de ce projet -->
+    <modules>
+        <module>api-gateway</module>      <!-- Passerelle API - point d'entrée unique -->
+        <module>service-auth</module>     <!-- Service d'authentification et JWT -->
+        <module>service-personnel</module><!-- Service gestion du personnel -->
+        <module>service-commission</module><!-- Service calcul commissions et contraintes -->
+        <module>service-presence</module> <!-- Service fiches présence et voyages -->
+    </modules>
+
+    <!-- Spring Boot comme parent pour bénéficier de ses dépendances gérées -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.4</version>
+        <relativePath/>
+    </parent>
+
+    <!-- Propriétés communes à tous les modules -->
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2023.0.1</spring-cloud.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!-- Gestion des dépendances partagées entre tous les microservices -->
+    <!-- Note : Spring Cloud (Gateway) est géré dans le pom de api-gateway uniquement -->
+    <dependencyManagement>
+        <dependencies>
+            <!--
+                On force mssql-jdbc en version 12.10.0.jre11 car c'est la version
+                disponible dans le cache Maven local. Spring Boot 3.2.4 gère par défaut
+                la 12.4.2.jre11 qui n'est pas encore téléchargée.
+            -->
+            <dependency>
+                <groupId>com.microsoft.sqlserver</groupId>
+                <artifactId>mssql-jdbc</artifactId>
+                <version>12.10.0.jre11</version>
+            </dependency>
+            <!-- JWT pour l'authentification inter-services -->
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>0.12.5</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>0.12.5</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>0.12.5</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

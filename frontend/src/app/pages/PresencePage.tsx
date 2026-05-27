@@ -11,6 +11,7 @@ import {
 } from '../components/ui/table';
 import { usePresence } from '../context/PresenceContext';
 import { Trash2, Calendar, Users, Truck } from 'lucide-react';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function PresencePage() {
   const { presenceRecords, deletePresenceRecord, clearPresenceRecords } = usePresence();
@@ -31,14 +32,22 @@ export default function PresencePage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={presenceRecords.length === 0}
-            onClick={clearPresenceRecords}
-          >
-            Supprimer toutes
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                disabled={presenceRecords.length === 0}
+              >
+                Supprimer toutes
+              </Button>
+            }
+            title="Supprimer toutes les fiches de présence ?"
+            description={`Cela supprimera ${presenceRecords.length} fiche(s) — action irréversible.`}
+            confirmLabel="Tout supprimer"
+            destructive
+            onConfirm={clearPresenceRecords}
+          />
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import PresencePage from "./pages/PresencePage";
 import SettingsPage from "./pages/SettingsPage";
 import NewConstraintPage from "./pages/NewConstraintPage";
 import PersonnelPage from "./pages/PersonnelPage";
+import AuditPage from "./pages/AuditPage";
 import Layout from "./components/Layout";
 
 /**
@@ -88,5 +89,10 @@ export const router = createBrowserRouter([
     path: "/settings",
     element: <Layout><SettingsPage /></Layout>,
     loader: () => requireAuth(),
+  },
+  {
+    path: "/audit",
+    element: <Layout><AuditPage /></Layout>,
+    loader: () => requireAuth(['ADMIN']),
   },
 ]);

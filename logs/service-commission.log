@@ -1,0 +1,2204 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.4)
+
+2026-05-21T00:31:39.085+01:00  INFO 32476 --- [service-commission] [           main] c.a.c.CommissionServiceApplication       : Starting CommissionServiceApplication v1.0.0 using Java 17.0.12 with PID 32476 (C:\Projets\RH-Commission\backend-microservices\service-commission\target\service-commission-1.0.0.jar started by yassi in C:\Users\yassi)
+2026-05-21T00:31:39.090+01:00 DEBUG 32476 --- [service-commission] [           main] c.a.c.CommissionServiceApplication       : Running with Spring Boot v3.2.4, Spring v6.1.5
+2026-05-21T00:31:39.092+01:00  INFO 32476 --- [service-commission] [           main] c.a.c.CommissionServiceApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-05-21T00:31:42.436+01:00  INFO 32476 --- [service-commission] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-21T00:31:42.636+01:00  INFO 32476 --- [service-commission] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 179 ms. Found 5 JPA repository interfaces.
+2026-05-21T00:31:44.751+01:00  INFO 32476 --- [service-commission] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8083 (http)
+2026-05-21T00:31:44.791+01:00  INFO 32476 --- [service-commission] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-05-21T00:31:44.793+01:00  INFO 32476 --- [service-commission] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-05-21T00:31:44.940+01:00  INFO 32476 --- [service-commission] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-05-21T00:31:44.942+01:00  INFO 32476 --- [service-commission] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 5598 ms
+2026-05-21T00:31:46.607+01:00  INFO 32476 --- [service-commission] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-21T00:31:46.824+01:00  INFO 32476 --- [service-commission] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-05-21T00:31:46.944+01:00  INFO 32476 --- [service-commission] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-05-21T00:31:47.573+01:00  INFO 32476 --- [service-commission] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-21T00:31:47.649+01:00  INFO 32476 --- [service-commission] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-21T00:31:48.341+01:00  INFO 32476 --- [service-commission] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection ConnectionID:1 ClientConnectionId: 705c953b-cd6f-4a24-bc90-7f3b7b252292
+2026-05-21T00:31:48.347+01:00  INFO 32476 --- [service-commission] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-21T00:31:48.420+01:00  WARN 32476 --- [service-commission] [           main] org.hibernate.orm.deprecation            : HHH90000025: SQLServerDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-21T00:31:50.850+01:00  INFO 32476 --- [service-commission] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    create index idx_hist_employe 
+       on historique_calculs (nom_employe)
+Hibernate: 
+    create index idx_hist_matricule 
+       on historique_calculs (matricule)
+Hibernate: 
+    create index idx_hist_periode 
+       on historique_calculs (periode)
+Hibernate: 
+    create index idx_hist_mois_annee 
+       on historique_calculs (mois, annee)
+Hibernate: 
+    create index idx_hist_carte 
+       on historique_calculs (carte)
+Hibernate: 
+    create index idx_triage_periode 
+       on note_triage (periode)
+Hibernate: 
+    create index idx_triage_matricule 
+       on note_triage (matricule)
+Hibernate: 
+    alter table note_triage 
+       drop constraint if exists uk_triage_periode_matricule
+Hibernate: 
+    alter table note_triage 
+       add constraint uk_triage_periode_matricule unique (periode, matricule)
+Hibernate: 
+    create index idx_objectif_periode 
+       on objectif_commercial (periode)
+Hibernate: 
+    create index idx_objectif_matricule 
+       on objectif_commercial (matricule)
+Hibernate: 
+    alter table objectif_commercial 
+       drop constraint if exists uk_objectif_periode_carte_matricule
+Hibernate: 
+    alter table objectif_commercial 
+       add constraint uk_objectif_periode_carte_matricule unique (periode, carte, matricule)
+Hibernate: 
+    create index idx_realisation_periode 
+       on realisation_commerciale (periode)
+Hibernate: 
+    create index idx_realisation_matricule 
+       on realisation_commerciale (matricule)
+Hibernate: 
+    alter table realisation_commerciale 
+       drop constraint if exists uk_realisation_periode_carte_matricule
+Hibernate: 
+    alter table realisation_commerciale 
+       add constraint uk_realisation_periode_carte_matricule unique (periode, carte, matricule)
+2026-05-21T00:31:51.498+01:00  INFO 32476 --- [service-commission] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-21T00:31:52.427+01:00  INFO 32476 --- [service-commission] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-21T00:31:54.093+01:00  WARN 32476 --- [service-commission] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-21T00:31:55.442+01:00  INFO 32476 --- [service-commission] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-05-21T00:31:55.588+01:00  INFO 32476 --- [service-commission] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8083 (http) with context path ''
+2026-05-21T00:31:55.606+01:00  INFO 32476 --- [service-commission] [           main] c.a.c.CommissionServiceApplication       : Started CommissionServiceApplication in 17.838 seconds (process running for 18.692)
+2026-05-21T00:32:32.000+01:00  INFO 32476 --- [service-commission] [nio-8083-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-21T00:32:32.001+01:00  INFO 32476 --- [service-commission] [nio-8083-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-21T00:32:32.003+01:00  INFO 32476 --- [service-commission] [nio-8083-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+2026-05-21T00:34:11.323+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-5] c.a.c.exception.GlobalExceptionHandler   : Validation failed: carte: La carte est obligatoire
+2026-05-21T00:34:11.424+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-9] c.a.c.exception.GlobalExceptionHandler   : Validation failed: periode: Format période attendu : YYYY-MM
+2026-05-21T00:34:11.491+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-6] c.a.c.exception.GlobalExceptionHandler   : Validation failed: target: L'objectif doit être >= 0
+2026-05-21T00:34:11.577+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-7] c.a.c.exception.GlobalExceptionHandler   : Validation failed: note: La note doit être <= 100
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    select
+        top (?) hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.matricule=? 
+        and hc1_0.mois=? 
+        and hc1_0.annee=? 
+        and hc1_0.carte=? 
+    order by
+        hc1_0.date_calcul desc
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.carte=? 
+        and c1_0.actif=1
+Hibernate: 
+    select
+        max(oc1_0.derniere_maj) 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and lower(oc1_0.carte)=lower(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    select
+        max(rc1_0.derniere_maj) 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and lower(rc1_0.carte)=lower(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    select
+        max(nt1_0.derniere_maj) 
+    from
+        note_triage nt1_0 
+    where
+        nt1_0.periode=? 
+        and nt1_0.matricule=?
+Hibernate: 
+    insert 
+    into
+        historique_calculs
+        (annee, bonus, carte, commissions, contraintes_appliquees, date_calcul, details, matricule, mois, nom_employe, penalites, periode, role_employe, salaire_base, salaire_final, source_version, total_ventes) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        top (?) hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.matricule=? 
+        and hc1_0.mois=? 
+        and hc1_0.annee=? 
+        and hc1_0.carte=? 
+    order by
+        hc1_0.date_calcul desc
+Hibernate: 
+    select
+        max(oc1_0.derniere_maj) 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and lower(oc1_0.carte)=lower(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    select
+        max(rc1_0.derniere_maj) 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and lower(rc1_0.carte)=lower(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    select
+        max(nt1_0.derniere_maj) 
+    from
+        note_triage nt1_0 
+    where
+        nt1_0.periode=? 
+        and nt1_0.matricule=?
+2026-05-21T00:34:12.503+01:00  INFO 32476 --- [service-commission] [nio-8083-exec-1] c.a.commission.service.CalculService     : Calcul réutilisé pour matricule=P001 periode=2026-05 carte=Coca Cola
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+2026-05-21T00:46:40.591+01:00  WARN 32476 --- [service-commission] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m22s97ms934µs400ns).
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.actif=1
+Hibernate: 
+    select
+        count_big(c1_0.id) 
+    from
+        contraintes c1_0 
+    where
+        c1_0.actif=1
+2026-05-21T00:52:07.742+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-6] c.a.c.exception.GlobalExceptionHandler   : Validation failed: valeur: ne doit pas être nul
+Hibernate: 
+    insert 
+    into
+        contraintes
+        (actif, carte, condition, date_creation, date_modification, nom, rule_groups, type_commission, type_valeur, valeur) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    update
+        contraintes 
+    set
+        actif=?,
+        carte=?,
+        condition=?,
+        date_modification=?,
+        nom=?,
+        rule_groups=?,
+        type_commission=?,
+        type_valeur=?,
+        valeur=? 
+    where
+        id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    update
+        contraintes 
+    set
+        actif=?,
+        carte=?,
+        condition=?,
+        date_modification=?,
+        nom=?,
+        rule_groups=?,
+        type_commission=?,
+        type_valeur=?,
+        valeur=? 
+    where
+        id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    update
+        contraintes 
+    set
+        actif=?,
+        carte=?,
+        condition=?,
+        date_modification=?,
+        nom=?,
+        rule_groups=?,
+        type_commission=?,
+        type_valeur=?,
+        valeur=? 
+    where
+        id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.id=?
+2026-05-21T00:52:08.181+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-2] c.a.c.exception.GlobalExceptionHandler   : Resource not found: Contrainte introuvable avec l'ID : 99999
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    delete 
+    from
+        contraintes 
+    where
+        id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.carte=? 
+        and c1_0.actif=1
+Hibernate: 
+    insert 
+    into
+        historique_calculs
+        (annee, bonus, carte, commissions, contraintes_appliquees, date_calcul, details, matricule, mois, nom_employe, penalites, periode, role_employe, salaire_base, salaire_final, source_version, total_ventes) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+2026-05-21T00:52:08.383+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-5] c.a.c.exception.GlobalExceptionHandler   : Validation failed: salaireBase: Le salaire de base doit être positif
+2026-05-21T00:52:08.443+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-9] c.a.c.exception.GlobalExceptionHandler   : Validation failed: carte: La carte est obligatoire
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.carte=? 
+        and c1_0.actif=1
+Hibernate: 
+    insert 
+    into
+        historique_calculs
+        (annee, bonus, carte, commissions, contraintes_appliquees, date_calcul, details, matricule, mois, nom_employe, penalites, periode, role_employe, salaire_base, salaire_final, source_version, total_ventes) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    select
+        rc1_0.id,
+        rc1_0.ca_realise,
+        rc1_0.carte,
+        rc1_0.derniere_maj,
+        rc1_0.matricule,
+        rc1_0.periode 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and upper(rc1_0.carte)=upper(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    update
+        realisation_commerciale 
+    set
+        ca_realise=?,
+        carte=?,
+        derniere_maj=?,
+        matricule=?,
+        periode=? 
+    where
+        id=?
+Hibernate: 
+    select
+        top (?) hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.matricule=? 
+        and hc1_0.mois=? 
+        and hc1_0.annee=? 
+        and hc1_0.carte=? 
+    order by
+        hc1_0.date_calcul desc
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.carte=? 
+        and c1_0.actif=1
+Hibernate: 
+    select
+        max(oc1_0.derniere_maj) 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and lower(oc1_0.carte)=lower(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    select
+        max(rc1_0.derniere_maj) 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and lower(rc1_0.carte)=lower(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    select
+        max(nt1_0.derniere_maj) 
+    from
+        note_triage nt1_0 
+    where
+        nt1_0.periode=? 
+        and nt1_0.matricule=?
+Hibernate: 
+    insert 
+    into
+        historique_calculs
+        (annee, bonus, carte, commissions, contraintes_appliquees, date_calcul, details, matricule, mois, nom_employe, penalites, periode, role_employe, salaire_base, salaire_final, source_version, total_ventes) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        top (?) hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.matricule=? 
+        and hc1_0.mois=? 
+        and hc1_0.annee=? 
+        and hc1_0.carte=? 
+    order by
+        hc1_0.date_calcul desc
+Hibernate: 
+    select
+        max(oc1_0.derniere_maj) 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and lower(oc1_0.carte)=lower(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    select
+        max(rc1_0.derniere_maj) 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and lower(rc1_0.carte)=lower(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    select
+        max(nt1_0.derniere_maj) 
+    from
+        note_triage nt1_0 
+    where
+        nt1_0.periode=? 
+        and nt1_0.matricule=?
+2026-05-21T00:52:08.922+01:00  INFO 32476 --- [service-commission] [nio-8083-exec-1] c.a.commission.service.CalculService     : Calcul réutilisé pour matricule=P001 periode=2026-05 carte=Coca Cola
+Hibernate: 
+    select
+        rc1_0.id,
+        rc1_0.ca_realise,
+        rc1_0.carte,
+        rc1_0.derniere_maj,
+        rc1_0.matricule,
+        rc1_0.periode 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and upper(rc1_0.carte)=upper(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    update
+        realisation_commerciale 
+    set
+        ca_realise=?,
+        carte=?,
+        derniere_maj=?,
+        matricule=?,
+        periode=? 
+    where
+        id=?
+Hibernate: 
+    select
+        top (?) hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.matricule=? 
+        and hc1_0.mois=? 
+        and hc1_0.annee=? 
+        and hc1_0.carte=? 
+    order by
+        hc1_0.date_calcul desc
+Hibernate: 
+    select
+        max(oc1_0.derniere_maj) 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and lower(oc1_0.carte)=lower(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    select
+        max(rc1_0.derniere_maj) 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and lower(rc1_0.carte)=lower(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    select
+        max(nt1_0.derniere_maj) 
+    from
+        note_triage nt1_0 
+    where
+        nt1_0.periode=? 
+        and nt1_0.matricule=?
+2026-05-21T00:52:10.127+01:00  INFO 32476 --- [service-commission] [nio-8083-exec-3] c.a.commission.service.CalculService     : Source modifiée — recalcul forcé pour matricule=P001 periode=2026-05 carte=Coca Cola
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.carte=? 
+        and c1_0.actif=1
+Hibernate: 
+    select
+        max(oc1_0.derniere_maj) 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and lower(oc1_0.carte)=lower(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    select
+        max(rc1_0.derniere_maj) 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and lower(rc1_0.carte)=lower(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    select
+        max(nt1_0.derniere_maj) 
+    from
+        note_triage nt1_0 
+    where
+        nt1_0.periode=? 
+        and nt1_0.matricule=?
+Hibernate: 
+    insert 
+    into
+        historique_calculs
+        (annee, bonus, carte, commissions, contraintes_appliquees, date_calcul, details, matricule, mois, nom_employe, penalites, periode, role_employe, salaire_base, salaire_final, source_version, total_ventes) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0 
+    where
+        c1_0.carte=? 
+        and c1_0.actif=1
+Hibernate: 
+    select
+        max(oc1_0.derniere_maj) 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and lower(oc1_0.carte)=lower(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    select
+        max(rc1_0.derniere_maj) 
+    from
+        realisation_commerciale rc1_0 
+    where
+        rc1_0.periode=? 
+        and lower(rc1_0.carte)=lower(?) 
+        and rc1_0.matricule=?
+Hibernate: 
+    select
+        max(nt1_0.derniere_maj) 
+    from
+        note_triage nt1_0 
+    where
+        nt1_0.periode=? 
+        and nt1_0.matricule=?
+Hibernate: 
+    insert 
+    into
+        historique_calculs
+        (annee, bonus, carte, commissions, contraintes_appliquees, date_calcul, details, matricule, mois, nom_employe, penalites, periode, role_employe, salaire_base, salaire_final, source_version, total_ventes) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        sum(hc1_0.salaire_final) 
+    from
+        historique_calculs hc1_0
+Hibernate: 
+    select
+        sum(hc1_0.commissions) 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.annee=?
+Hibernate: 
+    select
+        count_big(*) 
+    from
+        historique_calculs hc1_0
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.mois=? 
+        and hc1_0.annee=?
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        upper(hc1_0.nom_employe) like upper(?) escape '\'
+Hibernate: 
+    insert 
+    into
+        historique_calculs
+        (annee, bonus, carte, commissions, contraintes_appliquees, date_calcul, details, matricule, mois, nom_employe, penalites, periode, role_employe, salaire_base, salaire_final, source_version, total_ventes) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        count_big(*) 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.id=?
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    where
+        hc1_0.id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        historique_calculs 
+    where
+        id=?
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0
+Hibernate: 
+    select
+        nt1_0.id,
+        nt1_0.derniere_maj,
+        nt1_0.matricule,
+        nt1_0.note,
+        nt1_0.periode 
+    from
+        note_triage nt1_0
+Hibernate: 
+    select
+        oc1_0.id,
+        oc1_0.carte,
+        oc1_0.derniere_maj,
+        oc1_0.matricule,
+        oc1_0.periode,
+        oc1_0.target 
+    from
+        objectif_commercial oc1_0
+Hibernate: 
+    select
+        rc1_0.id,
+        rc1_0.ca_realise,
+        rc1_0.carte,
+        rc1_0.derniere_maj,
+        rc1_0.matricule,
+        rc1_0.periode 
+    from
+        realisation_commerciale rc1_0
+Hibernate: 
+    select
+        oc1_0.id,
+        oc1_0.carte,
+        oc1_0.derniere_maj,
+        oc1_0.matricule,
+        oc1_0.periode,
+        oc1_0.target 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and upper(oc1_0.carte)=upper(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    insert 
+    into
+        objectif_commercial
+        (carte, derniere_maj, matricule, periode, target) 
+    values
+        (?, ?, ?, ?, ?)
+2026-05-21T00:52:11.261+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-7] c.a.c.exception.GlobalExceptionHandler   : Validation failed: carte: La carte est obligatoire
+2026-05-21T00:52:11.340+01:00  WARN 32476 --- [service-commission] [io-8083-exec-10] c.a.c.exception.GlobalExceptionHandler   : Validation failed: periode: Format période attendu : YYYY-MM
+2026-05-21T00:52:11.394+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-8] c.a.c.exception.GlobalExceptionHandler   : Validation failed: target: L'objectif doit être >= 0
+2026-05-21T00:52:11.466+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-1] c.a.c.exception.GlobalExceptionHandler   : Validation failed: note: La note doit être <= 100
+Hibernate: 
+    select
+        oc1_0.id,
+        oc1_0.carte,
+        oc1_0.derniere_maj,
+        oc1_0.matricule,
+        oc1_0.periode,
+        oc1_0.target 
+    from
+        objectif_commercial oc1_0 
+    where
+        oc1_0.periode=? 
+        and upper(oc1_0.carte)=upper(?) 
+        and oc1_0.matricule=?
+Hibernate: 
+    insert 
+    into
+        objectif_commercial
+        (carte, derniere_maj, matricule, periode, target) 
+    values
+        (?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+2026-05-21T05:59:59.772+01:00  WARN 32476 --- [service-commission] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4h57m48s972ms528µs).
+2026-05-21T05:59:59.781+01:00  WARN 32476 --- [service-commission] [nio-8083-exec-5] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:11 ClientConnectionId: 9c7f09d4-7f25-448d-b2d2-cb070f1083c5 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+2026-05-21T19:35:16.486+01:00  WARN 32476 --- [service-commission] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=13h35m16s714ms7µs100ns).
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+2026-05-21T19:45:34.779+01:00  WARN 32476 --- [service-commission] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s324ms276µs500ns).
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.actif,
+        c1_0.carte,
+        c1_0.condition,
+        c1_0.date_creation,
+        c1_0.date_modification,
+        c1_0.nom,
+        c1_0.rule_groups,
+        c1_0.type_commission,
+        c1_0.type_valeur,
+        c1_0.valeur 
+    from
+        contraintes c1_0
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        hc1_0.id,
+        hc1_0.annee,
+        hc1_0.bonus,
+        hc1_0.carte,
+        hc1_0.commissions,
+        hc1_0.contraintes_appliquees,
+        hc1_0.date_calcul,
+        hc1_0.details,
+        hc1_0.matricule,
+        hc1_0.mois,
+        hc1_0.nom_employe,
+        hc1_0.penalites,
+        hc1_0.periode,
+        hc1_0.role_employe,
+        hc1_0.salaire_base,
+        hc1_0.salaire_final,
+        hc1_0.source_version,
+        hc1_0.total_ventes 
+    from
+        historique_calculs hc1_0 
+    order by
+        hc1_0.date_calcul desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+2026-05-21T21:35:49.791+01:00  WARN 32476 --- [service-commission] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h19m14s684ms974µs700ns).
+2026-05-21T21:42:06.381+01:00  WARN 32476 --- [service-commission] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=6m16s589ms986µs100ns).
+2026-05-21T22:41:36.270+01:00  WARN 32476 --- [service-commission] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=34m59s633ms216µs400ns).

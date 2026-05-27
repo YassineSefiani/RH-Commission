@@ -28,9 +28,18 @@ export default function Login() {
     setIsLoading(false);
   };
 
-  const handleQuickLogin = (userEmail: string, userPassword: string) => {
+  const handleQuickLogin = async (userEmail: string, userPassword: string) => {
     setEmail(userEmail);
     setPassword(userPassword);
+    setError('');
+    setIsLoading(true);
+    try {
+      const success = await login(userEmail, userPassword);
+      if (success) navigate('/dashboard');
+      else setError(l.error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -128,8 +137,9 @@ export default function Login() {
                   type="button"
                   className="abc-login-quickbtn"
                   onClick={() => handleQuickLogin(u.email, u.password)}
+                  title={u.email}
                 >
-                  {u.superRole}
+                  {(u as any).label ?? u.superRole}
                 </button>
               ))}
             </div>

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { logAudit } from '../services/auditApi';
 import { 
   personnelApi, 
   mapApiPersonnelToFrontend, 
@@ -132,8 +133,10 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
   // Actions CRUD
   const addPersonnel = async (newP: Omit<Personnel, 'id'>) => {
     const created = await personnelApi.create(mapFrontendPersonnelToApi(newP));
-    setPersonnel(prev => [...prev, mapApiPersonnelToFrontend(created)]);
+    const mapped = mapApiPersonnelToFrontend(created);
+    setPersonnel(prev => [...prev, mapped]);
     await loadStats();
+    logAudit({ action: 'PERSONNEL_CREATE', entity: 'Personnel', entityId: mapped.id, details: `${mapped.prenom} ${mapped.nom}` });
     toast.success('Ajouté avec succès');
   };
 
@@ -142,6 +145,7 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     if (!current) return;
     const updated = await personnelApi.update(parseInt(id), mapFrontendPersonnelToApi({...current, ...updates}));
     setPersonnel(prev => prev.map(p => p.id === id ? mapApiPersonnelToFrontend(updated) : p));
+    logAudit({ action: 'PERSONNEL_UPDATE', entity: 'Personnel', entityId: id, details: JSON.stringify(updates) });
     toast.success('Modifié');
   };
 
@@ -149,13 +153,16 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     await personnelApi.delete(parseInt(id));
     setPersonnel(prev => prev.filter(p => p.id !== id));
     await loadStats();
+    logAudit({ action: 'PERSONNEL_DELETE', entity: 'Personnel', entityId: id });
     toast.success('Supprimé');
   };
 
   const togglePersonnel = async (id: string) => {
     const toggled = await personnelApi.toggle(parseInt(id));
-    setPersonnel(prev => prev.map(p => p.id === id ? mapApiPersonnelToFrontend(toggled) : p));
+    const mapped = mapApiPersonnelToFrontend(toggled);
+    setPersonnel(prev => prev.map(p => p.id === id ? mapped : p));
     await loadStats();
+    logAudit({ action: 'PERSONNEL_TOGGLE', entity: 'Personnel', entityId: id, details: `actif=${mapped.actif}` });
   };
 
   // Filtres

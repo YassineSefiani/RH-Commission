@@ -4,6 +4,7 @@ import { useHistory } from '../context/HistoryContext';
 import { exportHistoryPDF, exportSingleRecordPDF } from '../utils/pdfExport';
 import { useLang } from '../context/LangContext';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function HistoryPage() {
   const { history, deleteCalculation, clearHistory } = useHistory();
@@ -119,10 +120,21 @@ export default function HistoryPage() {
           )}
         </button>
         {history.length > 0 && (
-          <button className="abc-btn abc-btn-secondary abc-btn-sm" onClick={() => { if (confirm(lang === 'en' ? 'Clear all history?' : "Vider tout l'historique ?")) clearHistory(); }}>
-            <Trash2 size={13} />
-            {h_.clearAll}
-          </button>
+          <ConfirmDialog
+            trigger={
+              <button className="abc-btn abc-btn-secondary abc-btn-sm">
+                <Trash2 size={13} />
+                {h_.clearAll}
+              </button>
+            }
+            title={lang === 'en' ? 'Clear all history?' : "Vider tout l'historique ?"}
+            description={lang === 'en'
+              ? `This will permanently delete ${history.length} record(s).`
+              : `Cela supprimera définitivement ${history.length} enregistrement(s).`}
+            confirmLabel={lang === 'en' ? 'Delete all' : 'Tout supprimer'}
+            destructive
+            onConfirm={clearHistory}
+          />
         )}
       </div>
 

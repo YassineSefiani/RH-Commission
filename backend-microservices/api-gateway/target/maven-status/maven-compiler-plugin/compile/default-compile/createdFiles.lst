@@ -1,0 +1,3 @@
+com\abcdis\gateway\ProxyController.class
+com\abcdis\gateway\ApiGatewayApplication.class
+com\abcdis\gateway\CorsConfig.class

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { logAudit } from '../services/auditApi';
 import { constraintsApi, mapApiConstraintToFrontend, mapFrontendConstraintToApi } from '../services/api';
 import { toast } from 'sonner';
 import { useUser } from '../context/UserContext';
@@ -223,7 +224,9 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
   const addConstraint = async (constraint: Omit<Constraint, 'id'>) => {
     try {
       const created = await constraintsApi.create(mapFrontendConstraintToApi(constraint));
-      setConstraints(prev => [...prev, mapApiConstraintToFrontend(created)]);
+      const mapped = mapApiConstraintToFrontend(created);
+      setConstraints(prev => [...prev, mapped]);
+      logAudit({ action: 'CONSTRAINT_CREATE', entity: 'Contrainte', entityId: mapped.id, details: mapped.name });
       toast.success('Contrainte ajoutée');
     } catch (error) {
       toast.error("Erreur lors de l'ajout");
@@ -236,11 +239,12 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
       const numericId = parseInt(id, 10);
       const current = constraints.find(c => c.id === id);
       if (!current) return;
-      
+
       const updatedData = { ...current, ...updates };
       const updated = await constraintsApi.update(numericId, mapFrontendConstraintToApi(updatedData));
-      
+
       setConstraints(prev => prev.map(c => (c.id === id ? mapApiConstraintToFrontend(updated) : c)));
+      logAudit({ action: 'CONSTRAINT_UPDATE', entity: 'Contrainte', entityId: id, details: JSON.stringify(updates) });
       toast.success('Contrainte mise à jour');
     } catch (error) {
       toast.error('Erreur lors de la mise à jour');
@@ -252,6 +256,7 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
     try {
       await constraintsApi.delete(parseInt(id, 10));
       setConstraints(prev => prev.filter(c => c.id !== id));
+      logAudit({ action: 'CONSTRAINT_DELETE', entity: 'Contrainte', entityId: id });
       toast.success('Contrainte supprimée');
     } catch (error) {
       toast.error('Erreur lors de la suppression');
@@ -261,7 +266,9 @@ export function ConstraintsProvider({ children }: { children: ReactNode }) {
   const toggleConstraint = async (id: string) => {
     try {
       const toggled = await constraintsApi.toggle(parseInt(id, 10));
-      setConstraints(prev => prev.map(c => (c.id === id ? mapApiConstraintToFrontend(toggled) : c)));
+      const mapped = mapApiConstraintToFrontend(toggled);
+      setConstraints(prev => prev.map(c => (c.id === id ? mapped : c)));
+      logAudit({ action: 'CONSTRAINT_TOGGLE', entity: 'Contrainte', entityId: id, details: `active=${mapped.active}` });
     } catch (error) {
       toast.error('Erreur de changement d\'état');
     }

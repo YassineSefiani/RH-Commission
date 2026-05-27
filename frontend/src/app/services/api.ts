@@ -71,6 +71,10 @@ export interface ApiCalculationHistory {
   finalSalary: number;
   constraintsApplied: string; // JSON array
   details: string; // JSON array
+  carte?: string;
+  matricule?: string;        // clé anti-redondance (1 calcul/mois/employé/marque)
+  periode?: string;          // YYYY-MM
+  forcerRecalcul?: boolean;  // si true, écrase l'existant
 }
 
 // Helper pour gérer les erreurs
@@ -235,7 +239,29 @@ export function mapFrontendConstraintToApi(frontendConstraint: any): Omit<ApiCon
   };
 }
 
+// Tolère les anciens enregistrements stockés via Java toString() (ex: "[Commission A, Commission B]")
+function safeJsonParseArray(raw: unknown): any[] {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw;
+  const s = String(raw).trim();
+  if (!s) return [];
+  try {
+    const parsed = JSON.parse(s);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    // Fallback : "[a, b, c]" style Java → split sur les virgules
+    if (s.startsWith('[') && s.endsWith(']')) {
+      return s.slice(1, -1)
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+    }
+    return [s];
+  }
+}
+
 // Convertir un historique API vers le format frontend
+// Note : deliveries/returnRate ne sont pas persistés côté backend → default 0
 export function mapApiHistoryToFrontend(apiHistory: ApiCalculationHistory) {
   return {
     id: apiHistory.id?.toString() || '',
@@ -244,14 +270,14 @@ export function mapApiHistoryToFrontend(apiHistory: ApiCalculationHistory) {
     employeeRole: apiHistory.employeeRole,
     baseSalary: apiHistory.baseSalary,
     totalSales: apiHistory.totalSales,
-    deliveries: apiHistory.deliveries,
-    returns: apiHistory.returnRate,
+    deliveries: apiHistory.deliveries ?? 0,
+    returns: apiHistory.returnRate ?? 0,
     commissions: apiHistory.commissions,
     bonuses: apiHistory.bonuses,
     penalties: apiHistory.penalties,
     finalSalary: apiHistory.finalSalary,
-    constraintsApplied: JSON.parse(apiHistory.constraintsApplied || '[]'),
-    details: JSON.parse(apiHistory.details || '[]'),
+    constraintsApplied: safeJsonParseArray(apiHistory.constraintsApplied),
+    details: safeJsonParseArray(apiHistory.details),
   };
 }
 
@@ -270,5 +296,9 @@ export function mapFrontendHistoryToApi(frontendHistory: any): Omit<ApiCalculati
     finalSalary: frontendHistory.finalSalary,
     constraintsApplied: JSON.stringify(frontendHistory.constraintsApplied || []),
     details: JSON.stringify(frontendHistory.details || []),
+    carte: frontendHistory.carte,
+    matricule: frontendHistory.matricule,
+    periode: frontendHistory.periode,
+    forcerRecalcul: frontendHistory.forcerRecalcul ?? false,
   };
 }

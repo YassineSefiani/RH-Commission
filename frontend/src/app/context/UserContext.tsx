@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
+import { logAudit } from '../services/auditApi';
 
 export interface User {
   id: number;
@@ -10,11 +11,13 @@ export interface User {
 }
 
 // Liste des utilisateurs disponibles pour la connexion rapide
+// Mots de passe alignés sur DataInitializer du service-auth.
 export const AVAILABLE_USERS = [
-  { email: 'yassinesefiani@gmail.com', password: '123456', superRole: 'ADMIN' },
-  { email: 'adv@abcdis.com', password: '123456', superRole: 'ADV' },
-  { email: 'rh@abcdis.com', password: '123456', superRole: 'RH' },
-  { email: 'dispatcher@abcdis.com', password: '123456', superRole: 'DISPATCHER' },
+  { email: 'yassine.admin@abcdis.com', password: 'Admin1234!', superRole: 'ADMIN',      label: 'ADMIN' },
+  { email: 'admin@abcdis.com',         password: 'Admin2024!', superRole: 'ADMIN',      label: 'SUPER ADMIN' },
+  { email: 'adv@abcdis.com',           password: 'Adv1234!',   superRole: 'ADV',        label: 'ADV' },
+  { email: 'rh@abcdis.com',            password: 'Rh1234!',    superRole: 'RH',         label: 'RH' },
+  { email: 'dispatcher@abcdis.com',    password: 'Dispatch1!', superRole: 'DISPATCHER', label: 'DISPATCHER' },
 ];
 
 interface UserContextType {
@@ -38,50 +41,41 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        toast.error(error.error || 'Email ou mot de passe incorrect');
+        try {
+          const error = await response.json();
+          toast.error(error.message || error.error || 'Email ou mot de passe incorrect');
+        } catch {
+          toast.error('Email ou mot de passe incorrect');
+        }
         return false;
       }
 
+      // Backend renvoie LoginResponse: { token, email, prenom, nom, superRole }
       const data = await response.json();
-      
-      // Stocker les données de base pour l'authentification
+
+      const authedUser: User = {
+        id: 0,
+        email: data.email,
+        prenom: data.prenom,
+        nom: data.nom,
+        superRole: data.superRole,
+      };
+
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('userEmail', email);
+      localStorage.setItem('userEmail', authedUser.email);
+      localStorage.setItem('user', JSON.stringify(authedUser));
+      localStorage.setItem('userRole', authedUser.superRole);
 
-      // Valider le token et récupérer les infos utilisateur complètes
-      const validateResponse = await fetch(`${API_URL}/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: data.token }),
-      });
-
-      if (validateResponse.ok) {
-        const validateData = await validateResponse.json();
-        if (validateData.valid && validateData.user) {
-          setUser(validateData.user);
-          
-          // --- STOCKAGE CRUCIAL POUR LE ROUTER ---
-          localStorage.setItem('user', JSON.stringify(validateData.user));
-          localStorage.setItem('userRole', validateData.user.superRole); // Nécessaire pour requireAuth()
-          
-          toast.success('Connexion réussie');
-          return true;
-        }
-      }
-
-      toast.error('Erreur lors de la validation');
-      return false;
+      setUser(authedUser);
+      logAudit({ action: 'LOGIN', entity: 'Utilisateur', entityId: authedUser.email, details: authedUser.superRole });
+      toast.success('Connexion réussie');
+      return true;
     } catch (error) {
       console.error('Erreur de connexion:', error);
       toast.error('Impossible de se connecter au serveur');
@@ -90,6 +84,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const emailBefore = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').email; } catch { return null; } })();
+    logAudit({ action: 'LOGOUT', entity: 'Utilisateur', entityId: emailBefore ?? undefined });
     setUser(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('isAuthenticated');
@@ -118,12 +114,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
+        // Backend renvoie LoginResponse plat : { token, email, prenom, nom, superRole }
         const data = await response.json();
-        if (data.valid && data.user) {
-          setUser(data.user);
-          // Garder le localStorage à jour
-          localStorage.setItem('user', JSON.stringify(data.user));
-          localStorage.setItem('userRole', data.user.superRole);
+        if (data && data.email && data.superRole) {
+          const restored: User = {
+            id: 0,
+            email: data.email,
+            prenom: data.prenom,
+            nom: data.nom,
+            superRole: data.superRole,
+          };
+          setUser(restored);
+          localStorage.setItem('user', JSON.stringify(restored));
+          localStorage.setItem('userRole', restored.superRole);
         } else {
           logout();
         }
@@ -140,6 +143,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     checkAuth();
+    // Re-validate token toutes les 5 min — détecte les tokens expirés en cours de session
+    const interval = window.setInterval(() => {
+      if (localStorage.getItem('authToken')) checkAuth();
+    }, 5 * 60 * 1000);
+    return () => window.clearInterval(interval);
   }, []);
 
   return (

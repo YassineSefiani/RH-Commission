@@ -13,6 +13,7 @@ import {
   Users,
   Sun,
   Moon,
+  Activity,
 } from 'lucide-react';
 import logo from '../assets/logo-on-black.png';
 import { BackendStatus } from './BackendStatus';
@@ -44,6 +45,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/constraints', label: t.nav.constraints, icon: FileText,   allowedRoles: ['ADMIN', 'ADV'] },
     { path: '/calculation', label: t.nav.calculation, icon: Calculator, allowedRoles: ['ADMIN', 'ADV'] },
     { path: '/history',     label: t.nav.history,     icon: History },
+    { path: '/audit',       label: 'Audit',            icon: Activity, allowedRoles: ['ADMIN'] },
     { path: '/settings',    label: t.nav.settings,    icon: Settings },
   ];
 

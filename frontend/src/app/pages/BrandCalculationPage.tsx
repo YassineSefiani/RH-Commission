@@ -51,7 +51,8 @@ export default function BrandCalculationPage() {
     const fetchEmployeesByBrand = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:8080/api/personnel/carte/${decodedBrand}`);
+        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+        const response = await fetch(`${apiBase}/personnel/carte/${decodedBrand}`);
         if (response.ok) {
           const data = await response.json();
           setBrandEmployees(data.filter((emp: Employee) => emp.actif));
@@ -107,19 +108,26 @@ export default function BrandCalculationPage() {
           employee, commissions, bonuses, penalties, finalSalary, details 
         };
 
+        // Période courante YYYY-MM — utilisée pour l'anti-redondance côté backend
+        const today = new Date();
+        const periode = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
         addCalculation({
           employeeName: `${employee.prenom} ${employee.nom}`,
           employeeRole: employee.role,
           baseSalary,
-          totalSales: 0, // Placeholder
-          deliveries: 0, // Placeholder
-          returns: 0, // Placeholder
+          totalSales: 0,
+          deliveries: 0,
+          returns: 0,
           commissions: result.commissions,
           bonuses: result.bonuses,
           penalties: result.penalties,
           finalSalary: result.finalSalary,
           constraintsApplied: activeConstraints.map(c => c.name),
-          details: JSON.stringify(result.details) as any,
+          details: result.details,
+          carte: decodedBrand,
+          matricule: employee.matricule,
+          periode,
         });
 
         return result;

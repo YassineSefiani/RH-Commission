@@ -1,0 +1,280 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.abcdis:service-auth >-----------------------
+[INFO] Building Service Auth - Authentification et JWT 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.2.4:run (default-cli) > test-compile @ service-auth >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ service-auth ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ service-auth ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ service-auth ---
+[INFO] skip non existing resourceDirectory C:\Projets\RH-Commission\backend-microservices\service-auth\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ service-auth ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] <<< spring-boot:3.2.4:run (default-cli) < test-compile @ service-auth <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.2.4:run (default-cli) @ service-auth ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.4)
+
+2026-05-19T19:35:35.940+01:00  INFO 18900 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : Starting AuthServiceApplication using Java 17.0.12 with PID 18900 (C:\Projets\RH-Commission\backend-microservices\service-auth\target\classes started by yassi in C:\Projets\RH-Commission\backend-microservices\service-auth)
+2026-05-19T19:35:35.946+01:00 DEBUG 18900 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : Running with Spring Boot v3.2.4, Spring v6.1.5
+2026-05-19T19:35:35.951+01:00  INFO 18900 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-05-19T19:35:38.422+01:00  INFO 18900 --- [service-auth] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-19T19:35:38.519+01:00  INFO 18900 --- [service-auth] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 83 ms. Found 1 JPA repository interface.
+2026-05-19T19:35:40.265+01:00  INFO 18900 --- [service-auth] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-05-19T19:35:40.293+01:00  INFO 18900 --- [service-auth] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-05-19T19:35:40.295+01:00  INFO 18900 --- [service-auth] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-05-19T19:35:40.491+01:00  INFO 18900 --- [service-auth] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-05-19T19:35:40.493+01:00  INFO 18900 --- [service-auth] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4412 ms
+2026-05-19T19:35:41.291+01:00  INFO 18900 --- [service-auth] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-19T19:35:41.458+01:00  INFO 18900 --- [service-auth] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-05-19T19:35:41.546+01:00  INFO 18900 --- [service-auth] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-05-19T19:35:42.077+01:00  INFO 18900 --- [service-auth] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-19T19:35:42.133+01:00  INFO 18900 --- [service-auth] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-19T19:35:42.715+01:00  INFO 18900 --- [service-auth] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection ConnectionID:1 ClientConnectionId: c9b33646-3eec-4caf-9a33-50761917fcb9
+2026-05-19T19:35:42.722+01:00  INFO 18900 --- [service-auth] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-19T19:35:42.791+01:00  WARN 18900 --- [service-auth] [           main] org.hibernate.orm.deprecation            : HHH90000025: SQLServerDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-19T19:35:44.917+01:00  INFO 18900 --- [service-auth] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-19T19:35:45.848+01:00  INFO 18900 --- [service-auth] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-19T19:35:46.653+01:00  INFO 18900 --- [service-auth] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-19T19:35:47.369+01:00  WARN 18900 --- [service-auth] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-19T19:35:47.445+01:00  WARN 18900 --- [service-auth] [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: e39dd650-a88e-4456-bd9c-96c9455c5ab5
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-05-19T19:35:48.150+01:00  INFO 18900 --- [service-auth] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-05-19T19:35:48.277+01:00  INFO 18900 --- [service-auth] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@38e46ea, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@116f823c, org.springframework.security.web.context.SecurityContextHolderFilter@7602da1a, org.springframework.security.web.header.HeaderWriterFilter@16bed816, org.springframework.security.web.authentication.logout.LogoutFilter@76e56b17, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@2f26634a, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@2a64cb1f, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@7f5a5ef3, org.springframework.security.web.session.SessionManagementFilter@456c6754, org.springframework.security.web.access.ExceptionTranslationFilter@71c264e5, org.springframework.security.web.access.intercept.AuthorizationFilter@2746b1cc]
+2026-05-19T19:35:48.924+01:00  INFO 18900 --- [service-auth] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path ''
+2026-05-19T19:35:48.941+01:00  INFO 18900 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : Started AuthServiceApplication in 13.88 seconds (process running for 14.6)
+????????????????????????????????????????
+?  Service AUTH démarré sur port 8081  ?
+?  /api/auth/login  ? Connexion        ?
+?  /api/auth/valider ? Validation JWT  ?
+????????????????????????????????????????
+2026-05-19T19:37:19.482+01:00  INFO 18900 --- [service-auth] [nio-8081-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-19T19:37:19.487+01:00  INFO 18900 --- [service-auth] [nio-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-19T19:37:19.489+01:00  INFO 18900 --- [service-auth] [nio-8081-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-05-19T19:37:19.800+01:00  WARN 18900 --- [service-auth] [nio-8081-exec-2] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<?> com.abcdis.auth.controller.AuthController.connexion(com.abcdis.auth.dto.LoginRequest): [Field error in object 'loginRequest' on field 'motDePasse': rejected value [null]; codes [NotBlank.loginRequest.motDePasse,NotBlank.motDePasse,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [loginRequest.motDePasse,motDePasse]; arguments []; default message [motDePasse]]; default message [Le mot de passe est obligatoire]] ]
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+2026-05-19T20:04:36.909+01:00  WARN 18900 --- [service-auth] [nio-8081-exec-8] o.s.s.c.bcrypt.BCryptPasswordEncoder     : Encoded password does not look like BCrypt
+Hibernate: 
+    select
+        top (?) u1_0.id 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    insert 
+    into
+        utilisateurs
+        (actif, email, mot_de_passe, nom, prenom, super_role) 
+    values
+        (?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0
+Token JWT invalide : JWT signature does not match locally computed signature. JWT validity cannot be asserted and should not be trusted.
+Token JWT invalide : JWT signature does not match locally computed signature. JWT validity cannot be asserted and should not be trusted.
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  58:17 min
+[INFO] Finished at: 2026-05-19T20:33:45+01:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.2.4:run (default-cli) on project service-auth: Process terminated with exit code: -1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

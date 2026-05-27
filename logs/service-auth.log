@@ -1,0 +1,523 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.4)
+
+2026-05-21T00:31:35.033+01:00  INFO 38640 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : Starting AuthServiceApplication v1.0.0 using Java 17.0.12 with PID 38640 (C:\Projets\RH-Commission\backend-microservices\service-auth\target\service-auth-1.0.0.jar started by yassi in C:\Users\yassi)
+2026-05-21T00:31:35.035+01:00 DEBUG 38640 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : Running with Spring Boot v3.2.4, Spring v6.1.5
+2026-05-21T00:31:35.035+01:00  INFO 38640 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-05-21T00:31:36.433+01:00  INFO 38640 --- [service-auth] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-21T00:31:36.524+01:00  INFO 38640 --- [service-auth] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 81 ms. Found 2 JPA repository interfaces.
+2026-05-21T00:31:38.163+01:00  INFO 38640 --- [service-auth] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-05-21T00:31:38.188+01:00  INFO 38640 --- [service-auth] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-05-21T00:31:38.188+01:00  INFO 38640 --- [service-auth] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-05-21T00:31:38.297+01:00  INFO 38640 --- [service-auth] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-05-21T00:31:38.301+01:00  INFO 38640 --- [service-auth] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3174 ms
+2026-05-21T00:31:39.222+01:00  INFO 38640 --- [service-auth] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-21T00:31:39.380+01:00  INFO 38640 --- [service-auth] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-05-21T00:31:39.472+01:00  INFO 38640 --- [service-auth] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-05-21T00:31:40.084+01:00  INFO 38640 --- [service-auth] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-21T00:31:40.153+01:00  INFO 38640 --- [service-auth] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-21T00:31:40.821+01:00  INFO 38640 --- [service-auth] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection ConnectionID:1 ClientConnectionId: ffcd875e-5cdb-4f2e-bbdc-a8acfb6b05c2
+2026-05-21T00:31:40.827+01:00  INFO 38640 --- [service-auth] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-21T00:31:40.926+01:00  WARN 38640 --- [service-auth] [           main] org.hibernate.orm.deprecation            : HHH90000025: SQLServerDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-21T00:31:43.431+01:00  INFO 38640 --- [service-auth] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-21T00:31:44.823+01:00  INFO 38640 --- [service-auth] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-21T00:31:46.114+01:00  INFO 38640 --- [service-auth] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-21T00:31:47.698+01:00  WARN 38640 --- [service-auth] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-21T00:31:47.781+01:00  WARN 38640 --- [service-auth] [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: ac7499dc-db94-4ed0-9652-4109e7c57a2e
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-05-21T00:31:48.782+01:00  INFO 38640 --- [service-auth] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-05-21T00:31:48.969+01:00  INFO 38640 --- [service-auth] [           main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@3ba468ec, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@1828069a, org.springframework.security.web.context.SecurityContextHolderFilter@7b128cd2, org.springframework.security.web.header.HeaderWriterFilter@4aebd384, org.springframework.web.filter.CorsFilter@3e2afba0, org.springframework.security.web.authentication.logout.LogoutFilter@42e74fa3, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@71c1ba6d, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@335aac7a, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@2b74787f, org.springframework.security.web.session.SessionManagementFilter@7b51fc45, org.springframework.security.web.access.ExceptionTranslationFilter@57fd93f9, org.springframework.security.web.access.intercept.AuthorizationFilter@54b48b]
+2026-05-21T00:31:50.071+01:00  INFO 38640 --- [service-auth] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path ''
+2026-05-21T00:31:50.101+01:00  INFO 38640 --- [service-auth] [           main] com.abcdis.auth.AuthServiceApplication   : Started AuthServiceApplication in 15.556 seconds (process running for 15.99)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+2026-05-21T00:31:52.281+01:00  INFO 38640 --- [service-auth] [           main] com.abcdis.auth.config.DataInitializer   : DataInitializer : vérification des comptes par défaut terminée.
+????????????????????????????????????????
+?  Service AUTH démarré sur port 8081  ?
+?  /api/auth/login  ? Connexion        ?
+?  /api/auth/valider ? Validation JWT  ?
+????????????????????????????????????????
+2026-05-21T00:33:51.716+01:00  INFO 38640 --- [service-auth] [nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-21T00:33:51.719+01:00  INFO 38640 --- [service-auth] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-21T00:33:51.721+01:00  INFO 38640 --- [service-auth] [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    insert 
+    into
+        audit_log
+        (action, details, entity, entity_id, ip_address, timestamp, user_email, user_role) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+2026-05-21T00:46:33.099+01:00  WARN 38640 --- [service-auth] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m22s99ms191µs600ns).
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+2026-05-21T00:52:04.574+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] c.a.a.exception.GlobalExceptionHandler   : Invalid credentials: Email ou mot de passe incorrect
+2026-05-21T00:52:04.645+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-7] c.a.a.exception.GlobalExceptionHandler   : Validation failed: email: L'email est obligatoire
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0
+Hibernate: 
+    select
+        top (?) u1_0.id 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    insert 
+    into
+        utilisateurs
+        (actif, email, mot_de_passe, nom, prenom, super_role) 
+    values
+        (?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        top (?) u1_0.id 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=?
+2026-05-21T00:52:05.948+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-5] c.a.a.exception.GlobalExceptionHandler   : Duplicate resource: Un compte existe déjà avec cet email : adv@abcdis.com
+Hibernate: 
+    insert 
+    into
+        audit_log
+        (action, details, entity, entity_id, ip_address, timestamp, user_email, user_role) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        al1_0.id,
+        al1_0.action,
+        al1_0.details,
+        al1_0.entity,
+        al1_0.entity_id,
+        al1_0.ip_address,
+        al1_0.timestamp,
+        al1_0.user_email,
+        al1_0.user_role 
+    from
+        audit_log al1_0 
+    order by
+        al1_0.timestamp desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        al1_0.id,
+        al1_0.action,
+        al1_0.details,
+        al1_0.entity,
+        al1_0.entity_id,
+        al1_0.ip_address,
+        al1_0.timestamp,
+        al1_0.user_email,
+        al1_0.user_role 
+    from
+        audit_log al1_0 
+    order by
+        al1_0.timestamp desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        al1_0.id,
+        al1_0.action,
+        al1_0.details,
+        al1_0.entity,
+        al1_0.entity_id,
+        al1_0.ip_address,
+        al1_0.timestamp,
+        al1_0.user_email,
+        al1_0.user_role 
+    from
+        audit_log al1_0 
+    where
+        (
+            ? is null 
+            or al1_0.user_email=?
+        ) 
+        and (
+            ? is null 
+            or al1_0.action=?
+        ) 
+    order by
+        al1_0.timestamp desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        al1_0.id,
+        al1_0.action,
+        al1_0.details,
+        al1_0.entity,
+        al1_0.entity_id,
+        al1_0.ip_address,
+        al1_0.timestamp,
+        al1_0.user_email,
+        al1_0.user_role 
+    from
+        audit_log al1_0 
+    where
+        (
+            ? is null 
+            or al1_0.user_email=?
+        ) 
+        and (
+            ? is null 
+            or al1_0.action=?
+        ) 
+    order by
+        al1_0.timestamp desc 
+    offset
+        ? rows 
+    fetch
+        first ? rows only
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+2026-05-21T05:59:59.781+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:11 ClientConnectionId: 4269bd0e-32dd-4342-84cb-612f3b663d0d (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.794+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:12 ClientConnectionId: 05d204ce-d224-4067-bd96-1b3d99cfa91e (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.810+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:13 ClientConnectionId: 23f9692d-946c-4a1f-8d01-18e4bbd81119 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.825+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:14 ClientConnectionId: 7c980855-1889-46e0-ae9c-b4c8bdd175f2 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.841+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:15 ClientConnectionId: d48f0034-6d6a-4944-94cf-2d66772c8a46 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.857+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:16 ClientConnectionId: bf2f71db-c3a8-416d-9a1f-16b65cae6ba2 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.873+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:17 ClientConnectionId: 77adb081-e8d0-4f65-9510-7c1a137cdae7 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.889+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:18 ClientConnectionId: c3133eb9-b218-49da-91a6-6bd628898365 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.902+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:19 ClientConnectionId: 4d51ad72-e95c-47f7-9367-19367926f6e7 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+2026-05-21T05:59:59.920+01:00  WARN 38640 --- [service-auth] [nio-8081-exec-6] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Failed to validate connection ConnectionID:20 ClientConnectionId: d7e885cd-f8c2-4f48-9b7c-8679e4e63fe0 (La connexion est fermée.). Possibly consider using a shorter maxLifetime value.
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.actif,
+        u1_0.email,
+        u1_0.mot_de_passe,
+        u1_0.nom,
+        u1_0.prenom,
+        u1_0.super_role 
+    from
+        utilisateurs u1_0 
+    where
+        u1_0.email=? 
+        and u1_0.actif=?
+2026-05-21T19:35:09.017+01:00  WARN 38640 --- [service-auth] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=18h32m35s675ms527µs400ns).
+2026-05-21T19:45:57.268+01:00  WARN 38640 --- [service-auth] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s316ms727µs700ns).
+2026-05-21T21:35:42.268+01:00  WARN 38640 --- [service-auth] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h19m14s696ms984µs100ns).
+2026-05-21T21:41:58.855+01:00  WARN 38640 --- [service-auth] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=6m16s586ms516µs).
+2026-05-21T22:41:28.744+01:00  WARN 38640 --- [service-auth] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=34m59s632ms705µs).

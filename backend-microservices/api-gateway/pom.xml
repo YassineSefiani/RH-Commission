@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+    ═══════════════════════════════════════════════════════════
+     MODULE : API GATEWAY (Passerelle API simple)
+    ═══════════════════════════════════════════════════════════
+     Rôle : Point d'entrée unique sur le port 8080.
+     Implémenté avec un simple proxy RestTemplate (Spring MVC pur),
+     sans Spring Cloud Gateway — compatible Spring Boot 3.2.4.
+
+     Routage par préfixe URL :
+       /api/auth/**             → 8081
+       /api/users/**            → 8081
+       /api/personnel/**        → 8082
+       /api/contraintes/**      → 8083
+       /api/calcul/**           → 8083
+       /api/historique/**       → 8083
+       /api/fiches-presence/**  → 8084
+       /api/voyages/**          → 8084
+       /api/ventes/**           → 8084
+    ═══════════════════════════════════════════════════════════
+    -->
+
+    <parent>
+        <groupId>com.abcdis</groupId>
+        <artifactId>rh-commission-microservices</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>api-gateway</artifactId>
+    <name>API Gateway - Passerelle Centrale</name>
+
+    <dependencies>
+        <!-- Spring Web MVC : suffisant pour implémenter le proxy -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- Actuator : endpoint /actuator/health -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Apache HttpClient 5 : nécessaire pour supporter la méthode HTTP PATCH
+             (HttpURLConnection par défaut ne supporte pas PATCH) -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

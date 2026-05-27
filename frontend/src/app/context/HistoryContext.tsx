@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { historyApi, mapApiHistoryToFrontend, mapFrontendHistoryToApi } from '../services/api';
 import { toast } from 'sonner';
+import { logAudit } from '../services/auditApi';
 
 // --- TYPES POUR LES CALCULS ---
 export interface CalculationHistory {
@@ -18,6 +19,11 @@ export interface CalculationHistory {
   finalSalary: number;
   constraintsApplied: string[];
   details: any[];
+  // Champs anti-redondance (optionnels, propagés au backend)
+  carte?: string;
+  matricule?: string;
+  periode?: string;
+  forcerRecalcul?: boolean;
 }
 
 // --- TYPES POUR LES MODIFICATIONS DE CONTRAINTES ---
@@ -85,6 +91,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       const created = await historyApi.create(apiHistory);
       const newCalculation = mapApiHistoryToFrontend(created);
       setHistory(prev => [newCalculation, ...prev]);
+      logAudit({ action: 'HISTORY_CREATE', entity: 'HistoriqueCalcul', entityId: newCalculation.id, details: newCalculation.employeeName });
       toast.success('Calcul ajouté à l\'historique');
     } catch (error) {
       console.error('Erreur lors de l\'ajout du calcul:', error);
@@ -99,6 +106,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       setHistory(prev => prev.filter(h => h.id !== id));
       const numericId = parseInt(id, 10);
       await historyApi.delete(numericId);
+      logAudit({ action: 'HISTORY_DELETE', entity: 'HistoriqueCalcul', entityId: id });
       toast.success('Calcul supprimé de l\'historique');
     } catch (error) {
       setHistory(previousHistory);
@@ -109,15 +117,16 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   };
 
   const clearHistory = async () => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer tout l\'historique ?')) {
-      try {
-        await historyApi.clearAll();
-        setHistory([]);
-        toast.success('Historique supprimé avec succès');
-      } catch (error) {
-        toast.error('Impossible de supprimer l\'historique');
-        throw error;
-      }
+    // Pas de confirm() ici — la confirmation est gérée par ConfirmDialog côté composant.
+    const count = history.length;
+    try {
+      await historyApi.clearAll();
+      setHistory([]);
+      logAudit({ action: 'HISTORY_CLEAR_ALL', entity: 'HistoriqueCalcul', details: `${count} entrées` });
+      toast.success('Historique supprimé avec succès');
+    } catch (error: any) {
+      console.error('clearHistory failed', error);
+      toast.error(`Impossible de supprimer l'historique : ${error?.message ?? 'erreur inconnue'}`);
     }
   };
 

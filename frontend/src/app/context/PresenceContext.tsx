@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { logAudit } from '../services/auditApi';
 import { 
   presenceApi, 
   PresenceRecord, 
@@ -13,7 +14,7 @@ interface PresenceContextType {
   addPresenceRecord: (record: Omit<PresenceRecord, 'id'>) => Promise<void>;
   deletePresenceRecord: (id: string) => Promise<void>;
   refreshRecords: () => Promise<void>;
-  // Note: clearPresenceRecords est souvent supprimé car on ne vide pas une DB entière comme un localStorage
+  clearPresenceRecords: () => Promise<void>;
 }
 
 const PresenceContext = createContext<PresenceContextType | undefined>(undefined);
@@ -60,6 +61,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       const newRecord = mapApiToPresenceRecord(savedApiRecord);
       
       setPresenceRecords((prev) => [newRecord, ...prev]);
+      logAudit({ action: 'PRESENCE_CREATE', entity: 'FichePresence', entityId: newRecord.id, details: `${newRecord.date} ${newRecord.matriculeCamion}` });
       toast.success('Fiche de présence enregistrée sur le serveur');
     } catch (error: any) {
       console.error('Erreur lors de l\'ajout:', error);
@@ -80,12 +82,31 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       if (isNaN(numericId)) throw new Error("ID invalide");
 
       await presenceApi.delete(numericId);
-      
+
       setPresenceRecords((prev) => prev.filter((record) => record.id !== id));
+      logAudit({ action: 'PRESENCE_DELETE', entity: 'FichePresence', entityId: id });
       toast.success('Fiche de présence supprimée du serveur');
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
       toast.error('Impossible de supprimer la fiche');
+    }
+  };
+
+  /**
+   * VIDER : Supprime toutes les fiches côté serveur
+   */
+  const clearPresenceRecords = async () => {
+    try {
+      const ids = presenceRecords.map(r => r.id);
+      await Promise.all(ids.map(id => {
+        const numericId = parseInt(id, 10);
+        return isNaN(numericId) ? Promise.resolve() : presenceApi.delete(numericId);
+      }));
+      setPresenceRecords([]);
+      toast.success('Toutes les fiches de présence ont été supprimées');
+    } catch (error) {
+      console.error('Erreur lors du vidage:', error);
+      toast.error('Impossible de vider les fiches de présence');
     }
   };
 
@@ -97,6 +118,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
         addPresenceRecord,
         deletePresenceRecord,
         refreshRecords,
+        clearPresenceRecords,
       }}
     >
       {children}

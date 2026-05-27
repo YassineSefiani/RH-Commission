@@ -1,0 +1,759 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.4)
+
+2026-05-21T00:31:40.833+01:00  INFO 34624 --- [service-presence] [           main] c.a.presence.PresenceServiceApplication  : Starting PresenceServiceApplication v1.0.0 using Java 17.0.12 with PID 34624 (C:\Projets\RH-Commission\backend-microservices\service-presence\target\service-presence-1.0.0.jar started by yassi in C:\Users\yassi)
+2026-05-21T00:31:40.839+01:00 DEBUG 34624 --- [service-presence] [           main] c.a.presence.PresenceServiceApplication  : Running with Spring Boot v3.2.4, Spring v6.1.5
+2026-05-21T00:31:40.842+01:00  INFO 34624 --- [service-presence] [           main] c.a.presence.PresenceServiceApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-05-21T00:31:44.271+01:00  INFO 34624 --- [service-presence] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-21T00:31:44.433+01:00  INFO 34624 --- [service-presence] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 143 ms. Found 4 JPA repository interfaces.
+2026-05-21T00:31:47.121+01:00  INFO 34624 --- [service-presence] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8084 (http)
+2026-05-21T00:31:47.143+01:00  INFO 34624 --- [service-presence] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-05-21T00:31:47.145+01:00  INFO 34624 --- [service-presence] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-05-21T00:31:47.272+01:00  INFO 34624 --- [service-presence] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-05-21T00:31:47.274+01:00  INFO 34624 --- [service-presence] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 6140 ms
+2026-05-21T00:31:48.147+01:00  INFO 34624 --- [service-presence] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-21T00:31:48.299+01:00  INFO 34624 --- [service-presence] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-05-21T00:31:48.387+01:00  INFO 34624 --- [service-presence] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-05-21T00:31:49.011+01:00  INFO 34624 --- [service-presence] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-21T00:31:49.100+01:00  INFO 34624 --- [service-presence] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-05-21T00:31:49.906+01:00  INFO 34624 --- [service-presence] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection ConnectionID:1 ClientConnectionId: 4564f51a-3aa7-4836-bec7-0e09f998791c
+2026-05-21T00:31:49.914+01:00  INFO 34624 --- [service-presence] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-05-21T00:31:49.999+01:00  WARN 34624 --- [service-presence] [           main] org.hibernate.orm.deprecation            : HHH90000025: SQLServerDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-21T00:31:52.191+01:00  INFO 34624 --- [service-presence] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-21T00:31:53.143+01:00  INFO 34624 --- [service-presence] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-21T00:31:54.170+01:00  INFO 34624 --- [service-presence] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-21T00:31:55.618+01:00  WARN 34624 --- [service-presence] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-21T00:31:56.688+01:00  INFO 34624 --- [service-presence] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint(s) beneath base path '/actuator'
+2026-05-21T00:31:56.808+01:00  INFO 34624 --- [service-presence] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8084 (http) with context path ''
+2026-05-21T00:31:56.826+01:00  INFO 34624 --- [service-presence] [           main] c.a.presence.PresenceServiceApplication  : Started PresenceServiceApplication in 17.093 seconds (process running for 18.248)
+2026-05-21T00:32:31.969+01:00  INFO 34624 --- [service-presence] [nio-8084-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-21T00:32:31.970+01:00  INFO 34624 --- [service-presence] [nio-8084-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-05-21T00:32:31.973+01:00  INFO 34624 --- [service-presence] [nio-8084-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+2026-05-21T00:46:42.194+01:00  WARN 34624 --- [service-presence] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m22s107ms516탎100ns).
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        lower(fp1_0.livreur1_nom) like lower(('%'+?+'%')) 
+        or lower(fp1_0.livreur2_nom) like lower(('%'+?+'%')) 
+        or lower(fp1_0.livreur3_nom) like lower(('%'+?+'%'))
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        fp1_0.date=?
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        datepart(month, fp1_0.date)=? 
+        and datepart(year, fp1_0.date)=?
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        datepart(month, fp1_0.date)=? 
+        and datepart(year, fp1_0.date)=?
+2026-05-21T00:52:12.257+01:00  WARN 34624 --- [service-presence] [nio-8084-exec-4] c.a.p.exception.GlobalExceptionHandler   : Validation failed: livreur1Nom: Le nom du livreur 1 est obligatoire
+Hibernate: 
+    insert 
+    into
+        fiches_presence
+        (canal, date, date_creation, heure_depart, heure_retour, livreur1_id, livreur1_matricule, livreur1_nom, livreur1_prenom, livreur2_id, livreur2_matricule, livreur2_nom, livreur2_prenom, livreur3_id, livreur3_matricule, livreur3_nom, livreur3_prenom, matricule_camion, nom_aide_livreur, nom_livreur, nombre_voyages, observations) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        fp1_0.id=?
+Hibernate: 
+    update
+        fiches_presence 
+    set
+        canal=?,
+        date=?,
+        heure_depart=?,
+        heure_retour=?,
+        livreur1_id=?,
+        livreur1_matricule=?,
+        livreur1_nom=?,
+        livreur1_prenom=?,
+        livreur2_id=?,
+        livreur2_matricule=?,
+        livreur2_nom=?,
+        livreur2_prenom=?,
+        livreur3_id=?,
+        livreur3_matricule=?,
+        livreur3_nom=?,
+        livreur3_prenom=?,
+        matricule_camion=?,
+        nom_aide_livreur=?,
+        nom_livreur=?,
+        nombre_voyages=?,
+        observations=? 
+    where
+        id=?
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        fp1_0.id=?
+Hibernate: 
+    insert 
+    into
+        voyages
+        (destination, fiche_presence_id, heure_depart, heure_retour, montant_ventes, nombre_colis, numero_voyage, observations) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    update
+        fiches_presence 
+    set
+        canal=?,
+        date=?,
+        heure_depart=?,
+        heure_retour=?,
+        livreur1_id=?,
+        livreur1_matricule=?,
+        livreur1_nom=?,
+        livreur1_prenom=?,
+        livreur2_id=?,
+        livreur2_matricule=?,
+        livreur2_nom=?,
+        livreur2_prenom=?,
+        livreur3_id=?,
+        livreur3_matricule=?,
+        livreur3_nom=?,
+        livreur3_prenom=?,
+        matricule_camion=?,
+        nom_aide_livreur=?,
+        nom_livreur=?,
+        nombre_voyages=?,
+        observations=? 
+    where
+        id=?
+Hibernate: 
+    select
+        v1_0.id,
+        v1_0.destination,
+        v1_0.fiche_presence_id,
+        v1_0.heure_depart,
+        v1_0.heure_retour,
+        v1_0.montant_ventes,
+        v1_0.nombre_colis,
+        v1_0.numero_voyage,
+        v1_0.observations 
+    from
+        voyages v1_0 
+    left join
+        fiches_presence fp1_0 
+            on fp1_0.id=v1_0.fiche_presence_id 
+    where
+        fp1_0.id=?
+Hibernate: 
+    select
+        sum(v1_0.montant_ventes) 
+    from
+        voyages v1_0 
+    where
+        v1_0.fiche_presence_id=?
+Hibernate: 
+    select
+        v1_0.id,
+        v1_0.destination,
+        v1_0.fiche_presence_id,
+        v1_0.heure_depart,
+        v1_0.heure_retour,
+        v1_0.montant_ventes,
+        v1_0.nombre_colis,
+        v1_0.numero_voyage,
+        v1_0.observations 
+    from
+        voyages v1_0 
+    where
+        v1_0.id=?
+Hibernate: 
+    update
+        voyages 
+    set
+        destination=?,
+        fiche_presence_id=?,
+        heure_depart=?,
+        heure_retour=?,
+        montant_ventes=?,
+        nombre_colis=?,
+        numero_voyage=?,
+        observations=? 
+    where
+        id=?
+Hibernate: 
+    select
+        v1_0.id,
+        v1_0.destination,
+        v1_0.fiche_presence_id,
+        v1_0.heure_depart,
+        v1_0.heure_retour,
+        v1_0.montant_ventes,
+        v1_0.nombre_colis,
+        v1_0.numero_voyage,
+        v1_0.observations 
+    from
+        voyages v1_0 
+    where
+        v1_0.id=?
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        fp1_0.id=?
+Hibernate: 
+    update
+        fiches_presence 
+    set
+        canal=?,
+        date=?,
+        heure_depart=?,
+        heure_retour=?,
+        livreur1_id=?,
+        livreur1_matricule=?,
+        livreur1_nom=?,
+        livreur1_prenom=?,
+        livreur2_id=?,
+        livreur2_matricule=?,
+        livreur2_nom=?,
+        livreur2_prenom=?,
+        livreur3_id=?,
+        livreur3_matricule=?,
+        livreur3_nom=?,
+        livreur3_prenom=?,
+        matricule_camion=?,
+        nom_aide_livreur=?,
+        nom_livreur=?,
+        nombre_voyages=?,
+        observations=? 
+    where
+        id=?
+Hibernate: 
+    delete 
+    from
+        voyages 
+    where
+        id=?
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0 
+    where
+        fp1_0.id=?
+Hibernate: 
+    delete 
+    from
+        fiches_presence 
+    where
+        id=?
+Hibernate: 
+    select
+        vm1_0.id,
+        vm1_0.annee,
+        vm1_0.carte,
+        vm1_0.date_enregistrement,
+        vm1_0.mois,
+        vm1_0.montant_ventes,
+        vm1_0.nom_employe,
+        vm1_0.objectif,
+        vm1_0.taux_realisation 
+    from
+        ventes_mensuelles vm1_0 
+    where
+        vm1_0.mois=? 
+        and vm1_0.annee=?
+Hibernate: 
+    select
+        sum(vm1_0.montant_ventes) 
+    from
+        ventes_mensuelles vm1_0 
+    where
+        vm1_0.annee=?
+Hibernate: 
+    select
+        vd1_0.id,
+        vd1_0.jours_travailles,
+        vd1_0.matricule,
+        vd1_0.periode,
+        vd1_0.volume_charge,
+        vd1_0.volume_retourne 
+    from
+        volume_distribution vd1_0
+2026-05-21T06:00:01.363+01:00  WARN 34624 --- [service-presence] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=4h57m48s974ms107탎800ns).
+2026-05-21T19:35:18.068+01:00  WARN 34624 --- [service-presence] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=13h35m16s705ms628탎100ns).
+2026-05-21T19:45:36.298+01:00  WARN 34624 --- [service-presence] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s324ms797탎800ns).
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+Hibernate: 
+    select
+        fp1_0.id,
+        fp1_0.canal,
+        fp1_0.date,
+        fp1_0.date_creation,
+        fp1_0.heure_depart,
+        fp1_0.heure_retour,
+        fp1_0.livreur1_id,
+        fp1_0.livreur1_matricule,
+        fp1_0.livreur1_nom,
+        fp1_0.livreur1_prenom,
+        fp1_0.livreur2_id,
+        fp1_0.livreur2_matricule,
+        fp1_0.livreur2_nom,
+        fp1_0.livreur2_prenom,
+        fp1_0.livreur3_id,
+        fp1_0.livreur3_matricule,
+        fp1_0.livreur3_nom,
+        fp1_0.livreur3_prenom,
+        fp1_0.matricule_camion,
+        fp1_0.nom_aide_livreur,
+        fp1_0.nom_livreur,
+        fp1_0.nombre_voyages,
+        fp1_0.observations 
+    from
+        fiches_presence fp1_0
+2026-05-21T21:41:37.927+01:00  WARN 34624 --- [service-presence] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=1h25m1s276ms759탎900ns).
+2026-05-21T22:41:07.827+01:00  WARN 34624 --- [service-presence] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=34m59s638ms29탎300ns).
