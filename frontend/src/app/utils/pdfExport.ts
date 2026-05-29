@@ -15,7 +15,15 @@ const C_FGRAY:  [number, number, number] = [240, 244, 248];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function fmt(v: number) {
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' MAD';
+  const formattedString = new Intl.NumberFormat('fr-FR', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  }).format(v);
+
+  // Remplace les espaces insécables (\u202F ou \u00A0) par un espace standard
+  const safeString = formattedString.replace(/[\u202F\u00A0]/g, ' ');
+
+  return safeString + ' MAD';
 }
 
 function fmtDate(d: string) {

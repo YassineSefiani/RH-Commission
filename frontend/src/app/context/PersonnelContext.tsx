@@ -188,11 +188,41 @@ export function PersonnelProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   };
 
-  const filterByCarte = async (c: string) => {
+  const filterByCarte = async (carte: string) => {
+    // Si la chaîne est vide ou "all", on annule le filtre
+    if (!carte || carte === 'all') {
+      return reloadPersonnel();
+    }
+
     setIsLoading(true);
-    const res = await personnelApi.getByCarte(c);
-    setPersonnel(res.map(mapApiPersonnelToFrontend));
-    setIsLoading(false);
+    try {
+      // 1. On récupère TOUT le personnel pour faire le tri nous-mêmes (contournement du bug Backend)
+      const allPersonnelApi = await personnelApi.getAll();
+      const allPersonnel = allPersonnelApi.map(mapApiPersonnelToFrontend);
+
+      // 2. Le "Filtre Magique"
+      const normalize = (str: string) => (str || '').toUpperCase().replace(/[_ \-]/g, '');
+      const targetCarte = normalize(carte);
+
+      const filtered = allPersonnel.filter(p => {
+        const dbCarte = normalize(p.carte || '');
+        
+        // Mots-clés principaux
+        if (targetCarte.includes('COCA') && dbCarte.includes('COCA')) return true;
+        if (targetCarte.includes('FERRERO') && dbCarte.includes('FERRERO')) return true;
+        if (targetCarte.includes('WALL') && dbCarte.includes('WALL')) return true;
+
+        // Comparaison exacte sans espaces ni tirets
+        return dbCarte === targetCarte;
+      });
+
+      // 3. On met à jour l'affichage avec setPersonnel (qui existe bien !)
+      setPersonnel(filtered);
+    } catch (error) {
+      console.error("Erreur lors du filtrage par carte:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const showActifsOnly = async () => {

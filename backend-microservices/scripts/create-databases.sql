@@ -6,7 +6,7 @@
 --
 -- Comment l'exécuter :
 --   1. Ouvrir SQL Server Management Studio (SSMS)
---   2. Se connecter à BEKYASSINE\SQLEXPRESS avec Windows Auth
+--   2. Se connecter à SEFYASSINE\SQLEXPRESS avec Windows Auth
 --   3. Ouvrir ce fichier ou copier-coller son contenu
 --   4. Cliquer sur "Exécuter" (F5)
 -- ================================================================

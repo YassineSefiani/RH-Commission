@@ -1,7 +1,7 @@
 -- ================================================================
 -- SCRIPT : Création du login SQL Server pour les microservices
 -- ================================================================
--- Exécuter dans SSMS connecté en Windows Auth sur BEKYASSINE\SQLEXPRESS
+-- Exécuter dans SSMS connecté en Windows Auth sur SEFYASSINE\SQLEXPRESS
 -- ================================================================
 
 USE master;
