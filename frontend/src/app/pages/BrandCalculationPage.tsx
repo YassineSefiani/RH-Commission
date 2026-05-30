@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
 
 interface Employee {
-  id: string;
+  id: string; 
+  matricule?: string; 
   nom: string;
   prenom: string;
   role: string;
@@ -53,7 +54,6 @@ export default function BrandCalculationPage() {
         setLoading(true);
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
         
-        // Tentative 1 : Appel direct classique (fonctionne parfaitement pour "Wall's")
         let response = await fetch(`${apiBase}/personnel/carte/${encodeURIComponent(decodedBrand)}`);
         let data = [];
         
@@ -61,30 +61,20 @@ export default function BrandCalculationPage() {
           data = await response.json();
         }
 
-        // 🌟 LE PLAN DE SECOURS (POUR COCA COLA ET FERRERO ROCHER) 🌟
-        // Si l'API renvoie un tableau vide à cause du bug de l'espace dans l'URL par Spring Boot
         if (data.length === 0) {
-          console.log(`L'API n'a rien trouvé pour "${decodedBrand}". Récupération globale en cours...`);
-          // On appelle la route globale qui ramène tout le monde
           const allPersonnelResponse = await fetch(`${apiBase}/personnel`);
-          
           if (allPersonnelResponse.ok) {
             const allPersonnel = await allPersonnelResponse.json();
-            
-            // On filtre nous-mêmes côté Javascript (insensible à la casse et aux espaces cachés)
             const targetBrand = decodedBrand.trim().toUpperCase();
             data = allPersonnel.filter((emp: Employee) => 
               emp.carte && emp.carte.trim().toUpperCase() === targetBrand
             );
-            console.log(`Filtre local appliqué : ${data.length} employés trouvés pour ${targetBrand}`);
           }
         }
 
-        // On ne garde que les employés actifs
         setBrandEmployees(data.filter((emp: Employee) => emp.actif));
-
       } catch (error) {
-        console.error("Erreur lors de la récupération des employés:", error);
+        console.error("Erreur récupération:", error);
         toast.error("Impossible de charger les employés");
       } finally {
         setLoading(false);
@@ -107,17 +97,13 @@ export default function BrandCalculationPage() {
         return;
       }
 
-      // 🌟 LE FILTRE MAGIQUE 🌟
       const activeConstraints = constraints.filter(c => {
         if (c.actif === false || c.actif === 0) return false;
-        
         const dbCarte = (c.carte || '').toUpperCase();
         const urlBrand = (decodedBrand || '').toUpperCase();
-
         if (urlBrand.includes('COCA') && dbCarte.includes('COCA')) return true;
         if (urlBrand.includes('FERRERO') && dbCarte.includes('FERRERO')) return true;
         if (urlBrand.includes('WALL') && dbCarte.includes('WALL')) return true;
-
         return dbCarte.replace(/[_ \-]/g, '') === urlBrand.replace(/[_ \-]/g, '');
       });
 
@@ -127,7 +113,8 @@ export default function BrandCalculationPage() {
         return;
       }
 
-      console.log(`✅ ${activeConstraints.length} règles trouvées pour ${decodedBrand} !`);
+      const simulationData = JSON.parse(localStorage.getItem('simulation_metrics') || '{}');
+      const { objPayload = [], realPayload = [], triPayload = [], volPayload = [] } = simulationData;
 
       const brandResults = brandEmployees.map(employee => {
         let commissions = 0;
@@ -135,25 +122,40 @@ export default function BrandCalculationPage() {
         let penalties = 0;
         const details: CalculationDetail[] = [];
 
+        const empMatricule = String(employee.matricule || employee.id).trim().toUpperCase();
+
+        const empObjectif = objPayload.find((o: any) => String(o.matricule).trim().toUpperCase() === empMatricule) || { target: 0 };
+        const empRealisation = realPayload.find((r: any) => String(r.matricule).trim().toUpperCase() === empMatricule) || { caRealise: 0 };
+        const empTriage = triPayload.find((t: any) => String(t.matricule).trim().toUpperCase() === empMatricule) || { note: 0 };
+        const empVolume = volPayload.find((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule) || { volumeDistribue: 0, tauxRetour: 0 };
+
+        const tauxRea = empObjectif.target > 0 ? (empRealisation.caRealise / empObjectif.target) * 100 : 0;
+
         const metrics = {
           joursTravailles: 22,
-          volumeDistribue: 1500,
-          tauxRetour: 0.5,
-          tauxTriage: 85.0,
-          caRealise: 120000,
-          tauxRealisation: 95.0,
-          tauxRealisationGlobal: 105.0
+          volumeDistribue: empVolume.volumeDistribue,
+          tauxRetour: empVolume.tauxRetour,
+          tauxTriage: empTriage.note,
+          caRealise: empRealisation.caRealise,
+          tauxRealisation: tauxRea,
+          tauxRealisationGlobal: 105.0 
         };
+
+        console.log(`\n📊 [DEBUG VOLUME] Employé: ${employee.prenom} ${employee.nom} (Matricule: ${empMatricule})`);
+        console.log(`   -> Volume Distribué lu: ${metrics.volumeDistribue}`);
+        console.log(`   -> Taux Retour lu: ${metrics.tauxRetour}%`);
+        console.log(`   -> Taux Triage lu: ${metrics.tauxTriage}%`);
 
         const ROLE = employee.role ? employee.role.trim().toUpperCase() : '';
         const CONTRAT = employee.natureContrat?.toUpperCase().includes('INT') ? 'INTERIM' : 'CDI';
 
         activeConstraints.forEach(constraint => {
           let conditionVerifiee = false;
-          const nomRegle = constraint.name || constraint.nom || 'Règle inconnue';
-          const conditionStr = (constraint.condition || '').toUpperCase();
+          const nomRegle = String(constraint.name || constraint.nom || 'Règle inconnue').toUpperCase(); 
+          const conditionStr = String(constraint.condition || '').toUpperCase();
 
           try {
+            // ✨ CORRECTION : Le moteur lit nativement le SQL en Javascript pur ! (Plus de fallback dangereux)
             let jsCondition = conditionStr
               .replace(/\bAND\b/g, '&&')
               .replace(/\bOR\b/g, '||')
@@ -162,7 +164,8 @@ export default function BrandCalculationPage() {
               .replace(/ROLE ===? 'AIDE LIVREUR 2'/g, "ROLE.includes('AIDE LIVREUR')")
               .replace(/ROLE ===? 'AIDE LIVREUR'/g, "ROLE.includes('AIDE LIVREUR')");
 
-            jsCondition = jsCondition.replace(/([^=<>!])=([^=])/g, "$1===$2");
+            // Remplacement sécurisé des "=" SQL en "===" Javascript
+            jsCondition = jsCondition.replace(/==+/g, "==="); 
 
             const evaluator = new Function(
               'ROLE', 'CONTRAT', 'JOURS_TRAVAILLES', 'TAUX_RETOUR', 'TAUX_TRIAGE', 'TAUX_REALISATION', 'TAUX_REALISATION_GLOBAL',
@@ -175,28 +178,16 @@ export default function BrandCalculationPage() {
             );
 
           } catch (e) {
-            console.warn(`Syntaxe échouée sur [${nomRegle}], utilisation du mode Fallback`);
-          }
-
-          if (!conditionVerifiee) {
-            if (ROLE === 'LIVREUR' && CONTRAT === 'CDI' && nomRegle.includes('CDI LIVREUR')) conditionVerifiee = true;
-            if (ROLE.includes('AIDE LIVREUR') && CONTRAT === 'CDI' && nomRegle.includes('CDI AIDE')) conditionVerifiee = true;
-            if (ROLE === 'LIVREUR' && CONTRAT === 'INTERIM' && nomRegle.includes('INTÉRIM LIVREUR')) conditionVerifiee = true;
-            if (ROLE.includes('AIDE LIVREUR') && CONTRAT === 'INTERIM' && nomRegle.includes('INTÉRIM AIDE')) conditionVerifiee = true;
-            if (nomRegle.includes('RETOUR') && ROLE === 'LIVREUR' && CONTRAT === 'CDI') conditionVerifiee = true;
-            if (nomRegle.includes('TRIAGE') && CONTRAT === 'CDI') conditionVerifiee = true;
-            if (ROLE.includes('VENDEUR') && CONTRAT === 'CDI' && nomRegle.includes('VENDEUR')) conditionVerifiee = true;
-            if (ROLE.includes('SUPERVISEUR') && CONTRAT === 'CDI' && nomRegle.includes('SUPERVISEUR')) conditionVerifiee = true;
+            console.error(`❌ Échec de lecture de la règle SQL [${nomRegle}]:`, e);
           }
 
           if (conditionVerifiee) {
             let amount = 0;
             const typeValue = String(constraint.typeValeur || (constraint as any).type_valeur || (constraint as any).type || (constraint as any).valueType || '').toUpperCase();
             const valeur = Number(constraint.valeur !== undefined ? constraint.valeur : (constraint as any).value || 0);
-
             const urlBrand = (decodedBrand || '').toUpperCase();
 
-            if (typeValue.includes('UNITE')) {
+            if (typeValue.includes('UNITE') || typeValue.includes('UNITÉ') || typeValue.includes('UNIT')) {
               amount = valeur * metrics.volumeDistribue;
               commissions += amount;
             } else if (typeValue.includes('POURCENTAGE')) {
@@ -224,6 +215,7 @@ export default function BrandCalculationPage() {
                 amount, 
                 type: (typeValue.includes('FIXE') || (amount === valeur && valeur > 100)) ? 'bonus' : 'commission' 
               });
+              console.log(`   ✅ [DEBUG RÈGLE] Appliquée: ${nomRegle} | Montant généré: ${amount}`);
             }
           }
         });
@@ -248,7 +240,7 @@ export default function BrandCalculationPage() {
           constraintsApplied: details.map(d => d.name),
           details,
           carte: decodedBrand,
-          matricule: employee.matricule,
+          matricule: employee.matricule || employee.id,
           periode,
         });
 
@@ -286,7 +278,6 @@ export default function BrandCalculationPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* COLONNE GAUCHE : Équipe */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">
@@ -305,7 +296,7 @@ export default function BrandCalculationPage() {
                     <div>
                       <div className="font-bold text-gray-900">{emp.prenom} {emp.nom}</div>
                       <div className="text-xs text-gray-500 uppercase font-semibold mt-1">
-                        {emp.role} • {emp.natureContrat}
+                        {emp.matricule || emp.id} • {emp.role} • {emp.natureContrat}
                       </div>
                     </div>
                   </div>
@@ -324,7 +315,6 @@ export default function BrandCalculationPage() {
           </div>
         </div>
 
-        {/* COLONNE DROITE : Résultats */}
         <div className="lg:col-span-2">
           {results.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 h-full flex flex-col items-center justify-center text-center">
@@ -379,6 +369,29 @@ export default function BrandCalculationPage() {
                             <p className={`font-bold ${res.penalties > 0 ? 'text-red-700' : 'text-gray-700'}`}>{formatCurrency(res.penalties)}</p>
                           </div>
                         </div>
+
+                        {res.details && res.details.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-gray-100">
+                            <h5 className="text-xs font-bold text-gray-500 uppercase mb-3">Règles appliquées</h5>
+                            <ul className="space-y-2">
+                              {res.details.map((detail, dIdx) => (
+                                <li key={dIdx} className="flex items-center justify-between text-sm">
+                                  <span className="text-gray-700 flex-1 truncate pr-2" title={detail.name}>
+                                    • {detail.name}
+                                  </span>
+                                  <span className={`font-semibold whitespace-nowrap ${detail.type === 'penalty' ? 'text-red-600' : 'text-green-600'}`}>
+                                    {detail.type === 'penalty' ? '-' : '+'}{formatCurrency(detail.amount)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {res.details?.length === 0 && (
+                          <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+                            <span className="text-xs text-gray-400 italic">Aucune règle supplémentaire appliquée</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

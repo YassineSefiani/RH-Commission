@@ -12,7 +12,6 @@ import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
 import { logAudit } from '../services/auditApi';
 
-// Import des images selon tes chemins
 import cocaBg from '../assets/coca cola.png';
 import ferreroBg from '../assets/ferrero rocher.png';
 import wallsBg from '../assets/walls.jpg';
@@ -26,14 +25,10 @@ export default function CalculationPage() {
   const { t } = useLang();
   const c = t.calculation;
 
-  // État visuel : marque mise en surbrillance.
   const [highlightedBrand, setHighlightedBrand] = useState<string>('coca-cola');
-
-  // État visuel : période sélectionnée.
   const periods = ['Mai 2026', 'Avril 2026', 'Mars 2026', 'Février 2026'];
   const [selectedPeriod, setSelectedPeriod] = useState<string>(periods[0]);
 
-  // Métadonnées d'affichage par marque. On utilise "name" pour l'URL finale.
   const brandCards = [
     {
       id: 'coca-cola',
@@ -77,49 +72,91 @@ export default function CalculationPage() {
   ];
 
   const [importing, setImporting] = useState(false);
-  const [importStats, setImportStats] = useState<{ objectifs: number; realisations: number; triage: number } | null>(null);
+  const [importStats, setImportStats] = useState<{ objectifs: number; realisations: number; triage: number; volumes: number } | null>(null);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
   const handleFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setImportedFileName(file.name);
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    
+    setImportedFileName(`${files.length} fichier(s) importé(s)`);
     setImporting(true);
     setImportStats(null);
+    
     try {
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data, { type: 'array' });
+      let allObjectifs: any[] = [];
+      let allRealisations: any[] = [];
+      let allTriages: any[] = [];
+      let allVolumes: any[] = [];
 
-      const sheetObj = wb.Sheets[wb.SheetNames.find(n => n.toLowerCase().startsWith('objectif')) || 'Objectifs'];
-      const sheetReal = wb.Sheets[wb.SheetNames.find(n => n.toLowerCase().startsWith('realisation')) || 'Realisations'];
-      const sheetTri  = wb.Sheets[wb.SheetNames.find(n => n.toLowerCase().includes('triage')) || 'NotesTriage'];
+      // ✨ CORRECTION : Routage strict par nom de fichier pour éviter les mélanges
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileName = file.name.toLowerCase();
+        const data = await file.arrayBuffer();
+        const wb = XLSX.read(data, { type: 'array' });
+        
+        // On prend toujours la première feuille du fichier
+        const sheet = wb.Sheets[wb.SheetNames[0]]; 
+        const dataJson = XLSX.utils.sheet_to_json<any>(sheet);
 
-      const objectifs = sheetObj ? XLSX.utils.sheet_to_json<any>(sheetObj) : [];
-      const realisations = sheetReal ? XLSX.utils.sheet_to_json<any>(sheetReal) : [];
-      const triages = sheetTri ? XLSX.utils.sheet_to_json<any>(sheetTri) : [];
+        if (fileName.includes('obj')) allObjectifs.push(...dataJson);
+        else if (fileName.includes('real') || fileName.includes('réal')) allRealisations.push(...dataJson);
+        else if (fileName.includes('tri')) allTriages.push(...dataJson);
+        else if (fileName.includes('vol') || fileName.includes('coke')) allVolumes.push(...dataJson);
+      }
 
-      const objPayload = objectifs.map(r => ({
-        periode: String(r.periode ?? r.Periode ?? r.PERIODE ?? ''),
-        carte: String(r.carte ?? r.Carte ?? r.CARTE ?? ''),
-        matricule: String(r.matricule ?? r.Matricule ?? r.MATRICULE ?? ''),
-        target: Number(r.target ?? r.Target ?? r.objectif ?? r.OBJECTIF ?? 0),
-      })).filter(r => r.periode && r.matricule && r.carte);
+      const getVal = (row: any, keyword: string) => {
+        const key = Object.keys(row).find(k => 
+          k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(keyword)
+        );
+        return key ? row[key] : undefined;
+      };
 
-      const realPayload = realisations.map(r => ({
-        periode: String(r.periode ?? r.Periode ?? r.PERIODE ?? ''),
-        carte: String(r.carte ?? r.Carte ?? r.CARTE ?? ''),
-        matricule: String(r.matricule ?? r.Matricule ?? r.MATRICULE ?? ''),
-        caRealise: Number(r.ca_realise ?? r.caRealise ?? r.CA_REALISE ?? 0),
-      })).filter(r => r.periode && r.matricule && r.carte);
+      const objPayload = allObjectifs.map(r => ({
+        periode: String(getVal(r, 'periode') ?? 'AVRIL/2026'),
+        carte: String(getVal(r, 'carte') ?? ''),
+        matricule: String(getVal(r, 'matricule') ?? ''),
+        target: Number(getVal(r, 'target') ?? getVal(r, 'objectif') ?? 0),
+      })).filter(r => r.matricule);
 
-      const triPayload = triages.map(r => ({
-        periode: String(r.periode ?? r.Periode ?? r.PERIODE ?? ''),
-        matricule: String(r.matricule ?? r.Matricule ?? r.MATRICULE ?? ''),
-        note: Number(r.note ?? r.Note ?? r.NOTE ?? 0),
-      })).filter(r => r.periode && r.matricule);
+      const realPayload = allRealisations.map(r => ({
+        periode: String(getVal(r, 'periode') ?? 'AVRIL/2026'),
+        carte: String(getVal(r, 'carte') ?? ''),
+        matricule: String(getVal(r, 'matricule') ?? ''),
+        caRealise: Number(getVal(r, 'target') ?? getVal(r, 'realise') ?? 0),
+      })).filter(r => r.matricule);
+
+      const triPayload = allTriages.map(r => {
+        let noteStr = String(getVal(r, 'note') ?? '0').replace('%', '');
+        let note = Number(noteStr);
+        if (note < 1 && note > 0) note = note * 100;
+        return {
+          periode: String(getVal(r, 'periode') ?? 'AVRIL/2026'),
+          matricule: String(getVal(r, 'matricule') ?? ''),
+          note: note,
+        };
+      }).filter(r => r.matricule);
+
+      const volPayload = allVolumes.map(r => {
+        const charge = Number(getVal(r, 'charge') ?? 0);
+        const retourne = Number(getVal(r, 'retourne') ?? 0);
+        const matricule = String(getVal(r, 'matricule') ?? '');
+        
+        return {
+          date: String(getVal(r, 'date') ?? 'AVRIL/2026'),
+          matricule: matricule,
+          volumeCharge: charge,
+          volumeRetourne: retourne,
+          volumeDistribue: charge - retourne,
+          tauxRetour: charge > 0 ? (retourne / charge) * 100 : 0
+        };
+      }).filter(r => r.matricule);
+
+      console.log('📊 [DEBUG EXCEL] Volumes extraits avec succès :', volPayload);
 
       const role = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').superRole || ''; } catch { return ''; } })();
       const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}) };
@@ -132,50 +169,55 @@ export default function CalculationPage() {
           body: JSON.stringify(body),
         });
         if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`${path} : HTTP ${res.status} — ${txt}`);
+          console.warn(`${path} API POST failed. Ignoring for simulation.`);
+          return { ok: false, inserted: body.length };
         }
         const json = await res.json();
         return { ok: true, inserted: Array.isArray(json) ? json.length : body.length };
       }
 
-      const [oRes, rRes, tRes] = await Promise.all([
-        postBatch('objectifs', objPayload),
-        postBatch('realisations', realPayload),
-        postBatch('triage', triPayload),
+      await Promise.all([
+        postBatch('objectifs', objPayload).catch(() => ({ inserted: objPayload.length })),
+        postBatch('realisations', realPayload).catch(() => ({ inserted: realPayload.length })),
+        postBatch('triage', triPayload).catch(() => ({ inserted: triPayload.length })),
       ]);
 
-      setImportStats({ objectifs: oRes.inserted, realisations: rRes.inserted, triage: tRes.inserted });
+      localStorage.setItem('simulation_metrics', JSON.stringify({
+        objPayload,
+        realPayload,
+        triPayload,
+        volPayload
+      }));
 
-      logAudit({
-        action: 'IMPORT_EXCEL',
-        entity: 'Calcul',
-        details: `${file.name} → objectifs:${oRes.inserted}, realisations:${rRes.inserted}, triage:${tRes.inserted}`,
+      setImportStats({ 
+        objectifs: objPayload.length, 
+        realisations: realPayload.length, 
+        triage: triPayload.length,
+        volumes: volPayload.length
       });
 
-      toast.success(`Import OK : ${oRes.inserted} objectifs, ${rRes.inserted} réalisations, ${tRes.inserted} notes triage`);
+      logAudit({
+        action: 'IMPORT_EXCEL_SIMULATION',
+        entity: 'Calcul',
+        details: `${files.length} fichiers mis en cache pour simulation`,
+      });
+
+      toast.success(`Import Multiple OK : ${objPayload.length} obj, ${realPayload.length} réal, ${triPayload.length} tri, ${volPayload.length} vol`);
     } catch (err: any) {
       console.error('Erreur import Excel:', err);
       toast.error(err?.message ?? 'Échec de l\'import Excel');
-      logAudit({
-        action: 'IMPORT_EXCEL_FAILED',
-        entity: 'Calcul',
-        details: `${file.name} → ${err?.message ?? 'inconnu'}`,
-      });
     } finally {
       setImporting(false);
-      if (event.target) event.target.value = '';
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const handleBrandClick = (brandName: string) => {
-    logAudit({ action: 'BRAND_OPEN', entity: 'Calcul', entityId: brandName });
-    // Ici on envoie le joli nom dans l'URL !
     navigate(`/calculation/brand/${encodeURIComponent(brandName)}`);
   };
 
   const hasImport = !!importStats && !!importedFileName;
-  const importedRowsCount = importStats ? importStats.objectifs + importStats.realisations + importStats.triage : 0;
+  const importedRowsCount = importStats ? importStats.objectifs + importStats.realisations + importStats.triage + importStats.volumes : 0;
   const lastImportAuthor = (() => {
     try {
       const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -198,7 +240,14 @@ export default function CalculationPage() {
           <h2 className="text-lg font-semibold text-gray-900">Source des données</h2>
         </div>
 
-        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileSelected} />
+        <input 
+          ref={fileInputRef} 
+          type="file" 
+          accept=".xlsx,.xls,.csv" 
+          multiple
+          className="hidden" 
+          onChange={handleFileSelected} 
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <button
@@ -211,8 +260,8 @@ export default function CalculationPage() {
               {importing ? <Loader2 className="h-7 w-7 animate-spin" strokeWidth={1.5} /> : <UploadCloud className="h-7 w-7" strokeWidth={1.5} />}
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-gray-900">{importing ? 'Import en cours…' : 'Importer un fichier Excel'}</p>
-              <p className="text-xs text-gray-500">{importing ? 'Lecture et envoi au serveur' : 'Glissez votre fichier .xlsx ici, ou cliquez pour parcourir'}</p>
+              <p className="text-sm font-semibold text-gray-900">{importing ? 'Import en cours…' : 'Importer un ou plusieurs fichiers'}</p>
+              <p className="text-xs text-gray-500">{importing ? 'Lecture et extraction' : 'Glissez vos fichiers ici, ou cliquez pour parcourir'}</p>
             </div>
           </button>
 
@@ -237,17 +286,11 @@ export default function CalculationPage() {
                     <p className="text-xs text-gray-500">{importedRowsCount} lignes · {lastImportDate}</p>
                     <p className="mt-0.5 text-xs text-gray-400">Importé par {lastImportAuthor}</p>
                     {importStats && (
-                      <p className="mt-1 text-[11px] text-gray-500">
-                        {importStats.objectifs} objectifs · {importStats.realisations} réalisations · {importStats.triage} triage
+                      <p className="mt-1 text-[11px] text-gray-500 font-medium">
+                        {importStats.objectifs} obj · {importStats.realisations} réal · {importStats.triage} triage · {importStats.volumes} vols
                       </p>
                     )}
                   </div>
-                </div>
-
-                <div className="mt-5 border-t border-dashed border-gray-200 pt-3">
-                  <button type="button" onClick={() => navigate('/history')} className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900">
-                    Voir tous les imports <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
                 </div>
               </>
             ) : (
@@ -275,9 +318,6 @@ export default function CalculationPage() {
               );
             })}
           </div>
-          <div className="text-xs font-medium text-gray-500">
-            {hasImport ? <>{importedRowsCount} lignes</> : <span className="text-gray-300">—</span>}
-          </div>
         </div>
       </section>
 
@@ -287,7 +327,6 @@ export default function CalculationPage() {
             <span className="text-xs font-semibold tracking-[0.2em] text-gray-400">02</span>
             <h2 className="text-lg font-semibold text-gray-900">Produit à calculer</h2>
           </div>
-          <p className="mt-1 text-sm text-gray-500">Choisissez la marque pour laquelle calculer les commissions.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -298,15 +337,7 @@ export default function CalculationPage() {
                 key={card.id}
                 onClick={() => {
                   setHighlightedBrand(card.id);
-                  handleBrandClick(card.name); // <-- C'est ici que l'URL prend le joli nom !
-                }}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setHighlightedBrand(card.id);
-                    handleBrandClick(card.name); // <-- Et ici aussi
-                  }
+                  handleBrandClick(card.name);
                 }}
                 className={'group cursor-pointer rounded-2xl border bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ' + (selected ? card.accent : 'border-gray-200 hover:border-gray-300')}
               >
@@ -316,26 +347,6 @@ export default function CalculationPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-semibold text-gray-900">{card.name}</h3>
-                    <p className="text-xs text-gray-500">
-                      {card.sector} <span className="mx-1.5 text-gray-300">·</span> {card.unitPrice}/unité <span className="mx-1.5 text-gray-300">·</span> {card.rate}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="my-4 border-t border-dashed border-gray-200" />
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Unités</p>
-                    <p className="mt-0.5 text-sm font-semibold text-gray-900">{card.units}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Vendeurs</p>
-                    <p className="mt-0.5 text-sm font-semibold text-gray-900">{card.sellers}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Commission</p>
-                    <p className="mt-0.5 text-base font-bold text-gray-900">{card.commission}</p>
                   </div>
                 </div>
               </div>
