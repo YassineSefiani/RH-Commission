@@ -16,13 +16,12 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    // Injecté depuis CorsConfig — câblage explicite dans la chaîne de filtres
     private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public SecurityFilterChain filtreSecurite(HttpSecurity http) throws Exception {
         return http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource)) // Fix : CORS maintenant actif
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -31,7 +30,7 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/users/login",
                                 "/api/users/validate",
-                                "/api/users",
+                                "/api/users/**", // ✨ CORRECTION ICI : ajout de /** pour inclure /api/users/{email}
                                 "/api/audit/**",
                                 "/actuator/**"
                         ).permitAll()

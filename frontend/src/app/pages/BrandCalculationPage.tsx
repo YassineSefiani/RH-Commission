@@ -104,7 +104,7 @@ export default function BrandCalculationPage() {
         if (urlBrand.includes('COCA') && dbCarte.includes('COCA')) return true;
         if (urlBrand.includes('FERRERO') && dbCarte.includes('FERRERO')) return true;
         if (urlBrand.includes('WALL') && dbCarte.includes('WALL')) return true;
-        return dbCarte.replace(/[_ \-]/g, '') === urlBrand.replace(/[_ \-]/g, '');
+        return dbCarte.replace(/[_ \-']/g, '') === urlBrand.replace(/[_ \-']/g, '');
       });
 
       if (activeConstraints.length === 0) {
@@ -127,96 +127,134 @@ export default function BrandCalculationPage() {
         const empObjectif = objPayload.find((o: any) => String(o.matricule).trim().toUpperCase() === empMatricule) || { target: 0 };
         const empRealisation = realPayload.find((r: any) => String(r.matricule).trim().toUpperCase() === empMatricule) || { caRealise: 0 };
         const empTriage = triPayload.find((t: any) => String(t.matricule).trim().toUpperCase() === empMatricule) || { note: 0 };
-        const empVolume = volPayload.find((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule) || { volumeDistribue: 0, tauxRetour: 0 };
+        
+        // 1. Récupérer TOUTES les lignes Excel de l'employé
+        const empVolumeRecords = volPayload.filter((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule);
+
+        // 2. Grouper les volumes par Rôle exercé
+        const roleSegments: Record<string, { volume: number }> = {};
+        let totalVolume = 0;
+        let globalTauxRetour = 0;
+
+        if (empVolumeRecords.length > 0) {
+          globalTauxRetour = empVolumeRecords[0].tauxRetour || 0;
+          empVolumeRecords.forEach((record: any) => {
+            // Lecture dynamique de la colonne "Role" du Excel
+            const dailyRole = String(record.Role || record.role || employee.role || '').trim().toUpperCase();
+            const dailyVol = Number(record.volumeDistribue || record['Volume chargé (En CP)'] || 0);
+
+            if (!roleSegments[dailyRole]) {
+              roleSegments[dailyRole] = { volume: 0 };
+            }
+            roleSegments[dailyRole].volume += dailyVol;
+            totalVolume += dailyVol;
+          });
+        } else {
+          // Fallback de sécurité si aucune donnée détaillée n'est trouvée
+          const fallbackRole = String(employee.role || '').trim().toUpperCase();
+          const fallbackVolData = volPayload.find((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule) || { volumeDistribue: 0, tauxRetour: 0 };
+          totalVolume = Number(fallbackVolData.volumeDistribue || 0);
+          globalTauxRetour = fallbackVolData.tauxRetour || 0;
+          roleSegments[fallbackRole] = { volume: totalVolume };
+        }
 
         const tauxRea = empObjectif.target > 0 ? (empRealisation.caRealise / empObjectif.target) * 100 : 0;
+        const CONTRAT = employee.natureContrat?.toUpperCase().includes('INT') ? 'INTERIM' : 'CDI';
 
         const metrics = {
           joursTravailles: 22,
-          volumeDistribue: empVolume.volumeDistribue,
-          tauxRetour: empVolume.tauxRetour,
+          volumeDistribue: totalVolume,
+          tauxRetour: globalTauxRetour,
           tauxTriage: empTriage.note,
           caRealise: empRealisation.caRealise,
           tauxRealisation: tauxRea,
           tauxRealisationGlobal: 105.0 
         };
 
-        console.log(`\n📊 [DEBUG VOLUME] Employé: ${employee.prenom} ${employee.nom} (Matricule: ${empMatricule})`);
-        console.log(`   -> Volume Distribué lu: ${metrics.volumeDistribue}`);
-        console.log(`   -> Taux Retour lu: ${metrics.tauxRetour}%`);
-        console.log(`   -> Taux Triage lu: ${metrics.tauxTriage}%`);
-
-        const ROLE = employee.role ? employee.role.trim().toUpperCase() : '';
-        const CONTRAT = employee.natureContrat?.toUpperCase().includes('INT') ? 'INTERIM' : 'CDI';
-
+        // 3. Évaluation des règles
         activeConstraints.forEach(constraint => {
-          let conditionVerifiee = false;
           const nomRegle = String(constraint.name || constraint.nom || 'Règle inconnue').toUpperCase(); 
           const conditionStr = String(constraint.condition || '').toUpperCase();
+          const typeValue = String(constraint.typeValeur || (constraint as any).type_valeur || (constraint as any).type || (constraint as any).valueType || '').toUpperCase();
+          const valeur = Number(constraint.valeur !== undefined ? constraint.valeur : (constraint as any).value || 0);
+          const urlBrand = (decodedBrand || '').toUpperCase();
 
-          try {
-            // ✨ CORRECTION : Le moteur lit nativement le SQL en Javascript pur ! (Plus de fallback dangereux)
-            let jsCondition = conditionStr
-              .replace(/\bAND\b/g, '&&')
-              .replace(/\bOR\b/g, '||')
-              .replace(/ROLE LIKE 'AIDE LIVREUR%'/g, "ROLE.includes('AIDE LIVREUR')")
-              .replace(/ROLE ===? 'AIDE LIVREUR 1'/g, "ROLE.includes('AIDE LIVREUR')")
-              .replace(/ROLE ===? 'AIDE LIVREUR 2'/g, "ROLE.includes('AIDE LIVREUR')")
-              .replace(/ROLE ===? 'AIDE LIVREUR'/g, "ROLE.includes('AIDE LIVREUR')");
+          let jsCondition = conditionStr
+            .replace(/\bAND\b/g, '&&')
+            .replace(/\bOR\b/g, '||')
+            .replace(/ROLE LIKE 'AIDE LIVREUR%'/g, "ROLE.includes('AIDE LIVREUR')")
+            .replace(/ROLE ===? 'AIDE LIVREUR 1'/g, "ROLE.includes('AIDE LIVREUR')")
+            .replace(/ROLE ===? 'AIDE LIVREUR 2'/g, "ROLE.includes('AIDE LIVREUR')")
+            .replace(/ROLE ===? 'AIDE LIVREUR'/g, "ROLE.includes('AIDE LIVREUR')")
+            .replace(/==+/g, "==="); 
 
-            // Remplacement sécurisé des "=" SQL en "===" Javascript
-            jsCondition = jsCondition.replace(/==+/g, "==="); 
+          const isVolumeRule = typeValue.includes('UNITE') || typeValue.includes('UNITÉ') || typeValue.includes('UNIT') || (valeur < 1 && !typeValue.includes('POURCENTAGE'));
+          
+          let amountGeneratedForRule = 0;
+          let ruleApplied = false;
 
-            const evaluator = new Function(
-              'ROLE', 'CONTRAT', 'JOURS_TRAVAILLES', 'TAUX_RETOUR', 'TAUX_TRIAGE', 'TAUX_REALISATION', 'TAUX_REALISATION_GLOBAL',
-              `return ${jsCondition};`
-            );
+          if (isVolumeRule) {
+            // Règles au volume : On boucle sur les rôles exercés pour ne calculer que sur le volume concerné
+            Object.entries(roleSegments).forEach(([roleJoue, stats]) => {
+              let conditionVerifiee = false;
+              try {
+                const evaluator = new Function(
+                  'ROLE', 'CONTRAT', 'JOURS_TRAVAILLES', 'TAUX_RETOUR', 'TAUX_TRIAGE', 'TAUX_REALISATION', 'TAUX_REALISATION_GLOBAL',
+                  `return ${jsCondition};`
+                );
+                conditionVerifiee = evaluator(
+                  roleJoue, CONTRAT, metrics.joursTravailles, metrics.tauxRetour, 
+                  metrics.tauxTriage, metrics.tauxRealisation, metrics.tauxRealisationGlobal
+                );
+              } catch (e) {
+                console.error(`❌ Échec de lecture de la règle [${nomRegle}]:`, e);
+              }
 
-            conditionVerifiee = evaluator(
-              ROLE, CONTRAT, metrics.joursTravailles, metrics.tauxRetour, 
-              metrics.tauxTriage, metrics.tauxRealisation, metrics.tauxRealisationGlobal
-            );
+              if (conditionVerifiee && stats.volume > 0) {
+                const segmentAmount = valeur * stats.volume;
+                commissions += segmentAmount;
+                amountGeneratedForRule += segmentAmount;
+                ruleApplied = true;
+                console.log(`   ✅ [DEBUG] Appliquée: ${nomRegle} pour rôle ${roleJoue} | Vol: ${stats.volume} -> ${segmentAmount} MAD`);
+              }
+            });
+          } else {
+            // Règles globales (Fixe, CA) : On valide si l'employé a exercé le rôle éligible au moins une fois
+            let conditionVerifiee = false;
+            for (const roleJoue of Object.keys(roleSegments)) {
+              try {
+                const evaluator = new Function(
+                  'ROLE', 'CONTRAT', 'JOURS_TRAVAILLES', 'TAUX_RETOUR', 'TAUX_TRIAGE', 'TAUX_REALISATION', 'TAUX_REALISATION_GLOBAL',
+                  `return ${jsCondition};`
+                );
+                if (evaluator(
+                    roleJoue, CONTRAT, metrics.joursTravailles, metrics.tauxRetour, 
+                    metrics.tauxTriage, metrics.tauxRealisation, metrics.tauxRealisationGlobal
+                )) {
+                  conditionVerifiee = true;
+                  break; // On arrête dès qu'un rôle valide la condition
+                }
+              } catch (e) {}
+            }
 
-          } catch (e) {
-            console.error(`❌ Échec de lecture de la règle SQL [${nomRegle}]:`, e);
+            if (conditionVerifiee) {
+              if (typeValue.includes('POURCENTAGE') || (valeur <= 100 && !urlBrand.includes('COCA'))) {
+                amountGeneratedForRule = (valeur / 100) * metrics.caRealise;
+                commissions += amountGeneratedForRule;
+              } else {
+                amountGeneratedForRule = valeur;
+                bonuses += amountGeneratedForRule;
+              }
+              ruleApplied = true;
+            }
           }
 
-          if (conditionVerifiee) {
-            let amount = 0;
-            const typeValue = String(constraint.typeValeur || (constraint as any).type_valeur || (constraint as any).type || (constraint as any).valueType || '').toUpperCase();
-            const valeur = Number(constraint.valeur !== undefined ? constraint.valeur : (constraint as any).value || 0);
-            const urlBrand = (decodedBrand || '').toUpperCase();
-
-            if (typeValue.includes('UNITE') || typeValue.includes('UNITÉ') || typeValue.includes('UNIT')) {
-              amount = valeur * metrics.volumeDistribue;
-              commissions += amount;
-            } else if (typeValue.includes('POURCENTAGE')) {
-              amount = (valeur / 100) * metrics.caRealise;
-              commissions += amount;
-            } else if (typeValue.includes('FIXE')) {
-              amount = valeur;
-              bonuses += amount;
-            } else {
-              if (valeur < 1) { 
-                amount = valeur * metrics.volumeDistribue;
-                commissions += amount;
-              } else if (valeur <= 100 && !urlBrand.includes('COCA')) { 
-                amount = (valeur / 100) * metrics.caRealise;
-                commissions += amount;
-              } else { 
-                amount = valeur;
-                bonuses += amount;
-              }
-            }
-            
-            if (amount > 0) {
-              details.push({ 
-                name: nomRegle, 
-                amount, 
-                type: (typeValue.includes('FIXE') || (amount === valeur && valeur > 100)) ? 'bonus' : 'commission' 
-              });
-              console.log(`   ✅ [DEBUG RÈGLE] Appliquée: ${nomRegle} | Montant généré: ${amount}`);
-            }
+          if (ruleApplied && amountGeneratedForRule > 0) {
+            details.push({ 
+              name: nomRegle, 
+              amount: amountGeneratedForRule, 
+              type: (typeValue.includes('FIXE') || (!isVolumeRule && !typeValue.includes('POURCENTAGE') && valeur > 100)) ? 'bonus' : 'commission' 
+            });
           }
         });
 

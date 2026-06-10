@@ -76,4 +76,24 @@ public class AuthService {
     public List<Utilisateur> listerUtilisateurs() {
         return utilisateurRepository.findAll();
     }
+
+    @Transactional
+    public Utilisateur modifierUtilisateur(String emailActuel, Utilisateur modifications) {
+        Utilisateur utilisateur = utilisateurRepository.findByEmailAndActif(emailActuel, true)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur introuvable"));
+
+        // Si l'utilisateur change d'email, on vérifie que le nouveau n'est pas déjà pris
+        if (modifications.getEmail() != null && !modifications.getEmail().equalsIgnoreCase(emailActuel)) {
+            if (utilisateurRepository.existsByEmail(modifications.getEmail())) {
+                throw new DuplicateResourceException("Un compte existe déjà avec cet email : " + modifications.getEmail());
+            }
+            utilisateur.setEmail(modifications.getEmail());
+        }
+
+        if (modifications.getPrenom() != null) utilisateur.setPrenom(modifications.getPrenom());
+        if (modifications.getNom() != null) utilisateur.setNom(modifications.getNom());
+        if (modifications.getSuperRole() != null) utilisateur.setSuperRole(modifications.getSuperRole());
+
+        return utilisateurRepository.save(utilisateur);
+    }
 }

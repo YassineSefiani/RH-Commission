@@ -114,7 +114,6 @@ export default function PersonnelPage() {
     filterByVille,
     filterByCarte,
     filterByContrat,
-    showActifsOnly,
     resetFilter,
   } = usePersonnel();
 
@@ -133,6 +132,10 @@ export default function PersonnelPage() {
   const [contractFilter, setContractFilter] = useState('');
   const [carteFilter, setCarteFilter] = useState('');
   const [villeFilter, setVilleFilter] = useState('');
+  
+  // NOUVEAU: État local pour gérer le cycle de filtre des statuts (all -> actif -> inactif)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'actif' | 'inactif'>('all');
+
   const [availableCartes, setAvailableCartes] = useState<string[]>([]);
   const [availableVilles, setAvailableVilles] = useState<string[]>([]);
   const [formData, setFormData] = useState({ ...emptyForm });
@@ -277,8 +280,25 @@ export default function PersonnelPage() {
     setContractFilter('');
     setCarteFilter('');
     setVilleFilter('');
+    setStatusFilter('all'); // Réinitialise aussi le filtre de statut
     resetFilter();
   };
+
+  // NOUVEAU: Fonction pour basculer le statut du filtre
+  const toggleStatusFilter = () => {
+    setStatusFilter(current => {
+      if (current === 'all') return 'actif';
+      if (current === 'actif') return 'inactif';
+      return 'all';
+    });
+  };
+
+  // NOUVEAU: Filtrage local des données à afficher en fonction du statut
+  const displayedPersonnel = personnel.filter(person => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'actif') return person.actif === true;
+    return person.actif === false; // inactif
+  });
 
   return (
     <div className="abc-page-inner abc-stack-lg">
@@ -388,9 +408,22 @@ export default function PersonnelPage() {
               </SelectContent>
             </Select>
           )}
-          <button onClick={showActifsOnly} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-            <Filter className="w-4 h-4" /> {p.activeFilter}
+
+          {/* NOUVEAU: Bouton de bascule Actif / Inactif */}
+          <button 
+            onClick={toggleStatusFilter} 
+            className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
+              statusFilter === 'actif' 
+                ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100' 
+                : statusFilter === 'inactif'
+                ? 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Filter className="w-4 h-4" /> 
+            {statusFilter === 'all' ? 'Statut (Tous)' : statusFilter === 'actif' ? 'Actifs Uniquement' : 'Inactifs Uniquement'}
           </button>
+
           <button onClick={handleReset} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
             <RotateCcw className="w-4 h-4" /> {p.reset}
           </button>
@@ -400,11 +433,11 @@ export default function PersonnelPage() {
       {/* Cards Grid */}
       {isLoading ? (
         <div className="text-center py-16 text-gray-400">{p.loading}</div>
-      ) : personnel.length === 0 ? (
+      ) : displayedPersonnel.length === 0 ? (
         <div className="text-center py-16 text-gray-400">{p.noPersonnel}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {personnel.map(person => (
+          {displayedPersonnel.map(person => (
             <div
               key={person.id}
               onClick={() => setSelectedPerson(person)}

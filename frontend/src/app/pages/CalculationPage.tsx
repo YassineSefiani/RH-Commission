@@ -142,13 +142,17 @@ export default function CalculationPage() {
       }).filter(r => r.matricule);
 
       const volPayload = allVolumes.map(r => {
-        const charge = Number(getVal(r, 'charge') ?? 0);
-        const retourne = Number(getVal(r, 'retourne') ?? 0);
+        const charge = Number(getVal(r, 'charge') ?? r['Volume chargé (En CP)'] ?? 0);
+        const retourne = Number(getVal(r, 'retourne') ?? r['Volume retourné (en CP)'] ?? 0);
         const matricule = String(getVal(r, 'matricule') ?? '');
         
+        // ✨ NOUVEAU : On extrait explicitement le rôle depuis le fichier Excel
+        const roleExtrait = String(getVal(r, 'role') ?? r.Role ?? r.role ?? '');
+
         return {
           date: String(getVal(r, 'date') ?? 'AVRIL/2026'),
           matricule: matricule,
+          Role: roleExtrait, // Ce champ est maintenant sauvegardé pour le moteur de calcul !
           volumeCharge: charge,
           volumeRetourne: retourne,
           volumeDistribue: charge - retourne,

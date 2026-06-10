@@ -32,7 +32,6 @@ const ACTION_COLOR: Record<string, string> = {
   HISTORY_CLEAR_ALL:    'bg-red-100 text-red-800 border-red-200',
   IMPORT_EXCEL:         'bg-purple-50 text-purple-700 border-purple-100',
   IMPORT_EXCEL_FAILED:  'bg-red-50 text-red-700 border-red-100',
-  BRAND_OPEN:           'bg-gray-100 text-gray-700 border-gray-200',
 };
 
 const DEFAULT_BADGE = 'bg-gray-100 text-gray-700 border-gray-200';

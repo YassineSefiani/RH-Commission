@@ -122,7 +122,7 @@ export default function Login() {
               />
             </div>
 
-            <button type="submit" className="abc-login-cta" disabled={isLoading}>
+            <button id="btn-login" type="submit" className="abc-login-cta" disabled={isLoading}>
               <LogIn size={16} />
               {isLoading ? l.loading : l.submit}
             </button>

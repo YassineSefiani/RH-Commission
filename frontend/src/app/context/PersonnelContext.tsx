@@ -16,12 +16,12 @@ const INITIAL_PERSONNEL: Omit<Personnel, 'id'>[] = [
   { matricule: 'P001', nom: 'Bennani', prenom: 'Youssef', carte: 'Coca Cola', fonction: 'Livreur', role: 'Livreur', numero: '0600000001', natureContrat: 'CDI', ville: 'Casablanca', actif: true },
   { matricule: 'P002', nom: 'El Idrissi', prenom: 'Sara', carte: 'Coca Cola', fonction: 'Livreur', role: 'Aide Livreur', numero: '0600000002', natureContrat: 'CDI', ville: 'Rabat', actif: true },
   { matricule: 'P003', nom: 'Moussaoui', prenom: 'Karim', carte: 'Coca Cola', fonction: 'Livreur', role: 'Livreur', numero: '0600000003', natureContrat: 'Int', ville: 'Marrakech', actif: true },
-  { matricule: 'P004', nom: 'Novo', prenom: 'Ahmed', carte: "Wall's", fonction: 'Livreur', role: 'Aide Livreur', numero: '0600000004', natureContrat: 'CDI', ville: 'Fès', actif: true },
-  { matricule: 'P005', nom: 'Sidi', prenom: 'Fatima', carte: "Wall's", fonction: 'Livreur', role: 'Livreur', numero: '0600000005', natureContrat: 'CDI', ville: 'Tanger', actif: true },
-  { matricule: 'P006', nom: 'Belaid', prenom: 'Mohammed', carte: "Wall's", fonction: 'Livreur', role: 'Aide Livreur', numero: '0600000006', natureContrat: 'Int', ville: 'Agadir', actif: true },
-  { matricule: 'P007', nom: 'Radi', prenom: 'Laila', carte: 'Ferrero Rocher', fonction: 'Livreur', role: 'Livreur', numero: '0600000007', natureContrat: 'CDI', ville: 'Meknes', actif: true },
-  { matricule: 'P008', nom: 'Tazi', prenom: 'Ismail', carte: 'Ferrero Rocher', fonction: 'Livreur', role: 'Aide Livreur', numero: '0600000008', natureContrat: 'CDI', ville: 'Oujda', actif: true },
-  { matricule: 'P009', nom: 'Karim', prenom: 'Nadia', carte: 'Ferrero Rocher', fonction: 'Livreur', role: 'Livreur', numero: '0600000009', natureContrat: 'Int', ville: 'Tétouan', actif: true },
+  { matricule: 'P004', nom: 'Novo', prenom: 'Ahmed', carte: "Wall's", fonction: 'Area', role: 'Area', numero: '0600000004', natureContrat: 'CDI', ville: 'Fès', actif: true },
+  { matricule: 'P005', nom: 'Sidi', prenom: 'Fatima', carte: "Wall's", fonction: 'Vendeur', role: 'Vendeur', numero: '0600000005', natureContrat: 'CDI', ville: 'Tanger', actif: true },
+  { matricule: 'P006', nom: 'Belaid', prenom: 'Mohammed', carte: "Wall's", fonction: 'Superviseur MT', role: 'Superviseur MT', numero: '0600000006', natureContrat: 'Int', ville: 'Agadir', actif: true },
+  { matricule: 'P007', nom: 'Radi', prenom: 'Laila', carte: 'Ferrero Rocher', fonction: 'Superviseur', role: 'Superviseur', numero: '0600000007', natureContrat: 'CDI', ville: 'Meknes', actif: true },
+  { matricule: 'P008', nom: 'Tazi', prenom: 'Ismail', carte: 'Ferrero Rocher', fonction: 'Vendeur', role: 'Vendeur', numero: '0600000008', natureContrat: 'CDI', ville: 'Oujda', actif: true },
+  { matricule: 'P009', nom: 'Karim', prenom: 'Nadia', carte: 'Ferrero Rocher', fonction: 'Vendeur', role: 'Vendeur', numero: '0600000009', natureContrat: 'Int', ville: 'Tétouan', actif: true },
 ];
 
 interface PersonnelContextType {

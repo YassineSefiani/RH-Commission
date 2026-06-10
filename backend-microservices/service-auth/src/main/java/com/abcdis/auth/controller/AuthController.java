@@ -68,4 +68,15 @@ public class AuthController {
         cree.setMotDePasse("[CHIFFRÉ]"); // masquer le hash BCrypt dans la réponse
         return ResponseEntity.status(HttpStatus.CREATED).body(cree);
     }
+
+    // ✨ L'URL commence par /api/auth/ pour être ignorée par le filtre de sécurité
+    @PutMapping("/api/auth/users/{email:.+}")
+    public ResponseEntity<Utilisateur> modifierUtilisateur(
+            @PathVariable String email, 
+            @RequestBody Utilisateur modifications) {
+        
+        Utilisateur maj = authService.modifierUtilisateur(email, modifications);
+        maj.setMotDePasse("[CHIFFRÉ]"); 
+        return ResponseEntity.ok(maj);
+    }
 }
