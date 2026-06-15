@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Plus, Trash2, Save, X } from 'lucide-react';
 import { useConstraints, Constraint } from '../context/ConstraintsContext';
-import { useHistory } from '../context/HistoryContext'; // Import de l'historique
+import { useHistory } from '../context/HistoryContext';
 
 interface Rule {
   id: string;
@@ -21,10 +21,9 @@ export default function NewConstraintPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addConstraint, updateConstraint } = useConstraints();
-  const { addHistoryEntry } = useHistory(); // Hook pour l'historique
+  const { addHistoryEntry } = useHistory();
   const editingConstraint = location.state?.constraint as Constraint | undefined;
 
-  // Récupération de l'utilisateur connecté (simulé via localStorage)
   const currentUser = localStorage.getItem('userName') || 'Utilisateur';
 
   const [formData, setFormData] = useState({
@@ -36,41 +35,92 @@ export default function NewConstraintPage() {
     active: editingConstraint?.active ?? true,
   });
 
-  const [ruleGroups, setRuleGroups] = useState<RuleGroup[]>(
-    editingConstraint?.ruleGroups || [
+  // --- Parseur de condition SQL vers Interface Visuelle ---
+  const parseConditionString = (conditionStr: string): RuleGroup[] => {
+    if (!conditionStr) return [];
+    
+    // Sépare les groupes par "OR"
+    const groupsRaw = conditionStr.split(/\bOR\b/i);
+    
+    return groupsRaw.map((groupStr, groupIndex) => {
+      // Nettoyer les parenthèses
+      const cleanGroupStr = groupStr.replace(/^\s*\(\s*|\s*\)\s*$/g, '').trim();
+      
+      // Séparer les règles par "AND"
+      const rulesRaw = cleanGroupStr.split(/\bAND\b/i);
+      
+      const rules: Rule[] = rulesRaw.map((ruleStr, ruleIndex) => {
+        const cleanRule = ruleStr.trim();
+        // Regex pour capturer: CHAMP OPERATEUR VALEUR
+        const match = cleanRule.match(/^([a-zA-Z_0-9]+)\s*(>=|<=|!=|==|=|>|<)\s*(.+)$/);
+        
+        if (match) {
+          return {
+            id: `parsed-${groupIndex}-${ruleIndex}`,
+            field: match[1].toLowerCase(),
+            operator: match[2] === '=' ? '==' : match[2],
+            value: match[3].replace(/^['"]|['"]$/g, ''), // Enlever les guillemets
+          };
+        }
+        
+        return {
+          id: `parsed-${groupIndex}-${ruleIndex}`,
+          field: 'ca_realise', // fallback
+          operator: '>',
+          value: '0'
+        };
+      });
+
+      return {
+        id: `group-parsed-${groupIndex}`,
+        logic: 'AND',
+        rules: rules
+      };
+    });
+  };
+
+  // Initialisation de l'état des règles
+  const [ruleGroups, setRuleGroups] = useState<RuleGroup[]>(() => {
+    if (editingConstraint?.ruleGroups && editingConstraint.ruleGroups.length > 0) {
+      return editingConstraint.ruleGroups;
+    }
+    if (editingConstraint?.condition) {
+      return parseConditionString(editingConstraint.condition);
+    }
+    return [
       {
         id: '1',
         logic: 'AND',
-        rules: [{ id: '1-1', field: 'sales', operator: '>', value: '0' }],
-      },
-    ]
-  );
+        rules: [{ id: '1-1', field: 'contrat', operator: '==', value: 'CDI' }],
+      }
+    ];
+  });
 
+  // Mises à jour des options pour coller à votre base de données réelle
   const fieldOptions = [
-    { value: 'sales', label: 'Ventes' },
-    { value: 'deliveries', label: 'Livraisons' },
-    { value: 'returns', label: 'Retours' },
-    { value: 'role', label: 'Rôle' },
-    { value: 'contract', label: 'Type Contrat' },
-    { value: 'target', label: 'Objectif' },
-    { value: 'performance', label: 'Performance (%)' },
-    { value: 'zone', label: 'Zone' },
+    { value: 'contrat', label: 'Type de Contrat (CDI/Intérim)' },
+    { value: 'jours_travailles', label: 'Jours Travaillés' },
+    { value: 'taux_triage', label: 'Taux de Triage (%)' },
+    { value: 'taux_retour', label: 'Taux de Retour (%)' },
+    { value: 'ca_realise', label: 'Ventes / CA Réalisé' },
+    { value: 'volume_distribue', label: 'Volume Distribué' },
+    { value: 'role', label: 'Rôle (Livreur / Aide)' },
   ];
 
   const operatorOptions = [
+    { value: '==', label: 'Égal à (==)' },
+    { value: '!=', label: 'Différent de (!=)' },
     { value: '>', label: 'Supérieur à (>)' },
-    { value: '>=', label: 'Supérieur ou égal (≥)' },
+    { value: '>=', label: 'Supérieur ou égal (>=)' },
     { value: '<', label: 'Inférieur à (<)' },
-    { value: '<=', label: 'Inférieur ou égal (≤)' },
-    { value: '==', label: 'Égal à (=)' },
-    { value: '!=', label: 'Différent de (≠)' },
+    { value: '<=', label: 'Inférieur ou égal (<=)' },
   ];
 
   const addRuleGroup = () => {
     const newGroup: RuleGroup = {
       id: Date.now().toString(),
       logic: 'AND',
-      rules: [{ id: `${Date.now()}-1`, field: 'sales', operator: '>', value: '0' }],
+      rules: [{ id: `${Date.now()}-1`, field: 'jours_travailles', operator: '>', value: '0' }],
     };
     setRuleGroups([...ruleGroups, newGroup]);
   };
@@ -88,7 +138,7 @@ export default function NewConstraintPage() {
   const addRule = (groupId: string) => {
     setRuleGroups(ruleGroups.map(g => {
       if (g.id === groupId) {
-        const newRule: Rule = { id: `${groupId}-${Date.now()}`, field: 'sales', operator: '>', value: '0' };
+        const newRule: Rule = { id: `${groupId}-${Date.now()}`, field: 'jours_travailles', operator: '>', value: '0' };
         return { ...g, rules: [...g.rules, newRule] };
       }
       return g;
@@ -117,11 +167,32 @@ export default function NewConstraintPage() {
   };
 
   const handleSave = () => {
+    // Reconstruction de la chaîne propre pour l'évaluation backend
     const conditionString = ruleGroups.map((group, groupIndex) => {
       const groupCondition = group.rules.map(rule => {
-        const fieldLabel = fieldOptions.find(f => f.value === rule.field)?.label || rule.field;
-        return `${fieldLabel} ${rule.operator} ${rule.value}`;
+        let formattedValue = rule.value.trim();
+        
+        // Détecte automatiquement si la valeur est du texte pur ou un nombre
+        // isNaN(Number("CDI")) = true (donc texte) | isNaN(Number("15")) = false (donc nombre)
+        const isNumber = !isNaN(Number(formattedValue)) && formattedValue !== '';
+        
+        if (!isNumber) {
+          // Si c'est du texte et qu'il n'y a pas déjà de guillemets, on en ajoute
+          if (!formattedValue.startsWith("'") && !formattedValue.startsWith('"')) {
+            formattedValue = `'${formattedValue}'`;
+          }
+        }
+        
+        // Utilisation stricte des minuscules pour les champs (ex: contrat, jours_travailles)
+        return `${rule.field.toLowerCase()} ${rule.operator} ${formattedValue}`;
       }).join(` ${group.logic} `);
+      
+      // S'il n'y a qu'un seul groupe de conditions, on ne met pas de parenthèses du tout
+      if (ruleGroups.length === 1) {
+        return groupCondition;
+      }
+      
+      // S'il y a plusieurs groupes (OR), on les enveloppe de parenthèses pour respecter la logique
       return groupIndex > 0 ? `OR (${groupCondition})` : `(${groupCondition})`;
     }).join(' ');
 
@@ -130,7 +201,6 @@ export default function NewConstraintPage() {
     if (editingConstraint) {
       updateConstraint(editingConstraint.id, constraintData as any);
       
-      // Enregistrement de la modification dans l'historique
       addHistoryEntry({
         constraintId: editingConstraint.id,
         modifiedBy: currentUser,
@@ -143,7 +213,6 @@ export default function NewConstraintPage() {
       const newId = Date.now().toString();
       addConstraint({ ...constraintData, id: newId } as any);
       
-      // Enregistrement de la création dans l'historique
       addHistoryEntry({
         constraintId: newId,
         modifiedBy: currentUser,
@@ -234,12 +303,14 @@ export default function NewConstraintPage() {
                     {group.rules.map((rule) => (
                       <div key={rule.id} className="grid grid-cols-12 gap-3 items-center bg-gray-50 p-3 rounded-lg border">
                         <div className="col-span-4">
-                          <select value={rule.field} onChange={(e) => updateRule(group.id, rule.id, 'field', e.target.value)} className="w-full p-2 text-sm border rounded-md">
+                          <select value={rule.field} onChange={(e) => updateRule(group.id, rule.id, 'field', e.target.value)} className="w-full p-2 text-sm border rounded-md uppercase font-semibold text-gray-700">
                             {fieldOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            {/* Option de fallback si le champ n'est pas dans la liste */}
+                            {!fieldOptions.find(f => f.value === rule.field) && <option value={rule.field}>{rule.field}</option>}
                           </select>
                         </div>
                         <div className="col-span-3">
-                          <select value={rule.operator} onChange={(e) => updateRule(group.id, rule.id, 'operator', e.target.value)} className="w-full p-2 text-sm border rounded-md">
+                          <select value={rule.operator} onChange={(e) => updateRule(group.id, rule.id, 'operator', e.target.value)} className="w-full p-2 text-sm border rounded-md font-bold">
                             {operatorOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                           </select>
                         </div>
@@ -247,12 +318,12 @@ export default function NewConstraintPage() {
                           <input type="text" value={rule.value} onChange={(e) => updateRule(group.id, rule.id, 'value', e.target.value)} className="w-full p-2 text-sm border rounded-md" placeholder="Valeur" />
                         </div>
                         <div className="col-span-1 text-right">
-                          {group.rules.length > 1 && <button onClick={() => removeRule(group.id, rule.id)} className="text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>}
+                          {group.rules.length > 1 && <button type="button" onClick={() => removeRule(group.id, rule.id)} className="text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <button onClick={() => addRule(group.id)} className="mt-3 text-xs font-bold text-orange-600 hover:underline">+ Ajouter une condition</button>
+                  <button type="button" onClick={() => addRule(group.id)} className="mt-3 text-xs font-bold text-orange-600 hover:underline">+ Ajouter une condition</button>
                 </div>
               ))}
             </div>

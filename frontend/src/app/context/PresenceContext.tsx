@@ -12,6 +12,7 @@ interface PresenceContextType {
   presenceRecords: PresenceRecord[];
   isLoading: boolean;
   addPresenceRecord: (record: Omit<PresenceRecord, 'id'>) => Promise<void>;
+  updatePresenceRecord: (id: string, record: PresenceRecord) => Promise<void>; // NOUVEAU
   deletePresenceRecord: (id: string) => Promise<void>;
   refreshRecords: () => Promise<void>;
   clearPresenceRecords: () => Promise<void>;
@@ -65,11 +66,54 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       toast.success('Fiche de présence enregistrée sur le serveur');
     } catch (error: any) {
       console.error('Erreur lors de l\'ajout:', error);
-      const message = error.message.includes('403') 
+      const message = error.message?.includes('403') 
         ? "Accès refusé : Rôle insuffisant" 
         : "Erreur lors de l'enregistrement";
       toast.error(message);
       throw error; // Permet de garder le dialogue ouvert si l'enregistrement échoue
+    }
+  };
+
+  /**
+   * MODIFICATION : Met à jour la fiche sur le serveur (NOUVEAU)
+   */
+  const updatePresenceRecord = async (id: string, record: PresenceRecord) => {
+    try {
+      const numericId = parseInt(id, 10);
+      if (isNaN(numericId)) throw new Error("ID invalide");
+
+      // Formater pour l'API Spring Boot
+      const apiInput = mapPresenceRecordToApi(record);
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+      
+      const response = await fetch(`${apiBase}/fiches-presence/${numericId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiInput),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la mise à jour");
+      }
+
+      const updatedApiRecord = await response.json();
+      
+      // Convertir la réponse dans le format React
+      const updatedRecord = mapApiToPresenceRecord(updatedApiRecord);
+
+      // Mettre à jour l'état local
+      setPresenceRecords((prev) =>
+        prev.map((r) => (r.id === id ? updatedRecord : r))
+      );
+      
+      logAudit({ action: 'PRESENCE_UPDATE', entity: 'FichePresence', entityId: id });
+      toast.success('Fiche de présence mise à jour avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+      toast.error('Impossible de mettre à jour la fiche');
+      throw error;
     }
   };
 
@@ -116,6 +160,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
         presenceRecords,
         isLoading,
         addPresenceRecord,
+        updatePresenceRecord, // N'oubliez pas de l'exposer ici !
         deletePresenceRecord,
         refreshRecords,
         clearPresenceRecords,

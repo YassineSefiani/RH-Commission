@@ -85,6 +85,7 @@ const emptyForm = {
 
 const emptyPresenceForm = {
   date: new Date().toISOString().split('T')[0],
+  ville: '', 
   matriculeCamion: '',
   canal: '',
   livreur1Id: '',
@@ -133,7 +134,6 @@ export default function PersonnelPage() {
   const [carteFilter, setCarteFilter] = useState('');
   const [villeFilter, setVilleFilter] = useState('');
   
-  // NOUVEAU: État local pour gérer le cycle de filtre des statuts (all -> actif -> inactif)
   const [statusFilter, setStatusFilter] = useState<'all' | 'actif' | 'inactif'>('all');
 
   const [availableCartes, setAvailableCartes] = useState<string[]>([]);
@@ -236,6 +236,7 @@ export default function PersonnelPage() {
     e.preventDefault();
     await addPresenceRecord({
       date: presenceForm.date,
+      ville: presenceForm.ville,
       matriculeCamion: presenceForm.matriculeCamion,
       canal: presenceForm.canal,
       livreur1Id: presenceForm.livreur1Id,
@@ -280,11 +281,10 @@ export default function PersonnelPage() {
     setContractFilter('');
     setCarteFilter('');
     setVilleFilter('');
-    setStatusFilter('all'); // Réinitialise aussi le filtre de statut
+    setStatusFilter('all');
     resetFilter();
   };
 
-  // NOUVEAU: Fonction pour basculer le statut du filtre
   const toggleStatusFilter = () => {
     setStatusFilter(current => {
       if (current === 'all') return 'actif';
@@ -293,11 +293,10 @@ export default function PersonnelPage() {
     });
   };
 
-  // NOUVEAU: Filtrage local des données à afficher en fonction du statut
   const displayedPersonnel = personnel.filter(person => {
     if (statusFilter === 'all') return true;
     if (statusFilter === 'actif') return person.actif === true;
-    return person.actif === false; // inactif
+    return person.actif === false;
   });
 
   return (
@@ -319,13 +318,16 @@ export default function PersonnelPage() {
               {p.presenceSheet}
             </button>
           )}
-          <button
-            onClick={openAdd}
-            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
-          >
-            <UserPlus className="w-4 h-4" />
-            {p.addProfile}
-          </button>
+          {/* Modification ici : ajout de la vérification pour ADMIN */}
+            {(user?.superRole === 'RH' || user?.superRole === 'ADMIN') && (
+              <button
+                onClick={openAdd}
+                className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                {p.addProfile}
+              </button>
+            )}
         </div>
       </div>
 
@@ -409,7 +411,6 @@ export default function PersonnelPage() {
             </Select>
           )}
 
-          {/* NOUVEAU: Bouton de bascule Actif / Inactif */}
           <button 
             onClick={toggleStatusFilter} 
             className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
@@ -525,27 +526,43 @@ export default function PersonnelPage() {
               </div>
 
               <DialogFooter className="flex gap-2 sm:justify-between">
-                <button
-                  onClick={() => togglePersonnel(selectedPerson.id)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  {selectedPerson.actif ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                  {selectedPerson.actif ? p.deactivate : p.activate}
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { openEdit(selectedPerson); setSelectedPerson(null); }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" /> {p.edit}
-                  </button>
-                  <button
-                    onClick={() => { askDelete(selectedPerson.id); setSelectedPerson(null); }}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 hover:bg-red-100 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" /> {t.common.delete}
-                  </button>
-                </div>
+                {/* NOUVEAU: Les boutons de modification/suppression du personnel ne sont visibles que par les RH */}
+                {user?.superRole === 'RH' && (
+                  <>
+                    <button
+                      onClick={() => togglePersonnel(selectedPerson.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      {selectedPerson.actif ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                      {selectedPerson.actif ? p.deactivate : p.activate}
+                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { openEdit(selectedPerson); setSelectedPerson(null); }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" /> {p.edit}
+                      </button>
+                      <button
+                        onClick={() => { askDelete(selectedPerson.id); setSelectedPerson(null); }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-50 border border-red-100 text-sm text-red-600 hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" /> {t.common.delete}
+                      </button>
+                    </div>
+                  </>
+                )}
+                {/* Fallback si l'utilisateur n'est pas RH (par exemple Dispatcher) on peut ajouter un bouton fermer */}
+                {user?.superRole !== 'RH' && (
+                  <div className="flex justify-end w-full">
+                     <button
+                      onClick={() => setSelectedPerson(null)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                       Fermer
+                    </button>
+                  </div>
+                )}
               </DialogFooter>
             </>
           )}
@@ -572,7 +589,7 @@ export default function PersonnelPage() {
 
       {/* ── Fiche de Présence (DISPATCHER) ───────────────────────────────────── */}
       <Dialog open={isPresenceDialogOpen} onOpenChange={setIsPresenceDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{p.presenceTitle}</DialogTitle>
             <DialogDescription>
@@ -580,11 +597,25 @@ export default function PersonnelPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handlePresenceSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <form onSubmit={handlePresenceSubmit} className="space-y-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Date</Label>
-                <Input value={presenceForm.date} readOnly />
+                <Input 
+                  type="date"
+                  value={presenceForm.date} 
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setPresenceForm({ ...presenceForm, date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Ville</Label>
+                <Input
+                  value={presenceForm.ville}
+                  onChange={(e) => setPresenceForm({ ...presenceForm, ville: e.target.value })}
+                  placeholder="Ex: Casablanca"
+                />
               </div>
               <div className="space-y-2">
                 <Label>{p.truckId}</Label>
@@ -596,47 +627,58 @@ export default function PersonnelPage() {
               </div>
               <div className="space-y-2">
                 <Label>{p.canal}</Label>
-                <Input
-                  value={presenceForm.canal}
-                  onChange={(e) => setPresenceForm({ ...presenceForm, canal: e.target.value })}
-                  placeholder="Ex: Retail"
-                />
+                <Select 
+                  value={presenceForm.canal} 
+                  onValueChange={(v) => setPresenceForm({ ...presenceForm, canal: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TRADI">TRADI</SelectItem>
+                    <SelectItem value="GMS">GMS</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            {(['livreur1', 'livreur2', 'livreur3'] as const).map((field, index) => {
-              const label = index === 0 ? p.livreur : `${p.aide} ${index}`;
-              const selectedId = presenceForm[`${field}Id`];
-              const selectedMatricule = presenceForm[`${field}Matricule`];
-              return (
-                <div key={field} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>{label}</Label>
-                    <Select value={selectedId} onValueChange={(v) => handlePresenceSelect(field, v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={`Sélectionner ${label}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">{p.none}</SelectItem>
-                        {personnel.map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.prenom} {p.nom}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Matricule</Label>
-                    <Input value={selectedMatricule} readOnly placeholder="Auto" />
-                  </div>
-                </div>
-              );
-            })}
+            <hr className="border-gray-100" />
 
-            <DialogFooter>
+            <div className="space-y-4">
+              {(['livreur1', 'livreur2', 'livreur3'] as const).map((field, index) => {
+                const label = index === 0 ? p.livreur : `${p.aide} ${index}`;
+                const selectedId = presenceForm[`${field}Id`];
+                const selectedMatricule = presenceForm[`${field}Matricule`];
+                return (
+                  <div key={field} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>{label}</Label>
+                      <Select value={selectedId} onValueChange={(v) => handlePresenceSelect(field, v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Sélectionner ${label}`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{p.none}</SelectItem>
+                          {personnel.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.prenom} {p.nom}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Matricule</Label>
+                      <Input value={selectedMatricule} readOnly placeholder="Auto" className="bg-gray-50" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsPresenceDialogOpen(false)}>
                 {t.common.cancel}
               </Button>
-              <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
+              <Button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white">
                 {p.save}
               </Button>
             </DialogFooter>

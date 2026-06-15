@@ -14,7 +14,6 @@ export interface User {
 // Mots de passe alignés sur DataInitializer du service-auth.
 export const AVAILABLE_USERS = [
   { email: 'yassine.admin@abcdis.com', password: 'Admin1234!', superRole: 'ADMIN',      label: 'ADMIN' },
-  { email: 'admin@abcdis.com',         password: 'Admin2024!', superRole: 'ADMIN',      label: 'SUPER ADMIN' },
   { email: 'adv@abcdis.com',           password: 'Adv1234!',   superRole: 'ADV',        label: 'ADV' },
   { email: 'rh@abcdis.com',            password: 'Rh1234!',    superRole: 'RH',         label: 'RH' },
   { email: 'dispatcher@abcdis.com',    password: 'Dispatch1!', superRole: 'DISPATCHER', label: 'DISPATCHER' },

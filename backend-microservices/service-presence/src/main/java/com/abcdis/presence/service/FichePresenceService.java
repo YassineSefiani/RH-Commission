@@ -57,9 +57,13 @@ public class FichePresenceService {
     @Transactional
     public FichePresence modifier(Long id, FichePresence nouvelleDonnees) {
         FichePresence existante = trouverParId(id);
+        
         if (nouvelleDonnees.getMatriculeCamion() != null) existante.setMatriculeCamion(nouvelleDonnees.getMatriculeCamion());
         if (nouvelleDonnees.getCanal()           != null) existante.setCanal(nouvelleDonnees.getCanal());
         if (nouvelleDonnees.getDate()            != null) existante.setDate(nouvelleDonnees.getDate());
+        
+        // NOUVEAU CHAMP
+        if (nouvelleDonnees.getVille()           != null) existante.setVille(nouvelleDonnees.getVille());
 
         // Livreur 1
         if (nouvelleDonnees.getLivreur1Id()        != null) existante.setLivreur1Id(nouvelleDonnees.getLivreur1Id());
@@ -82,6 +86,7 @@ public class FichePresenceService {
         if (nouvelleDonnees.getHeureDepart()     != null) existante.setHeureDepart(nouvelleDonnees.getHeureDepart());
         if (nouvelleDonnees.getHeureRetour()     != null) existante.setHeureRetour(nouvelleDonnees.getHeureRetour());
         if (nouvelleDonnees.getObservations()    != null) existante.setObservations(nouvelleDonnees.getObservations());
+        
         return ficheRepository.save(existante);
     }
 

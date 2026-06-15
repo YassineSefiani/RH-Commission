@@ -30,6 +30,10 @@ public class FichePresence {
     @Column(nullable = false)
     private String canal;
 
+    // NOUVEAU CHAMP
+    @Column(name = "ville")
+    private String ville;
+
     @NotNull(message = "La date est obligatoire")
     @Column(nullable = false)
     private LocalDate date;

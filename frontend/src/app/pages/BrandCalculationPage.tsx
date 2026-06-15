@@ -3,6 +3,7 @@ import { ArrowLeft, Calculator, Users, Loader2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router';
 import { useConstraints } from '../context/ConstraintsContext';
 import { useHistory } from '../context/HistoryContext';
+import { usePresence } from '../context/PresenceContext';
 import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
 
@@ -15,21 +16,19 @@ interface Employee {
   carte: string;
   natureContrat: string;
   actif: boolean;
-  baseSalary?: number;
 }
 
 type CalculationDetail = {
   name: string;
   amount: number;
-  type: 'commission' | 'bonus' | 'penalty';
+  type: 'commission' | 'bonus';
 };
 
 type EmployeeCalculationResult = {
   employee: Employee;
   commissions: number;
   bonuses: number;
-  penalties: number;
-  finalSalary: number;
+  finalSalary: number; // Sera égal à commissions + bonuses
   details: CalculationDetail[];
 };
 
@@ -38,6 +37,7 @@ export default function BrandCalculationPage() {
   const navigate = useNavigate();
   const { constraints } = useConstraints();
   const { addCalculation } = useHistory();
+  const { presenceRecords } = usePresence(); 
   const decodedBrand = decodeURIComponent(brand);
   const { t } = useLang();
   const b = t.brandCalc;
@@ -119,7 +119,6 @@ export default function BrandCalculationPage() {
       const brandResults = brandEmployees.map(employee => {
         let commissions = 0;
         let bonuses = 0;
-        let penalties = 0;
         const details: CalculationDetail[] = [];
 
         const empMatricule = String(employee.matricule || employee.id).trim().toUpperCase();
@@ -131,17 +130,59 @@ export default function BrandCalculationPage() {
         // 1. Récupérer TOUTES les lignes Excel de l'employé
         const empVolumeRecords = volPayload.filter((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule);
 
-        // 2. Grouper les volumes par Rôle exercé
+        // 2. Grouper les volumes par Rôle exercé (vérifié STRICTEMENT via la fiche de présence par date)
         const roleSegments: Record<string, { volume: number }> = {};
         let totalVolume = 0;
         let globalTauxRetour = 0;
 
         if (empVolumeRecords.length > 0) {
           globalTauxRetour = empVolumeRecords[0].tauxRetour || 0;
+          
           empVolumeRecords.forEach((record: any) => {
-            // Lecture dynamique de la colonne "Role" du Excel
-            const dailyRole = String(record.Role || record.role || employee.role || '').trim().toUpperCase();
+            let dailyRole = String(employee.role || '').trim().toUpperCase();
             const dailyVol = Number(record.volumeDistribue || record['Volume chargé (En CP)'] || 0);
+
+            // --- DEBUT : PARSING ROBUSTE DE LA DATE EXCEL ---
+            const rawDate = record.Date || record.date || record['Date'] || '';
+            let formattedDate = '';
+            const rawStr = String(rawDate).trim();
+            
+            // Regex pour vérifier si la chaîne est entièrement composée de chiffres (ex: "46182")
+            if (/^\d+$/.test(rawStr)) {
+              const serial = parseInt(rawStr, 10);
+              // L'origine d'Excel est le 30 Décembre 1899. 
+              // Utilisation de Date.UTC pour éviter les sauts de jours dus aux fuseaux horaires.
+              const dateObj = new Date(Date.UTC(1899, 11, 30 + serial));
+              formattedDate = dateObj.toISOString().split('T')[0];
+            } else if (rawStr.includes('/')) {
+              // Format MM/JJ/AAAA (ex: 6/9/2026) -> AAAA-MM-JJ
+              const parts = rawStr.split('/');
+              if (parts.length === 3) {
+                formattedDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+              }
+            } else if (rawStr.includes('-')) {
+              formattedDate = rawStr.split('T')[0];
+            } else if (rawDate instanceof Date) {
+              formattedDate = rawDate.toISOString().split('T')[0];
+            }
+            // --- FIN PARSING DATE ---
+
+            // Recherche de la présence pour CETTE date précise
+            const dailyPresence = presenceRecords.find(p => p.date === formattedDate);
+
+            if (dailyPresence) {
+              const mat1 = (dailyPresence.livreur1Matricule || '').trim().toUpperCase();
+              const mat2 = (dailyPresence.livreur2Matricule || '').trim().toUpperCase();
+              const mat3 = (dailyPresence.livreur3Matricule || '').trim().toUpperCase();
+
+              if (empMatricule === mat1) {
+                dailyRole = 'LIVREUR';
+              } else if (empMatricule === mat2 || empMatricule === mat3) {
+                dailyRole = 'AIDE LIVREUR';
+              }
+            }
+
+            console.log(`👤 [CHECK DATE] Matricule: ${empMatricule} | Date Brute: ${rawStr} | Date Formatée: ${formattedDate} | Rôle Attribué: ${dailyRole} | Trouvé dans Présence: ${!!dailyPresence}`);
 
             if (!roleSegments[dailyRole]) {
               roleSegments[dailyRole] = { volume: 0 };
@@ -150,7 +191,6 @@ export default function BrandCalculationPage() {
             totalVolume += dailyVol;
           });
         } else {
-          // Fallback de sécurité si aucune donnée détaillée n'est trouvée
           const fallbackRole = String(employee.role || '').trim().toUpperCase();
           const fallbackVolData = volPayload.find((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule) || { volumeDistribue: 0, tauxRetour: 0 };
           totalVolume = Number(fallbackVolData.volumeDistribue || 0);
@@ -194,7 +234,6 @@ export default function BrandCalculationPage() {
           let ruleApplied = false;
 
           if (isVolumeRule) {
-            // Règles au volume : On boucle sur les rôles exercés pour ne calculer que sur le volume concerné
             Object.entries(roleSegments).forEach(([roleJoue, stats]) => {
               let conditionVerifiee = false;
               try {
@@ -215,11 +254,9 @@ export default function BrandCalculationPage() {
                 commissions += segmentAmount;
                 amountGeneratedForRule += segmentAmount;
                 ruleApplied = true;
-                console.log(`   ✅ [DEBUG] Appliquée: ${nomRegle} pour rôle ${roleJoue} | Vol: ${stats.volume} -> ${segmentAmount} MAD`);
               }
             });
           } else {
-            // Règles globales (Fixe, CA) : On valide si l'employé a exercé le rôle éligible au moins une fois
             let conditionVerifiee = false;
             for (const roleJoue of Object.keys(roleSegments)) {
               try {
@@ -232,7 +269,7 @@ export default function BrandCalculationPage() {
                     metrics.tauxTriage, metrics.tauxRealisation, metrics.tauxRealisationGlobal
                 )) {
                   conditionVerifiee = true;
-                  break; // On arrête dès qu'un rôle valide la condition
+                  break; 
                 }
               } catch (e) {}
             }
@@ -258,8 +295,7 @@ export default function BrandCalculationPage() {
           }
         });
 
-        const baseSalary = employee.baseSalary || 2500;
-        const finalSalary = baseSalary + commissions + bonuses - penalties;
+        const finalSalary = commissions + bonuses;
 
         const today = new Date();
         const periode = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -267,13 +303,11 @@ export default function BrandCalculationPage() {
         addCalculation({
           employeeName: `${employee.prenom} ${employee.nom}`,
           employeeRole: employee.role,
-          baseSalary,
           totalSales: metrics.caRealise,
           deliveries: metrics.volumeDistribue,
           returns: metrics.tauxRetour,
           commissions,
           bonuses,
-          penalties,
           finalSalary,
           constraintsApplied: details.map(d => d.name),
           details,
@@ -282,7 +316,7 @@ export default function BrandCalculationPage() {
           periode,
         });
 
-        return { employee, commissions, bonuses, penalties, finalSalary, details };
+        return { employee, commissions, bonuses, finalSalary, details };
       });
 
       setResults(brandResults);
@@ -393,18 +427,15 @@ export default function BrandCalculationPage() {
                         <div className="text-3xl font-black text-orange-500 mb-6">
                           {formatCurrency(res.finalSalary)}
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="bg-green-50 p-2.5 rounded-lg border border-green-100 text-center">
+                        {/* Grid en 2 colonnes pour occuper tout l'espace disponible */}
+                        <div className="grid grid-cols-2 gap-3 w-full">
+                          <div className="flex-1 bg-green-50 p-3 rounded-xl border border-green-100 text-center">
                             <p className="text-[10px] text-green-600 uppercase font-bold mb-1">{b.commissions}</p>
-                            <p className="font-bold text-green-700">{formatCurrency(res.commissions)}</p>
+                            <p className="font-bold text-green-700 text-sm">{formatCurrency(res.commissions)}</p>
                           </div>
-                          <div className="bg-green-50 p-2.5 rounded-lg border border-green-100 text-center">
+                          <div className="flex-1 bg-green-50 p-3 rounded-xl border border-green-100 text-center">
                             <p className="text-[10px] text-green-600 uppercase font-bold mb-1">{b.bonus}</p>
-                            <p className="font-bold text-green-700">{formatCurrency(res.bonuses)}</p>
-                          </div>
-                          <div className={`p-2.5 rounded-lg border text-center ${res.penalties > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
-                            <p className={`text-[10px] uppercase font-bold mb-1 ${res.penalties > 0 ? 'text-red-600' : 'text-gray-500'}`}>{b.penalties}</p>
-                            <p className={`font-bold ${res.penalties > 0 ? 'text-red-700' : 'text-gray-700'}`}>{formatCurrency(res.penalties)}</p>
+                            <p className="font-bold text-green-700 text-sm">{formatCurrency(res.bonuses)}</p>
                           </div>
                         </div>
 
@@ -450,10 +481,8 @@ export default function BrandCalculationPage() {
                         {results.map((r, idx) => (
                           <tr key={idx} className="hover:bg-gray-50 transition-colors text-sm">
                             <td className="p-4 font-medium text-gray-900">{r.employee.prenom} {r.employee.nom}</td>
-                            <td className="p-4 text-gray-600">{formatCurrency(r.employee.baseSalary || 2500)}</td>
                             <td className="p-4 text-green-600 font-medium">+{formatCurrency(r.commissions)}</td>
                             <td className="p-4 text-green-600 font-medium">+{formatCurrency(r.bonuses)}</td>
-                            <td className="p-4 text-red-500 font-medium">-{formatCurrency(r.penalties)}</td>
                             <td className="p-4 font-bold text-orange-600">{formatCurrency(r.finalSalary)}</td>
                           </tr>
                         ))}
@@ -461,10 +490,8 @@ export default function BrandCalculationPage() {
                       <tfoot className="bg-orange-50 font-bold border-t-2 border-orange-200">
                         <tr>
                           <td className="p-4 text-orange-900">{b.teamTotal}</td>
-                          <td className="p-4">{formatCurrency(results.reduce((acc, r) => acc + (r.employee.baseSalary || 2500), 0))}</td>
                           <td className="p-4 text-green-700">+{formatCurrency(results.reduce((acc, r) => acc + r.commissions, 0))}</td>
                           <td className="p-4 text-green-700">+{formatCurrency(results.reduce((acc, r) => acc + r.bonuses, 0))}</td>
-                          <td className="p-4 text-red-600">-{formatCurrency(results.reduce((acc, r) => acc + r.penalties, 0))}</td>
                           <td className="p-4 text-orange-700 text-lg">{formatCurrency(results.reduce((acc, r) => acc + r.finalSalary, 0))}</td>
                         </tr>
                       </tfoot>

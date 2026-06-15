@@ -8,6 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 export interface ApiFichePresence {
   id?: number;
   date: string; // Format ISO: YYYY-MM-DD
+  ville?: string; // NOUVEAU: Champ ville
   matriculeCamion: string;
   canal: string;
   // Livreur 1 (Chauffeur)
@@ -71,21 +72,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
 // ============================================
 
 export const presenceApi = {
-  // GET /api/fiche-presence
+  // GET /api/fiches-presence
   getAll: async (): Promise<ApiFichePresence[]> => {
-    const response = await fetch(`${API_BASE_URL}/fiche-presence`);
+    const response = await fetch(`${API_BASE_URL}/fiches-presence`);
     return handleResponse<ApiFichePresence[]>(response);
   },
 
-  // GET /api/fiche-presence/date/{date}
+  // GET /api/fiches-presence/date/{date}
   getByDate: async (date: string): Promise<ApiFichePresence[]> => {
-    const response = await fetch(`${API_BASE_URL}/fiche-presence/date/${date}`);
+    const response = await fetch(`${API_BASE_URL}/fiches-presence/date/${date}`);
     return handleResponse<ApiFichePresence[]>(response);
   },
 
-  // POST /api/fiche-presence
+  // POST /api/fiches-presence
   create: async (fiche: Omit<ApiFichePresence, 'id'>): Promise<ApiFichePresence> => {
-    const response = await fetch(`${API_BASE_URL}/fiche-presence`, {
+    const response = await fetch(`${API_BASE_URL}/fiches-presence`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(fiche),
@@ -93,9 +94,9 @@ export const presenceApi = {
     return handleResponse<ApiFichePresence>(response);
   },
 
-  // PUT /api/fiche-presence/{id}
+  // PUT /api/fiches-presence/{id}
   update: async (id: number, fiche: Partial<ApiFichePresence>): Promise<ApiFichePresence> => {
-    const response = await fetch(`${API_BASE_URL}/fiche-presence/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/fiches-presence/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(fiche),
@@ -103,9 +104,9 @@ export const presenceApi = {
     return handleResponse<ApiFichePresence>(response);
   },
 
-  // DELETE /api/fiche-presence/{id}
+  // DELETE /api/fiches-presence/{id}
   delete: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/fiche-presence/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/fiches-presence/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
@@ -120,6 +121,7 @@ export const presenceApi = {
 export interface PresenceRecord {
   id: string;
   date: string;
+  ville: string; // NOUVEAU: Champ ville
   matriculeCamion: string;
   canal: string;
   livreur1Id: string;
@@ -140,6 +142,7 @@ export function mapApiToPresenceRecord(api: ApiFichePresence): PresenceRecord {
   return {
     id: api.id?.toString() || '',
     date: api.date,
+    ville: api.ville || '', // NOUVEAU: Mapping de la ville
     matriculeCamion: api.matriculeCamion,
     canal: api.canal,
     livreur1Id: api.livreur1Id,
@@ -160,6 +163,7 @@ export function mapApiToPresenceRecord(api: ApiFichePresence): PresenceRecord {
 export function mapPresenceRecordToApi(record: Partial<PresenceRecord>): Omit<ApiFichePresence, 'id'> {
   return {
     date: record.date || new Date().toISOString().split('T')[0],
+    ville: record.ville || '', // NOUVEAU: Mapping de la ville
     matriculeCamion: record.matriculeCamion || '',
     canal: record.canal || '',
     livreur1Id: record.livreur1Id || '',

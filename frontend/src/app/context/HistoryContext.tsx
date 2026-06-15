@@ -9,13 +9,11 @@ export interface CalculationHistory {
   date: string;
   employeeName: string;
   employeeRole: string;
-  baseSalary: number;
   totalSales: number;
   deliveries: number;
   returns: number;
   commissions: number;
   bonuses: number;
-  penalties: number;
   finalSalary: number;
   constraintsApplied: string[];
   details: any[];
