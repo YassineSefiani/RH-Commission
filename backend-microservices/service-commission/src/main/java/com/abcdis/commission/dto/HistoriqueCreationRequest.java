@@ -20,5 +20,8 @@ public record HistoriqueCreationRequest(
         String details,            // → details
         String matricule,          // → matricule (optionnel — clé anti-redondance)
         String periode,            // → periode YYYY-MM (optionnel)
+        String batchId,
+        String simulationName,
+        Boolean isArchived,
         Boolean forcerRecalcul     // → si true, écrase l'existant
 ) {}

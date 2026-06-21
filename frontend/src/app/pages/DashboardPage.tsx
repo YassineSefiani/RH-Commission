@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Users, TrendingUp, DollarSign, Calculator, Award, BarChart2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Users, TrendingUp, DollarSign, Calculator, Award, BarChart2, Filter } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -12,23 +12,64 @@ export default function DashboardPage() {
   const { t, lang } = useLang();
   const d = t.dashboard;
 
+  // États pour les filtres
+  const [selectedBrand, setSelectedBrand] = useState('');
+  const [selectedChannel, setSelectedChannel] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+  const [selectedYear, setSelectedYear] = useState('');
+
   const fc = (v: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(v);
 
-  const kpi = useMemo(() => {
-    if (history.length === 0) return { totalCalcs: 0, totalSales: 0, totalPayroll: 0, totalCommissions: 0, uniqueEmps: 0 };
-    return {
-      totalCalcs:       history.length,
-      totalSales:       history.reduce((s, h) => s + h.totalSales, 0),
-      totalPayroll:     history.reduce((s, h) => s + h.finalSalary, 0),
-      totalCommissions: history.reduce((s, h) => s + h.commissions, 0),
-      uniqueEmps:       new Set(history.map(h => h.employeeName)).size,
-    };
+  // ✨ On ne conserve QUE les calculs validés (isArchived === true)
+  const validatedHistory = useMemo(() => {
+    return history.filter(h => h.isArchived);
   }, [history]);
 
+  // --- LISTES DYNAMIQUES POUR LES DROPDOWNS DES FILTRES (Basées sur les validés) ---
+  const uniqueBrands = useMemo(() => {
+    return [...new Set(validatedHistory.map(h => h.carte).filter(Boolean))];
+  }, [validatedHistory]);
+
+  const uniqueChannels = useMemo(() => {
+    return [...new Set(validatedHistory.map(h => h.employeeRole?.split(' ')[0]).filter(Boolean))];
+  }, [validatedHistory]);
+
+  const uniqueEmployees = useMemo(() => {
+    return [...new Set(validatedHistory.map(h => h.employeeName).filter(Boolean))];
+  }, [validatedHistory]);
+
+  // --- LOGIQUE DE FILTRAGE COMMUNE ---
+  const filteredHistory = useMemo(() => {
+    return validatedHistory.filter(h => {
+      const dateObj = new Date(h.date);
+      const brandMatch = !selectedBrand || h.carte === selectedBrand;
+      const channelMatch = !selectedChannel || h.employeeRole?.toUpperCase().includes(selectedChannel.toUpperCase());
+      const employeeMatch = !selectedEmployee || h.employeeName === selectedEmployee;
+      const monthMatch = !selectedMonth || String(dateObj.getMonth()) === selectedMonth;
+      const yearMatch = !selectedYear || String(dateObj.getFullYear()) === selectedYear;
+
+      return brandMatch && channelMatch && employeeMatch && monthMatch && yearMatch;
+    });
+  }, [validatedHistory, selectedBrand, selectedChannel, selectedEmployee, selectedMonth, selectedYear]);
+
+  // --- KPIS SUR DONNÉES FILTRÉES ---
+  const kpi = useMemo(() => {
+    if (filteredHistory.length === 0) return { totalCalcs: 0, totalSales: 0, totalPayroll: 0, totalCommissions: 0, uniqueEmps: 0 };
+    return {
+      totalCalcs:       filteredHistory.length,
+      totalSales:       filteredHistory.reduce((s, h) => s + h.totalSales, 0),
+      totalPayroll:     filteredHistory.reduce((s, h) => s + h.finalSalary, 0),
+      totalCommissions: filteredHistory.reduce((s, h) => s + h.commissions, 0),
+      uniqueEmps:       new Set(filteredHistory.map(h => h.employeeName)).size,
+    };
+  }, [filteredHistory]);
+
+  // --- ÉVOLUTION MENSUELLE ---
   const monthlyData = useMemo(() => {
     const map = new Map<string, { sales: number; commissions: number; payroll: number; count: number; date: Date }>();
-    history.forEach(h => {
+    filteredHistory.forEach(h => {
       const d = new Date(h.date);
       const k = d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'short', year: 'numeric' });
       const ex = map.get(k) || { sales: 0, commissions: 0, payroll: 0, count: 0, date: d };
@@ -38,18 +79,19 @@ export default function DashboardPage() {
       .sort(([, a], [, b]) => a.date.getTime() - b.date.getTime())
       .slice(-6)
       .map(([month, d]) => ({ month, ...d }));
-  }, [history]);
+  }, [filteredHistory, lang]);
 
+  // --- TOP PERFORMERS ---
   const topPerformers = useMemo(() => {
     const map = new Map<string, { name: string; role: string; commissions: number; finalSalary: number; count: number }>();
-    history.forEach(h => {
+    filteredHistory.forEach(h => {
       const ex = map.get(h.employeeName) || { name: h.employeeName, role: h.employeeRole, commissions: 0, finalSalary: 0, count: 0 };
       map.set(h.employeeName, { ...ex, commissions: ex.commissions + h.commissions, finalSalary: ex.finalSalary + h.finalSalary, count: ex.count + 1 });
     });
     return [...map.values()].sort((a, b) => b.commissions - a.commissions).slice(0, 5);
-  }, [history]);
+  }, [filteredHistory]);
 
-  const recentActivity = history.slice(0, 5);
+  const recentActivity = filteredHistory.slice(0, 5);
   const maxComm = topPerformers[0]?.commissions || 1;
 
   const kpiCards = [
@@ -59,8 +101,81 @@ export default function DashboardPage() {
     { label: d.calculations, value: String(kpi.totalCalcs),    icon: BarChart2,  tone: 'violet' },
   ];
 
+  const monthsFr = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const monthsEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const resetFilters = () => {
+    setSelectedBrand('');
+    setSelectedChannel('');
+    setSelectedEmployee('');
+    setSelectedMonth('');
+    setSelectedYear('');
+  };
+
   return (
     <div className="abc-page-inner abc-stack-lg">
+      
+      {/* 🛠️ BARRE DE FILTRES DYNAMIQUE MULTI-CRITÈRES */}
+      <div className="abc-card" style={{ padding: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: 'var(--brand-deep)', fontWeight: 'bold', fontSize: '14px' }}>
+          <Filter size={16} />
+          <span>Filtres analytiques du tableau de bord</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+          
+          {/* Filtre Marque (Carte) */}
+          <div className="abc-stack-xs">
+            <select className="abc-mini-select" style={{ width: '100%' }} value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)}>
+              <option value="">{lang === 'en' ? 'All brands' : 'Toutes les cartes'}</option>
+              {uniqueBrands.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+
+          {/* Filtre Canal */}
+          <div className="abc-stack-xs">
+            <select className="abc-mini-select" style={{ width: '100%' }} value={selectedChannel} onChange={e => setSelectedChannel(e.target.value)}>
+              <option value="">{lang === 'en' ? 'All channels' : 'Tous les canaux'}</option>
+              {uniqueChannels.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Filtre Personnel / Vendeur */}
+          <div className="abc-stack-xs">
+            <select className="abc-mini-select" style={{ width: '100%' }} value={selectedEmployee} onChange={e => setSelectedEmployee(e.target.value)}>
+              <option value="">{lang === 'en' ? 'All personnel' : 'Tous les vendeurs'}</option>
+              {uniqueEmployees.map(emp => <option key={emp} value={emp}>{emp}</option>)}
+            </select>
+          </div>
+
+          {/* Filtre Période - Mois */}
+          <div className="abc-stack-xs">
+            <select className="abc-mini-select" style={{ width: '100%' }} value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}>
+              <option value="">{lang === 'en' ? 'All months' : 'Tous les mois'}</option>
+              {(lang === 'en' ? monthsEn : monthsFr).map((m, i) => (
+                <option key={i} value={String(i)}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre Période - Année */}
+          <div className="abc-stack-xs">
+            <select className="abc-mini-select" style={{ width: '100%' }} value={selectedYear} onChange={e => setSelectedYear(e.target.value)}>
+              <option value="">{lang === 'en' ? 'All years' : 'Toutes les années'}</option>
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+          </div>
+
+          {/* Bouton Réinitialiser */}
+          {(selectedBrand || selectedChannel || selectedEmployee || selectedMonth || selectedYear) && (
+            <button className="abc-btn abc-btn-ghost abc-btn-sm" onClick={resetFilters} style={{ alignSelf: 'center', height: '32px' }}>
+              Réinitialiser
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* KPI grid */}
       <div className="abc-kpi-grid">
         {kpiCards.map((k) => {
@@ -79,10 +194,10 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {history.length === 0 ? (
+      {filteredHistory.length === 0 ? (
         <div className="abc-card abc-empty-card">
           <Calculator size={36} strokeWidth={1.5} />
-          <p>{t.history.noHistorySub}</p>
+          <p>{lang === 'en' ? 'No validated data matching the filters.' : 'Aucun calcul validé ne correspond aux critères sélectionnés.'}</p>
         </div>
       ) : (
         <>
@@ -92,7 +207,7 @@ export default function DashboardPage() {
               <div className="abc-sechead">
                 <div>
                   <h3 className="abc-h3">{d.salesEvol}</h3>
-                  <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'Last 6 months' : '6 derniers mois'}</p>
+                  <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'Filtered Trend' : 'Tendance filtrée de la période'}</p>
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={240}>
@@ -114,7 +229,7 @@ export default function DashboardPage() {
               <div className="abc-top-card-head">
                 <div>
                   <h3 className="abc-h3">{d.recentActivity}</h3>
-                  <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'Latest calculations' : 'Derniers calculs'}</p>
+                  <p className="abc-sub abc-sub-tight">{lang === 'en' ? 'Latest validated calculations' : 'Derniers calculs validés'}</p>
                 </div>
               </div>
               <ul className="abc-activity-list">
@@ -125,13 +240,15 @@ export default function DashboardPage() {
                     <li key={h.id} className="abc-activity-row">
                       <div
                         className="abc-avatar abc-avatar-sm"
-                        style={{ background: 'var(--brand)', color: 'var(--brand-fg)', width: 30, height: 30, fontSize: 11 }}
+                        style={{ background: 'var(--brand)', color: 'white', width: 30, height: 30, fontSize: 11 }}
                       >
                         {initials}
                       </div>
                       <div className="abc-activity-info">
-                        <span className="abc-activity-name">{h.employeeName}</span>
-                        <span className="abc-activity-meta">{date} · {h.employeeRole}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="abc-activity-name">{h.employeeName}</span>
+                        </div>
+                        <span className="abc-activity-meta">{date} · {h.employeeRole} • <strong style={{ color: 'var(--brand-deep)' }}>{h.carte}</strong></span>
                       </div>
                       <span className="abc-mono abc-activity-amount">{fc(h.finalSalary)}</span>
                     </li>
@@ -182,7 +299,7 @@ export default function DashboardPage() {
                         <span className="abc-top-rank">{String(i + 1).padStart(2, '0')}</span>
                         <div
                           className="abc-avatar"
-                          style={{ background: colors[i], color: i === 0 ? 'var(--brand-fg)' : '#fff', width: 36, height: 36, fontSize: 12 }}
+                          style={{ background: colors[i], color: '#fff', width: 36, height: 36, fontSize: 12 }}
                         >
                           {initials}
                         </div>

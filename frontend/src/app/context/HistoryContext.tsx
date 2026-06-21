@@ -3,7 +3,6 @@ import { historyApi, mapApiHistoryToFrontend, mapFrontendHistoryToApi } from '..
 import { toast } from 'sonner';
 import { logAudit } from '../services/auditApi';
 
-// --- TYPES POUR LES CALCULS ---
 export interface CalculationHistory {
   id: string;
   date: string;
@@ -17,14 +16,15 @@ export interface CalculationHistory {
   finalSalary: number;
   constraintsApplied: string[];
   details: any[];
-  // Champs anti-redondance (optionnels, propagés au backend)
   carte?: string;
   matricule?: string;
   periode?: string;
   forcerRecalcul?: boolean;
+  isArchived?: boolean;
+  batchId?: string; // ✨ NOUVEAU : Identifiant du lot de simulation
+  simulationName?: string; // ✨ NOUVEAU : Nom affiché (ex: "Simulation 1 - COCA")
 }
 
-// --- TYPES POUR LES MODIFICATIONS DE CONTRAINTES ---
 export interface ConstraintHistoryEntry {
   constraintId: string;
   modifiedBy: string;
@@ -34,15 +34,13 @@ export interface ConstraintHistoryEntry {
   changeType: 'CREATE' | 'UPDATE' | 'TOGGLE' | 'DELETE';
 }
 
-// --- INTERFACE DU CONTEXTE ---
 interface HistoryContextType {
-  // Calculs
   history: CalculationHistory[];
   addCalculation: (calculation: Omit<CalculationHistory, 'id' | 'date'>) => void;
   deleteCalculation: (id: string) => void;
   clearHistory: () => void;
+  archiveCalculation: (id: string) => Promise<void>;
   
-  // Contraintes
   constraintHistory: ConstraintHistoryEntry[];
   addHistoryEntry: (entry: ConstraintHistoryEntry) => void;
 }
@@ -50,24 +48,18 @@ interface HistoryContextType {
 const HistoryContext = createContext<HistoryContextType | undefined>(undefined);
 
 export function HistoryProvider({ children }: { children: ReactNode }) {
-  // États
   const [history, setHistory] = useState<CalculationHistory[]>([]);
   const [constraintHistory, setConstraintHistory] = useState<ConstraintHistoryEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger les historiques au démarrage
   useEffect(() => {
-    // Chargement de l'historique des contraintes depuis le localStorage
     const savedConstraintHistory = localStorage.getItem('constraintHistory');
     if (savedConstraintHistory) {
       setConstraintHistory(JSON.parse(savedConstraintHistory));
     }
-    
-    // Chargement de l'historique des calculs via API
     loadHistory();
   }, []);
 
-  // --- LOGIQUE DES CALCULS (API) ---
   const loadHistory = async () => {
     try {
       setIsLoading(true);
@@ -76,7 +68,6 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       setHistory(mappedHistory);
     } catch (error) {
       console.error('Erreur lors du chargement de l\'historique:', error);
-      toast.error('Impossible de charger l\'historique. Vérifiez que le backend est démarré.');
       setHistory([]);
     } finally {
       setIsLoading(false);
@@ -85,37 +76,47 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
 
   const addCalculation = async (calculation: Omit<CalculationHistory, 'id' | 'date'>) => {
     try {
-      const apiHistory = mapFrontendHistoryToApi(calculation);
+      // Nouvelle simulation = toujours isArchived: false
+      const payload = { ...calculation, isArchived: false };
+      const apiHistory = mapFrontendHistoryToApi(payload);
+      
+      // 1. On envoie au backend (qui va ignorer batchId et simulationName pour le moment)
       const created = await historyApi.create(apiHistory);
+      
+      // 2. On récupère la réponse du backend
       const newCalculation = mapApiHistoryToFrontend(created);
-      setHistory(prev => [newCalculation, ...prev]);
+      
+      // ✨ LE CORRECTIF EST ICI ✨
+      // On force la réinjection des données locales car le backend 
+      // ne les a pas encore sauvegardées/renvoyées !
+      newCalculation.batchId = calculation.batchId;
+      newCalculation.simulationName = calculation.simulationName;
+      
+      setHistory(prev => {
+        // Évite les doublons visuels si le backend nous renvoie le même ID
+        const filtered = prev.filter(h => h.id !== newCalculation.id);
+        return [newCalculation, ...filtered];
+      });
       logAudit({ action: 'HISTORY_CREATE', entity: 'HistoriqueCalcul', entityId: newCalculation.id, details: newCalculation.employeeName });
-      toast.success('Calcul ajouté à l\'historique');
     } catch (error) {
       console.error('Erreur lors de l\'ajout du calcul:', error);
-      toast.error('Impossible d\'ajouter le calcul à l\'historique');
       throw error;
     }
   };
 
   const deleteCalculation = async (id: string) => {
-    const previousHistory = history;
     try {
       setHistory(prev => prev.filter(h => h.id !== id));
       const numericId = parseInt(id, 10);
       await historyApi.delete(numericId);
       logAudit({ action: 'HISTORY_DELETE', entity: 'HistoriqueCalcul', entityId: id });
-      toast.success('Calcul supprimé de l\'historique');
     } catch (error) {
-      setHistory(previousHistory);
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      toast.error(`Impossible de supprimer le calcul: ${errorMessage}`);
+      console.error(error);
       throw error;
     }
   };
 
   const clearHistory = async () => {
-    // Pas de confirm() ici — la confirmation est gérée par ConfirmDialog côté composant.
     const count = history.length;
     try {
       await historyApi.clearAll();
@@ -123,12 +124,25 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       logAudit({ action: 'HISTORY_CLEAR_ALL', entity: 'HistoriqueCalcul', details: `${count} entrées` });
       toast.success('Historique supprimé avec succès');
     } catch (error: any) {
-      console.error('clearHistory failed', error);
-      toast.error(`Impossible de supprimer l'historique : ${error?.message ?? 'erreur inconnue'}`);
+      toast.error(`Impossible de supprimer l'historique`);
     }
   };
 
-  // --- LOGIQUE DES CONTRAINTES (LOCALSTORAGE) ---
+  const archiveCalculation = async (id: string) => {
+    try {
+      // ✨ Mise à jour instantanée de l'UI (Optimiste)
+      setHistory(prev => prev.map(h => h.id === id ? { ...h, isArchived: true } : h));
+      
+      // Appel API en arrière-plan
+      await historyApi.archive(id);
+      logAudit({ action: 'HISTORY_VALIDATE', entity: 'HistoriqueCalcul', entityId: id });
+    } catch (error) {
+      // Annulation si le backend plante
+      setHistory(prev => prev.map(h => h.id === id ? { ...h, isArchived: false } : h));
+      throw error;
+    }
+  };
+
   const addHistoryEntry = (entry: ConstraintHistoryEntry) => {
     setConstraintHistory(prev => {
       const newHistory = [entry, ...prev];
@@ -137,35 +151,16 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  // --- RENDU ---
   if (isLoading) {
     return (
-      <HistoryContext.Provider
-        value={{
-          history: [],
-          addCalculation,
-          deleteCalculation,
-          clearHistory,
-          constraintHistory, // On passe l'état actuel même si ça charge
-          addHistoryEntry,
-        }}
-      >
+      <HistoryContext.Provider value={{ history: [], addCalculation, deleteCalculation, clearHistory, archiveCalculation, constraintHistory, addHistoryEntry }}>
         {children}
       </HistoryContext.Provider>
     );
   }
 
   return (
-    <HistoryContext.Provider
-      value={{
-        history,
-        addCalculation,
-        deleteCalculation,
-        clearHistory,
-        constraintHistory,
-        addHistoryEntry,
-      }}
-    >
+    <HistoryContext.Provider value={{ history, addCalculation, deleteCalculation, clearHistory, archiveCalculation, constraintHistory, addHistoryEntry }}>
       {children}
     </HistoryContext.Provider>
   );

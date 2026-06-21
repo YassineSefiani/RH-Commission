@@ -69,4 +69,10 @@ public class HistoriqueController {
         historiqueService.viderHistorique();
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/archive")
+    public ResponseEntity<Void> archiverCalcul(@PathVariable Long id) {
+        historiqueService.archiverCalcul(id);
+        return ResponseEntity.ok().build();
+    }
 }

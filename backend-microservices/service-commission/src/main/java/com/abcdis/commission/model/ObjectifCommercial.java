@@ -39,6 +39,10 @@ public class ObjectifCommercial {
     @Column(nullable = false, length = 50)
     private String matricule;
 
+    // ✨ NOUVEAU CHAMP
+    @Column(name = "nom_complet", length = 150)
+    private String nomComplet;
+    
     @NotNull(message = "L'objectif est obligatoire")
     @PositiveOrZero(message = "L'objectif doit être >= 0")
     @Column(nullable = false)

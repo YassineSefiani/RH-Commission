@@ -4,8 +4,8 @@ import {
   FileSpreadsheet,
   UploadCloud,
   CheckCircle2,
-  ArrowRight,
   Loader2,
+  Target,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
@@ -18,9 +18,40 @@ import wallsBg from '../assets/walls.jpg';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+// Utilitaire de normalisation des périodes pour correspondre au format attendu YYYY-MM
+const formatPeriodeToYYYYMM = (raw: string, fallbackPeriod: string) => {
+  const s = String(raw).toUpperCase().trim();
+  let year = "2026";
+  let month = "01";
+  
+  const yearMatch = s.match(/\d{4}/);
+  if (yearMatch) year = yearMatch[0];
+  else {
+    const fallbackYearMatch = fallbackPeriod.match(/\d{4}/);
+    if (fallbackYearMatch) year = fallbackYearMatch[0];
+  }
+
+  if (s.includes('JAN') || s.includes('01')) month = '01';
+  else if (s.includes('FEV') || s.includes('FÉV') || s.includes('02')) month = '02';
+  else if (s.includes('MAR') || s.includes('03')) month = '03';
+  else if (s.includes('AVR') || s.includes('04')) month = '04';
+  else if (s.includes('MAI') || s.includes('05')) month = '05';
+  else if (s.includes('JUN') || s.includes('JUIN') || s.includes('06')) month = '06';
+  else if (s.includes('JUL') || s.includes('JUIL') || s.includes('07')) month = '07';
+  else if (s.includes('AOU') || s.includes('AOÛ') || s.includes('08')) month = '08';
+  else if (s.includes('SEP') || s.includes('09')) month = '09';
+  else if (s.includes('OCT') || s.includes('10')) month = '10';
+  else if (s.includes('NOV') || s.includes('11')) month = '11';
+  else if (s.includes('DEC') || s.includes('DÉC') || s.includes('12')) month = '12';
+
+  return `${year}-${month}`;
+};
+
 export default function CalculationPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const objFileInputRef = useRef<HTMLInputElement | null>(null);
+  
   const [importedFileName, setImportedFileName] = useState<string>('');
   const { t } = useLang();
   const c = t.calculation;
@@ -72,8 +103,70 @@ export default function CalculationPage() {
   ];
 
   const [importing, setImporting] = useState(false);
-  const [importStats, setImportStats] = useState<{ objectifs: number; realisations: number; triage: number; volumes: number } | null>(null);
+  const [importingObj, setImportingObj] = useState(false);
+  const [importStats, setImportStats] = useState<{ realisations: number; triage: number; volumes: number } | null>(null);
 
+  const getVal = (row: any, keyword: string) => {
+    const key = Object.keys(row).find(k => 
+      k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(keyword)
+    );
+    return key ? row[key] : undefined;
+  };
+
+  // ─── 1. IMPORTATION ET SAUVEGARDE STRICTE DES OBJECTIFS (BDD) ──────────
+  const handleObjImportClick = () => {
+    objFileInputRef.current?.click();
+  };
+
+  const handleObjFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setImportingObj(true);
+    try {
+      const file = files[0];
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]]; 
+      const dataJson = XLSX.utils.sheet_to_json<any>(sheet);
+
+      const objPayload = dataJson.map(r => ({
+        periode: formatPeriodeToYYYYMM(getVal(r, 'periode') ?? selectedPeriod, selectedPeriod),
+        carte: String(getVal(r, 'carte') ?? ''),
+        matricule: String(getVal(r, 'matricule') ?? ''),
+        nomComplet: String(getVal(r, 'nom complet') ?? getVal(r, 'nom') ?? ''),
+        target: Number(getVal(r, 'target') ?? getVal(r, 'objectif') ?? 0),
+      })).filter(r => r.matricule && r.carte);
+
+      const role = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').superRole || ''; } catch { return ''; } })();
+      const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}) };
+
+      const res = await fetch(`${API_BASE_URL}/import/objectifs/batch`, {
+        method: 'POST',
+        headers: commonHeaders,
+        body: JSON.stringify(objPayload),
+      });
+
+      if (!res.ok) {
+        throw new Error("L'API d'importation des objectifs a renvoyé un échec.");
+      }
+
+      toast.success(`${objPayload.length} objectifs synchronisés avec succès en base de données !`);
+      logAudit({
+        action: 'IMPORT_OBJECTIFS_SQL',
+        entity: 'Calcul',
+        details: `${objPayload.length} objectifs persistés en BDD pour la période`,
+      });
+    } catch (err: any) {
+      console.error('Erreur import Objectifs:', err);
+      toast.error(err?.message ?? 'Échec de la sauvegarde des objectifs');
+    } finally {
+      setImportingObj(false);
+      if (objFileInputRef.current) objFileInputRef.current.value = '';
+    }
+  };
+
+  // ─── 2. IMPORTATION CLASSIQUE POUR SIMULATION (Réal, Triage, Volumes) ───
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
@@ -87,41 +180,22 @@ export default function CalculationPage() {
     setImportStats(null);
     
     try {
-      let allObjectifs: any[] = [];
       let allRealisations: any[] = [];
       let allTriages: any[] = [];
       let allVolumes: any[] = [];
 
-      // ✨ CORRECTION : Routage strict par nom de fichier pour éviter les mélanges
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const fileName = file.name.toLowerCase();
         const data = await file.arrayBuffer();
         const wb = XLSX.read(data, { type: 'array' });
-        
-        // On prend toujours la première feuille du fichier
         const sheet = wb.Sheets[wb.SheetNames[0]]; 
         const dataJson = XLSX.utils.sheet_to_json<any>(sheet);
 
-        if (fileName.includes('obj')) allObjectifs.push(...dataJson);
-        else if (fileName.includes('real') || fileName.includes('réal')) allRealisations.push(...dataJson);
+        if (fileName.includes('real') || fileName.includes('réal')) allRealisations.push(...dataJson);
         else if (fileName.includes('tri')) allTriages.push(...dataJson);
         else if (fileName.includes('vol') || fileName.includes('coke')) allVolumes.push(...dataJson);
       }
-
-      const getVal = (row: any, keyword: string) => {
-        const key = Object.keys(row).find(k => 
-          k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(keyword)
-        );
-        return key ? row[key] : undefined;
-      };
-
-      const objPayload = allObjectifs.map(r => ({
-        periode: String(getVal(r, 'periode') ?? 'AVRIL/2026'),
-        carte: String(getVal(r, 'carte') ?? ''),
-        matricule: String(getVal(r, 'matricule') ?? ''),
-        target: Number(getVal(r, 'target') ?? getVal(r, 'objectif') ?? 0),
-      })).filter(r => r.matricule);
 
       const realPayload = allRealisations.map(r => ({
         periode: String(getVal(r, 'periode') ?? 'AVRIL/2026'),
@@ -145,22 +219,18 @@ export default function CalculationPage() {
         const charge = Number(getVal(r, 'charge') ?? r['Volume chargé (En CP)'] ?? 0);
         const retourne = Number(getVal(r, 'retourne') ?? r['Volume retourné (en CP)'] ?? 0);
         const matricule = String(getVal(r, 'matricule') ?? '');
-        
-        // ✨ NOUVEAU : On extrait explicitement le rôle depuis le fichier Excel
         const roleExtrait = String(getVal(r, 'role') ?? r.Role ?? r.role ?? '');
 
         return {
           date: String(getVal(r, 'date') ?? 'AVRIL/2026'),
           matricule: matricule,
-          Role: roleExtrait, // Ce champ est maintenant sauvegardé pour le moteur de calcul !
+          Role: roleExtrait,
           volumeCharge: charge,
           volumeRetourne: retourne,
           volumeDistribue: charge - retourne,
           tauxRetour: charge > 0 ? (retourne / charge) * 100 : 0
         };
       }).filter(r => r.matricule);
-
-      console.log('📊 [DEBUG EXCEL] Volumes extraits avec succès :', volPayload);
 
       const role = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').superRole || ''; } catch { return ''; } })();
       const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}) };
@@ -173,7 +243,7 @@ export default function CalculationPage() {
           body: JSON.stringify(body),
         });
         if (!res.ok) {
-          console.warn(`${path} API POST failed. Ignoring for simulation.`);
+          console.warn(`${path} API POST failed. On garde en cache local.`);
           return { ok: false, inserted: body.length };
         }
         const json = await res.json();
@@ -181,20 +251,17 @@ export default function CalculationPage() {
       }
 
       await Promise.all([
-        postBatch('objectifs', objPayload).catch(() => ({ inserted: objPayload.length })),
         postBatch('realisations', realPayload).catch(() => ({ inserted: realPayload.length })),
         postBatch('triage', triPayload).catch(() => ({ inserted: triPayload.length })),
       ]);
 
       localStorage.setItem('simulation_metrics', JSON.stringify({
-        objPayload,
         realPayload,
         triPayload,
         volPayload
       }));
 
       setImportStats({ 
-        objectifs: objPayload.length, 
         realisations: realPayload.length, 
         triage: triPayload.length,
         volumes: volPayload.length
@@ -203,10 +270,10 @@ export default function CalculationPage() {
       logAudit({
         action: 'IMPORT_EXCEL_SIMULATION',
         entity: 'Calcul',
-        details: `${files.length} fichiers mis en cache pour simulation`,
+        details: `${files.length} fichiers chargés pour simulation de calcul`,
       });
 
-      toast.success(`Import Multiple OK : ${objPayload.length} obj, ${realPayload.length} réal, ${triPayload.length} tri, ${volPayload.length} vol`);
+      toast.success(`Simulation chargée : ${realPayload.length} réal, ${triPayload.length} tri, ${volPayload.length} volumes`);
     } catch (err: any) {
       console.error('Erreur import Excel:', err);
       toast.error(err?.message ?? 'Échec de l\'import Excel');
@@ -221,7 +288,7 @@ export default function CalculationPage() {
   };
 
   const hasImport = !!importStats && !!importedFileName;
-  const importedRowsCount = importStats ? importStats.objectifs + importStats.realisations + importStats.triage + importStats.volumes : 0;
+  const importedRowsCount = importStats ? importStats.realisations + importStats.triage + importStats.volumes : 0;
   const lastImportAuthor = (() => {
     try {
       const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -244,6 +311,7 @@ export default function CalculationPage() {
           <h2 className="text-lg font-semibold text-gray-900">Source des données</h2>
         </div>
 
+        {/* Inputs masqués pour la gestion de fichiers Excel */}
         <input 
           ref={fileInputRef} 
           type="file" 
@@ -252,8 +320,32 @@ export default function CalculationPage() {
           className="hidden" 
           onChange={handleFileSelected} 
         />
+        <input 
+          ref={objFileInputRef} 
+          type="file" 
+          accept=".xlsx,.xls,.csv" 
+          className="hidden" 
+          onChange={handleObjFileSelected} 
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Bloc d'importation unique des objectifs en base */}
+          <button
+            type="button"
+            onClick={handleObjImportClick}
+            disabled={importingObj}
+            className="group relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/10 px-6 py-12 text-center transition-all hover:border-orange-500 hover:bg-orange-50/40 disabled:cursor-wait disabled:opacity-70"
+          >
+            <div className="rounded-full bg-orange-100 p-4 transition-colors group-hover:bg-orange-600 group-hover:text-white">
+              {importingObj ? <Loader2 className="h-7 w-7 text-orange-600 animate-spin" /> : <Target className="h-7 w-7 text-orange-600 group-hover:text-white" strokeWidth={1.5} />}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-gray-900">1. Importer les Objectifs Mensuels (Base SQL)</p>
+              <p className="text-xs text-gray-500">Persiste et met à jour définitivement le référentiel des cibles</p>
+            </div>
+          </button>
+
+          {/* Bloc d'importation des fichiers de métriques terrain */}
           <button
             type="button"
             onClick={handleImportClick}
@@ -264,46 +356,43 @@ export default function CalculationPage() {
               {importing ? <Loader2 className="h-7 w-7 animate-spin" strokeWidth={1.5} /> : <UploadCloud className="h-7 w-7" strokeWidth={1.5} />}
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-gray-900">{importing ? 'Import en cours…' : 'Importer un ou plusieurs fichiers'}</p>
-              <p className="text-xs text-gray-500">{importing ? 'Lecture et extraction' : 'Glissez vos fichiers ici, ou cliquez pour parcourir'}</p>
+              <p className="text-sm font-bold text-gray-900">2. Importer les Métriques (Réal, Triage, Volumes)</p>
+              <p className="text-xs text-gray-500">Glissez-déposez vos fichiers pour lancer la simulation du mois</p>
             </div>
           </button>
+        </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-[10px] font-semibold tracking-[0.18em] text-gray-400">DERNIER IMPORT</span>
-              {hasImport && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-100">
-                  <CheckCircle2 className="h-3 w-3" /> Traité
-                </span>
-              )}
-            </div>
-
-            {hasImport ? (
-              <>
-                <div className="flex items-start gap-3">
-                  <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
-                    <FileSpreadsheet className="h-6 w-6" strokeWidth={1.5} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-gray-900">{lastImportFile}</p>
-                    <p className="text-xs text-gray-500">{importedRowsCount} lignes · {lastImportDate}</p>
-                    <p className="mt-0.5 text-xs text-gray-400">Importé par {lastImportAuthor}</p>
-                    {importStats && (
-                      <p className="mt-1 text-[11px] text-gray-500 font-medium">
-                        {importStats.objectifs} obj · {importStats.realisations} réal · {importStats.triage} triage · {importStats.volumes} vols
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex h-32 flex-col items-center justify-center text-center">
-                <FileSpreadsheet className="h-8 w-8 text-gray-200" strokeWidth={1.5} />
-                <p className="mt-2 text-xs text-gray-400">Aucun import pour le moment.</p>
-              </div>
+        <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-[0.18em] text-gray-400">DERNICR IMPORT SIMULATION</span>
+            {hasImport && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-100">
+                <CheckCircle2 className="h-3 w-3" /> Traité
+              </span>
             )}
           </div>
+
+          {hasImport ? (
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
+                <FileSpreadsheet className="h-6 w-6" strokeWidth={1.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-gray-900">{lastImportFile}</p>
+                <p className="text-xs text-gray-500">{importedRowsCount} lignes cumulées · {lastImportDate}</p>
+                <p className="mt-0.5 text-xs text-gray-400">Importé par {lastImportAuthor}</p>
+                {importStats && (
+                  <p className="mt-1 text-[11px] text-gray-500 font-medium">
+                    {importStats.realisations} réalisations · {importStats.triage} triage · {importStats.volumes} volumes
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-16 flex-col items-center justify-center text-center">
+              <p className="text-xs text-gray-400">Aucune simulation chargée dans la session courante.</p>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -351,6 +440,7 @@ export default function CalculationPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-semibold text-gray-900">{card.name}</h3>
+                    <p className="text-xs text-gray-400 truncate">{card.sector} · {card.rate}</p>
                   </div>
                 </div>
               </div>

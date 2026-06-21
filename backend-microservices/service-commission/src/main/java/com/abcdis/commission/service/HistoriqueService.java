@@ -130,6 +130,9 @@ public class HistoriqueService {
                 .mois(mois)
                 .annee(annee)
                 .sourceVersion(sourceVersion)
+                .batchId(request.batchId())
+                .simulationName(request.simulationName())
+                .isArchived(request.isArchived() != null ? request.isArchived() : false) // ✨ Ajout ici
                 .build();
 
         return historiqueRepository.save(historique);
@@ -174,6 +177,14 @@ public class HistoriqueService {
     @Transactional
     public void viderHistorique() {
         historiqueRepository.deleteAll();
+    }
+
+    @Transactional
+    public void archiverCalcul(Long id) {
+        HistoriqueCalcul calcul = trouverParId(id);
+        calcul.setIsArchived(true);
+        historiqueRepository.save(calcul);
+        log.info("Calcul ID {} validé et archivé avec succès.", id);
     }
 
     /**

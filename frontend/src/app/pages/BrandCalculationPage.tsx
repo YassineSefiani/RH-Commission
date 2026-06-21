@@ -21,14 +21,14 @@ interface Employee {
 type CalculationDetail = {
   name: string;
   amount: number;
-  type: 'commission' | 'bonus';
+  type: 'commission' | 'bonus' | 'penalty';
 };
 
 type EmployeeCalculationResult = {
   employee: Employee;
   commissions: number;
   bonuses: number;
-  finalSalary: number; // Sera égal à commissions + bonuses
+  finalSalary: number;
   details: CalculationDetail[];
 };
 
@@ -36,7 +36,10 @@ export default function BrandCalculationPage() {
   const { brand = '' } = useParams();
   const navigate = useNavigate();
   const { constraints } = useConstraints();
-  const { addCalculation } = useHistory();
+  
+  // Récupération de l'historique et de la méthode d'ajout
+  const { history = [], addCalculation } = useHistory();
+  
   const { presenceRecords } = usePresence(); 
   const decodedBrand = decodeURIComponent(brand);
   const { t } = useLang();
@@ -53,28 +56,28 @@ export default function BrandCalculationPage() {
       try {
         setLoading(true);
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-        
-        let response = await fetch(`${apiBase}/personnel/carte/${encodeURIComponent(decodedBrand)}`);
+        const targetBrand = decodedBrand.trim().toUpperCase();
+
+        let response = await fetch(`${apiBase}/personnel`);
         let data = [];
         
         if (response.ok) {
-          data = await response.json();
-        }
-
-        if (data.length === 0) {
-          const allPersonnelResponse = await fetch(`${apiBase}/personnel`);
-          if (allPersonnelResponse.ok) {
-            const allPersonnel = await allPersonnelResponse.json();
-            const targetBrand = decodedBrand.trim().toUpperCase();
-            data = allPersonnel.filter((emp: Employee) => 
-              emp.carte && emp.carte.trim().toUpperCase() === targetBrand
-            );
-          }
+          const allPersonnel = await response.json();
+          data = allPersonnel.filter((emp: Employee) => {
+            if (!emp.carte) return false;
+            const empCarte = emp.carte.trim().toUpperCase();
+            
+            if (targetBrand.includes('FERRERO') && empCarte.includes('FERRERO')) return true;
+            if (targetBrand.includes('COCA') && empCarte.includes('COCA')) return true;
+            if (targetBrand.includes('WALL') && empCarte.includes('WALL')) return true;
+            
+            return empCarte === targetBrand;
+          });
         }
 
         setBrandEmployees(data.filter((emp: Employee) => emp.actif));
       } catch (error) {
-        console.error("Erreur récupération:", error);
+        console.error("Erreur récupération du personnel:", error);
         toast.error("Impossible de charger les employés");
       } finally {
         setLoading(false);
@@ -89,8 +92,6 @@ export default function BrandCalculationPage() {
   const handleCalculateAll = async () => {
     setIsCalculating(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 600));
-
       if (!constraints || constraints.length === 0) {
         toast.error("Aucune règle de calcul disponible dans le contexte.");
         setIsCalculating(false);
@@ -113,8 +114,40 @@ export default function BrandCalculationPage() {
         return;
       }
 
+      // Logique de numérotation de la simulation par lot
+      const brandHistory = history.filter(h => (h.carte || '').toUpperCase() === decodedBrand.toUpperCase());
+      const uniqueBatches = new Set(brandHistory.map(h => h.batchId).filter(Boolean));
+      const simNumber = uniqueBatches.size + 1;
+      
+      const currentBatchId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+      const simulationName = `Simulation ${simNumber} - ${decodedBrand}`;
+
+      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+      
+      let fetchedObjectifs: any[] = [];
+      try {
+        const objRes = await fetch(`${apiBase}/import/objectifs`);
+        if (objRes.ok) {
+          const allObjectives = await objRes.json();
+          const urlBrand = decodedBrand.toUpperCase();
+          
+          fetchedObjectifs = allObjectives.filter((o: any) => {
+            const dbCarte = (o.carte || '').toUpperCase();
+            if (urlBrand.includes('FERRERO') && dbCarte.includes('FERRERO')) return true;
+            if (urlBrand.includes('COCA') && dbCarte.includes('COCA')) return true;
+            if (urlBrand.includes('WALL') && dbCarte.includes('WALL')) return true;
+            return dbCarte === urlBrand;
+          });
+        }
+      } catch (err) {
+        console.error("Erreur API Objectifs:", err);
+      }
+
+      const today = new Date();
+      const currentPeriodStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
       const simulationData = JSON.parse(localStorage.getItem('simulation_metrics') || '{}');
-      const { objPayload = [], realPayload = [], triPayload = [], volPayload = [] } = simulationData;
+      const { realPayload = [], triPayload = [], volPayload = [] } = simulationData;
 
       const brandResults = brandEmployees.map(employee => {
         let commissions = 0;
@@ -123,14 +156,12 @@ export default function BrandCalculationPage() {
 
         const empMatricule = String(employee.matricule || employee.id).trim().toUpperCase();
 
-        const empObjectif = objPayload.find((o: any) => String(o.matricule).trim().toUpperCase() === empMatricule) || { target: 0 };
+        const empObjectif = fetchedObjectifs.find((o: any) => String(o.matricule).trim().toUpperCase() === empMatricule) || { target: 0 };
         const empRealisation = realPayload.find((r: any) => String(r.matricule).trim().toUpperCase() === empMatricule) || { caRealise: 0 };
         const empTriage = triPayload.find((t: any) => String(t.matricule).trim().toUpperCase() === empMatricule) || { note: 0 };
         
-        // 1. Récupérer TOUTES les lignes Excel de l'employé
         const empVolumeRecords = volPayload.filter((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule);
 
-        // 2. Grouper les volumes par Rôle exercé (vérifié STRICTEMENT via la fiche de présence par date)
         const roleSegments: Record<string, { volume: number }> = {};
         let totalVolume = 0;
         let globalTauxRetour = 0;
@@ -142,32 +173,23 @@ export default function BrandCalculationPage() {
             let dailyRole = String(employee.role || '').trim().toUpperCase();
             const dailyVol = Number(record.volumeDistribue || record['Volume chargé (En CP)'] || 0);
 
-            // --- DEBUT : PARSING ROBUSTE DE LA DATE EXCEL ---
             const rawDate = record.Date || record.date || record['Date'] || '';
             let formattedDate = '';
             const rawStr = String(rawDate).trim();
             
-            // Regex pour vérifier si la chaîne est entièrement composée de chiffres (ex: "46182")
             if (/^\d+$/.test(rawStr)) {
               const serial = parseInt(rawStr, 10);
-              // L'origine d'Excel est le 30 Décembre 1899. 
-              // Utilisation de Date.UTC pour éviter les sauts de jours dus aux fuseaux horaires.
               const dateObj = new Date(Date.UTC(1899, 11, 30 + serial));
               formattedDate = dateObj.toISOString().split('T')[0];
             } else if (rawStr.includes('/')) {
-              // Format MM/JJ/AAAA (ex: 6/9/2026) -> AAAA-MM-JJ
               const parts = rawStr.split('/');
               if (parts.length === 3) {
                 formattedDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
               }
             } else if (rawStr.includes('-')) {
               formattedDate = rawStr.split('T')[0];
-            } else if (rawDate instanceof Date) {
-              formattedDate = rawDate.toISOString().split('T')[0];
             }
-            // --- FIN PARSING DATE ---
 
-            // Recherche de la présence pour CETTE date précise
             const dailyPresence = presenceRecords.find(p => p.date === formattedDate);
 
             if (dailyPresence) {
@@ -180,9 +202,11 @@ export default function BrandCalculationPage() {
               } else if (empMatricule === mat2 || empMatricule === mat3) {
                 dailyRole = 'AIDE LIVREUR';
               }
-            }
 
-            console.log(`👤 [CHECK DATE] Matricule: ${empMatricule} | Date Brute: ${rawStr} | Date Formatée: ${formattedDate} | Rôle Attribué: ${dailyRole} | Trouvé dans Présence: ${!!dailyPresence}`);
+              if (decodedBrand.toUpperCase().includes('COCA') && dailyPresence.canal?.trim().toUpperCase() === 'GMS') {
+                dailyRole = `${dailyRole} GMS`;
+              }
+            }
 
             if (!roleSegments[dailyRole]) {
               roleSegments[dailyRole] = { volume: 0 };
@@ -191,7 +215,20 @@ export default function BrandCalculationPage() {
             totalVolume += dailyVol;
           });
         } else {
-          const fallbackRole = String(employee.role || '').trim().toUpperCase();
+          let fallbackRole = String(employee.role || '').trim().toUpperCase();
+          
+          if (decodedBrand.toUpperCase().includes('COCA')) {
+            const hasGmsPresenceThisMonth = presenceRecords.some(p => {
+              const mat1 = (p.livreur1Matricule || '').trim().toUpperCase();
+              const mat2 = (p.livreur2Matricule || '').trim().toUpperCase();
+              const mat3 = (p.livreur3Matricule || '').trim().toUpperCase();
+              return p.canal?.trim().toUpperCase() === 'GMS' && (empMatricule === mat1 || empMatricule === mat2 || empMatricule === mat3);
+            });
+            if (hasGmsPresenceThisMonth) {
+              fallbackRole = `${fallbackRole} GMS`;
+            }
+          }
+
           const fallbackVolData = volPayload.find((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule) || { volumeDistribue: 0, tauxRetour: 0 };
           totalVolume = Number(fallbackVolData.volumeDistribue || 0);
           globalTauxRetour = fallbackVolData.tauxRetour || 0;
@@ -211,7 +248,6 @@ export default function BrandCalculationPage() {
           tauxRealisationGlobal: 105.0 
         };
 
-        // 3. Évaluation des règles
         activeConstraints.forEach(constraint => {
           const nomRegle = String(constraint.name || constraint.nom || 'Règle inconnue').toUpperCase(); 
           const conditionStr = String(constraint.condition || '').toUpperCase();
@@ -245,9 +281,7 @@ export default function BrandCalculationPage() {
                   roleJoue, CONTRAT, metrics.joursTravailles, metrics.tauxRetour, 
                   metrics.tauxTriage, metrics.tauxRealisation, metrics.tauxRealisationGlobal
                 );
-              } catch (e) {
-                console.error(`❌ Échec de lecture de la règle [${nomRegle}]:`, e);
-              }
+              } catch (e) {}
 
               if (conditionVerifiee && stats.volume > 0) {
                 const segmentAmount = valeur * stats.volume;
@@ -297,9 +331,6 @@ export default function BrandCalculationPage() {
 
         const finalSalary = commissions + bonuses;
 
-        const today = new Date();
-        const periode = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-
         addCalculation({
           employeeName: `${employee.prenom} ${employee.nom}`,
           employeeRole: employee.role,
@@ -313,14 +344,17 @@ export default function BrandCalculationPage() {
           details,
           carte: decodedBrand,
           matricule: employee.matricule || employee.id,
-          periode,
+          periode: currentPeriodStr,
+          forcerRecalcul: true, 
+          batchId: currentBatchId,
+          simulationName: simulationName,
         });
 
         return { employee, commissions, bonuses, finalSalary, details };
       });
 
       setResults(brandResults);
-      toast.success("Calcul appliqué avec succès !");
+      toast.success(`${simulationName} exécutée avec succès !`);
     } catch (error) {
       console.error("Erreur générale calcul:", error);
       toast.error("Une erreur est survenue lors de l'exécution du calcul.");
@@ -378,7 +412,7 @@ export default function BrandCalculationPage() {
 
             <button
               onClick={handleCalculateAll}
-              disabled={loading || brandEmployees.length === 0}
+              disabled={loading || brandEmployees.length === 0 || isCalculating}
               className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white py-3 px-4 rounded-lg font-bold hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCalculating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calculator className="w-5 h-5" />}
@@ -392,9 +426,7 @@ export default function BrandCalculationPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 h-full flex flex-col items-center justify-center text-center">
               <Calculator className="w-16 h-16 text-gray-200 mb-4" />
               <h3 className="text-lg font-bold text-gray-900 mb-2">{b.noCalc}</h3>
-              <p className="text-gray-500 max-w-sm">
-                {b.noCalcSub}
-              </p>
+              <p className="text-gray-500 max-w-sm">{b.noCalcSub}</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
@@ -419,7 +451,7 @@ export default function BrandCalculationPage() {
                 {activeTab === 'detail' ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     {results.map((res, idx) => (
-                      <div key={idx} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                      <div key={idx} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                         <div className="mb-4">
                           <h4 className="font-bold text-gray-900 text-lg">{res.employee.prenom} {res.employee.nom}</h4>
                           <p className="text-xs text-gray-500 mt-1 uppercase font-semibold">{res.employee.role} • {res.employee.natureContrat}</p>
@@ -427,13 +459,12 @@ export default function BrandCalculationPage() {
                         <div className="text-3xl font-black text-orange-500 mb-6">
                           {formatCurrency(res.finalSalary)}
                         </div>
-                        {/* Grid en 2 colonnes pour occuper tout l'espace disponible */}
                         <div className="grid grid-cols-2 gap-3 w-full">
-                          <div className="flex-1 bg-green-50 p-3 rounded-xl border border-green-100 text-center">
+                          <div className="bg-green-50 p-3 rounded-xl border border-green-100 text-center">
                             <p className="text-[10px] text-green-600 uppercase font-bold mb-1">{b.commissions}</p>
                             <p className="font-bold text-green-700 text-sm">{formatCurrency(res.commissions)}</p>
                           </div>
-                          <div className="flex-1 bg-green-50 p-3 rounded-xl border border-green-100 text-center">
+                          <div className="bg-green-50 p-3 rounded-xl border border-green-100 text-center">
                             <p className="text-[10px] text-green-600 uppercase font-bold mb-1">{b.bonus}</p>
                             <p className="font-bold text-green-700 text-sm">{formatCurrency(res.bonuses)}</p>
                           </div>
@@ -448,17 +479,12 @@ export default function BrandCalculationPage() {
                                   <span className="text-gray-700 flex-1 truncate pr-2" title={detail.name}>
                                     • {detail.name}
                                   </span>
-                                  <span className={`font-semibold whitespace-nowrap ${detail.type === 'penalty' ? 'text-red-600' : 'text-green-600'}`}>
-                                    {detail.type === 'penalty' ? '-' : '+'}{formatCurrency(detail.amount)}
+                                  <span className="font-semibold whitespace-nowrap text-green-600">
+                                    +{formatCurrency(detail.amount)}
                                   </span>
                                 </li>
                               ))}
                             </ul>
-                          </div>
-                        )}
-                        {res.details?.length === 0 && (
-                          <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-                            <span className="text-xs text-gray-400 italic">Aucune règle supplémentaire appliquée</span>
                           </div>
                         )}
                       </div>
@@ -470,10 +496,8 @@ export default function BrandCalculationPage() {
                       <thead className="bg-gray-50">
                         <tr className="border-b border-gray-200 text-xs text-gray-600 uppercase tracking-wider">
                           <th className="p-4 font-semibold">{b.colEmployee}</th>
-                          <th className="p-4 font-semibold">{b.colBase}</th>
                           <th className="p-4 font-semibold">{b.colComm}</th>
                           <th className="p-4 font-semibold">{b.colBonus}</th>
-                          <th className="p-4 font-semibold">{b.colPenal}</th>
                           <th className="p-4 font-bold text-orange-600">{b.colNet}</th>
                         </tr>
                       </thead>

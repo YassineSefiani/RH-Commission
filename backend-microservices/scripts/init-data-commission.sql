@@ -53,11 +53,7 @@ VALUES ('Retour Coke 1% à 2%', 'Coca Cola', 150.0, 'role == ''Livreur'' AND con
 
 IF NOT EXISTS (SELECT 1 FROM contraintes WHERE nom = 'Triage Coke Livreur >70%')
 INSERT INTO contraintes (nom, carte, valeur, condition, type_valeur, actif, date_creation, date_modification)
-VALUES ('Triage Coke Livreur >70%', 'Coca Cola', 200.0, 'role == ''Livreur'' AND contrat == ''CDI'' AND jours_travailles > 15 AND taux_triage > 70.0', 'FIXE', 1, GETDATE(), GETDATE());
-
-IF NOT EXISTS (SELECT 1 FROM contraintes WHERE nom = 'Triage Coke Aide Livreur >70%')
-INSERT INTO contraintes (nom, carte, valeur, condition, type_valeur, actif, date_creation, date_modification)
-VALUES ('Triage Coke Aide Livreur >70%', 'Coca Cola', 200.0, 'role LIKE ''Aide livreur%'' AND contrat == ''CDI'' AND jours_travailles > 15 AND taux_triage > 70.0', 'FIXE', 1, GETDATE(), GETDATE());
+VALUES ('Triage Coke >70%', 'Coca Cola', 200.0, 'contrat == ''CDI'' AND jours_travailles > 15 AND taux_triage > 70.0', 'FIXE', 1, GETDATE(), GETDATE());
 
 -- NOTE: Commission de Congé Coke -> En attente de confirmation par Hamza. (Non insérée)
 

@@ -94,6 +94,18 @@ public class HistoriqueCalcul {
     @Column(nullable = false)
     private Integer annee;
 
+    @JsonProperty("batchId")
+    @Column(name = "batch_id", length = 100)
+    private String batchId;
+
+    @JsonProperty("simulationName")
+    @Column(name = "simulation_name", length = 100)
+    private String simulationName;
+    
+    @JsonProperty("isArchived")
+    @Column(name = "is_archived", nullable = false, columnDefinition = "boolean default false")
+    private Boolean isArchived = false;
+
     @PrePersist
     protected void avantCreation() {
         if (this.dateCalcul == null) {
