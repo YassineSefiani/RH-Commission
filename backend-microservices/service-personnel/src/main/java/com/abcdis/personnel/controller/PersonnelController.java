@@ -3,12 +3,18 @@ package com.abcdis.personnel.controller;
 import com.abcdis.personnel.dto.PersonnelStatsDTO;
 import com.abcdis.personnel.model.Personnel;
 import com.abcdis.personnel.service.PersonnelService;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.List;
 
 /**
@@ -78,6 +84,18 @@ public class PersonnelController {
     @PostMapping
     public ResponseEntity<Personnel> creer(@Valid @RequestBody Personnel personnel) {
         return ResponseEntity.status(HttpStatus.CREATED).body(personnelService.creer(personnel));
+    }
+
+    @PostMapping(value = "/import")
+    public ResponseEntity<List<Personnel>> importerExcel(HttpServletRequest request) {
+        try {
+            // Lecture directe du flux entrant
+            List<Personnel> personnelImporte = personnelService.importerDepuisFlux(request.getInputStream());
+            return ResponseEntity.status(HttpStatus.CREATED).body(personnelImporte);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PutMapping("/{id}")

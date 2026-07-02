@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePersonnel } from '../context/PersonnelContext';
-import { Personnel } from '../services/personnelApi';
+// Ajout de personnelApi dans les imports
+import { personnelApi, Personnel } from '../services/personnelApi';
 import { usePresence } from '../context/PresenceContext';
 import { useUser } from '../context/UserContext';
 import { useLang } from '../context/LangContext';
@@ -46,7 +47,9 @@ import {
   ChevronRight,
   RotateCcw,
   Calendar,
+  Upload,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const NATURE_CONTRATS = ['CDI', 'Int'];
 
@@ -140,6 +143,10 @@ export default function PersonnelPage() {
   const [availableVilles, setAvailableVilles] = useState<string[]>([]);
   const [formData, setFormData] = useState({ ...emptyForm });
   const [presenceForm, setPresenceForm] = useState({ ...emptyPresenceForm });
+
+  // États pour l'import Excel
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setAvailableCartes(prev => {
@@ -293,6 +300,28 @@ export default function PersonnelPage() {
     });
   };
 
+  // Fonction de gestion d'upload avec personnelApi
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsImporting(true);
+      
+      // Appel via l'API unifiée
+      await personnelApi.importExcel(file);
+
+      toast.success("Personnel importé avec succès !"); // Utilisez toast si vous l'avez
+      window.location.reload(); 
+    } catch (error) {
+      console.error("Erreur d'import", error);
+      alert("Erreur lors de l'import. Vérifiez que votre fichier Excel contient les 9 colonnes dans l'ordre : Matricule, Contrat, Nom, Prénom, Carte, Fonction, Rôle, Téléphone, Ville.");
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const displayedPersonnel = personnel.filter(person => {
     if (statusFilter === 'all') return true;
     if (statusFilter === 'actif') return person.actif === true;
@@ -318,8 +347,28 @@ export default function PersonnelPage() {
               {p.presenceSheet}
             </button>
           )}
-          {/* Modification ici : ajout de la vérification pour ADMIN */}
-            {(user?.superRole === 'RH' || user?.superRole === 'ADMIN') && (
+          
+          {(user?.superRole === 'RH' || user?.superRole === 'ADMIN') && (
+            <>
+              {/* Input caché pour l'import Excel */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".xlsx"
+                onChange={handleFileUpload} // Assurez-vous que cette fonction appelle bien personnelApi.importExcel(file)
+              />
+              
+              {/* Bouton pour déclencher l'import */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                {isImporting ? "Importation..." : "Importer Excel"}
+              </button>
+
               <button
                 onClick={openAdd}
                 className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-lg transition-colors"
@@ -327,7 +376,8 @@ export default function PersonnelPage() {
                 <UserPlus className="w-4 h-4" />
                 {p.addProfile}
               </button>
-            )}
+            </>
+          )}
         </div>
       </div>
 
@@ -526,7 +576,6 @@ export default function PersonnelPage() {
               </div>
 
               <DialogFooter className="flex gap-2 sm:justify-between">
-                {/* NOUVEAU: Les boutons de modification/suppression du personnel ne sont visibles que par les RH */}
                 {user?.superRole === 'RH' && (
                   <>
                     <button
@@ -552,7 +601,6 @@ export default function PersonnelPage() {
                     </div>
                   </>
                 )}
-                {/* Fallback si l'utilisateur n'est pas RH (par exemple Dispatcher) on peut ajouter un bouton fermer */}
                 {user?.superRole !== 'RH' && (
                   <div className="flex justify-end w-full">
                      <button

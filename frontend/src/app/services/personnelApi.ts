@@ -176,7 +176,24 @@ export const personnelApi = {
     });
     await handleResponse<void>(response);
   },
-};
+
+  // POST /api/personnel/import
+  importExcel: async (file: File): Promise<ApiPersonnel[]> => {
+    // Lecture brute des octets du fichier
+    const arrayBuffer = await file.arrayBuffer();
+
+    const response = await fetch(`${API_BASE_URL}/personnel/import`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream', // On indique au serveur que ce sont des données brutes
+        'X-File-Name': encodeURIComponent(file.name) // On passe le nom via un header personnalisé
+      },
+      body: arrayBuffer,
+    });
+    
+    return handleResponse<ApiPersonnel[]>(response);
+  },
+}; // <-- L'objet personnelApi est fermé ici
 
 // ============================================
 // MAPPERS - Conversion entre API et Frontend
