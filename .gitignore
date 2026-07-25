@@ -11,3 +11,7 @@ backend/service-presence/target/
 
 # Worktrees
 .worktrees/
+
+# Secrets locaux (jamais committés)
+.env.neon.local
+backend-microservices/.env.neon.local
