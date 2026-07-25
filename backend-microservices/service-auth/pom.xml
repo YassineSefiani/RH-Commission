@@ -51,10 +51,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-        <!-- Pilote JDBC PostgreSQL -->
+        <!-- Pilote JDBC PostgreSQL (version épinglée: le BOM Spring Boot 3.2.4 gère
+             42.6.2, mais Maven Central est inaccessible sur cette machine pour cette
+             version précise - PKIX path building failed. 42.7.8 est déjà en cache
+             local et corrige aussi CVE-2024-1597, fixée en 42.6.1+) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <version>42.7.8</version>
             <scope>runtime</scope>
         </dependency>
         <!-- JWT (JSON Web Token) pour l'authentification sans session -->
