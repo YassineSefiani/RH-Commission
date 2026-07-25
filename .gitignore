@@ -8,3 +8,6 @@ backend/service-personnel/target/
 backend/service-presence/target/
 *.class
 .claude/
+
+# Worktrees
+.worktrees/
