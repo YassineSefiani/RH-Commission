@@ -50,7 +50,7 @@ WHERE NOT EXISTS (SELECT 1 FROM contraintes WHERE nom = 'Retour Coke 1% à 2%');
 
 INSERT INTO contraintes (nom, carte, valeur, condition, type_valeur, actif, date_creation, date_modification)
 SELECT 'Triage Coke >70%', 'Coca Cola', 200.0, 'contrat == ''CDI'' AND jours_travailles > 15 AND taux_triage > 70.0', 'FIXE', true, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM contraintes WHERE nom = 'Triage Coke >70%');
+WHERE NOT EXISTS (SELECT 1 FROM contraintes WHERE nom = 'Triage Coke Livreur >70%');
 
 -- NOTE: Commission de Congé Coke -> En attente de confirmation par Hamza. (Non insérée)
 
