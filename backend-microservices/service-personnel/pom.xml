@@ -55,7 +55,7 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.3</version> <!-- Vérifiez la dernière version stable -->
+            <version>5.2.4</version> <!-- 5.2.3 indisponible (Maven Central injoignable pour cet artefact sur cette machine), 5.2.4 déjà en cache local -->
         </dependency>
     </dependencies>
 
