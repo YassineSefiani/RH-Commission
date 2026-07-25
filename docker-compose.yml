@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./backend-microservices/scripts/init-local-postgres-dbs.sh:/docker-entrypoint-initdb.d/init-local-postgres-dbs.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  service-auth:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-auth/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL_AUTH: jdbc:postgresql://postgres:5432/rh_auth
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      CORS_ORIGINS: http://localhost:5173
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  service-personnel:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-personnel/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8082:8082"
+    environment:
+      DB_URL_PERSONNEL: jdbc:postgresql://postgres:5432/rh_personnel
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  service-commission:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-commission/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8083:8083"
+    environment:
+      DB_URL_COMMISSION: jdbc:postgresql://postgres:5432/rh_commission
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  service-presence:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-presence/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8084:8084"
+    environment:
+      DB_URL_PRESENCE: jdbc:postgresql://postgres:5432/rh_presence
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: ./backend-microservices
+      dockerfile: api-gateway/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICE_AUTH_URL: http://service-auth:8081
+      SERVICE_PERSONNEL_URL: http://service-personnel:8082
+      SERVICE_COMMISSION_URL: http://service-commission:8083
+      SERVICE_PRESENCE_URL: http://service-presence:8084
+      CORS_ORIGINS: http://localhost:5173
+    depends_on:
+      - service-auth
+      - service-personnel
+      - service-commission
+      - service-presence
