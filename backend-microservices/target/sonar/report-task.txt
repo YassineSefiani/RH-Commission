@@ -1,6 +1,0 @@
-projectKey=rh-commission-backend
-serverUrl=http://localhost:9000
-serverVersion=26.6.0.123539
-dashboardUrl=http://localhost:9000/dashboard?id=rh-commission-backend
-ceTaskId=3343f71b-8996-4538-946e-f22a5e16274a
-ceTaskUrl=http://localhost:9000/api/ce/task?id=3343f71b-8996-4538-946e-f22a5e16274a
