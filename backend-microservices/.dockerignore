@@ -1,0 +1,4 @@
+.env.neon.local
+**/target/
+logs/
+*.log

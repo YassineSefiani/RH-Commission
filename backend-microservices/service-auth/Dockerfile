@@ -7,4 +7,4 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /workspace/service-auth/target/*.jar app.jar
 EXPOSE 8081
-ENTRYPOINT ["sh", "-c", "java -Xmx350m -jar app.jar"]
+ENTRYPOINT ["java", "-Xmx350m", "-jar", "app.jar"]
