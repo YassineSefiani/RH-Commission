@@ -6,6 +6,7 @@ backend/service-auth/target/
 backend/service-commission/target/
 backend/service-personnel/target/
 backend/service-presence/target/
+backend-microservices/*/target/
 *.class
 .claude/
 
