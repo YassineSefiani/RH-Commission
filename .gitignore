@@ -17,3 +17,4 @@ backend-microservices/*/target/
 # Secrets locaux (jamais committés)
 .env.neon.local
 backend-microservices/.env.neon.local
+backend-microservices/.env.prod-secrets.local
