@@ -18,3 +18,4 @@ backend-microservices/*/target/
 .env.neon.local
 backend-microservices/.env.neon.local
 backend-microservices/.env.prod-secrets.local
+docker-compose.override.yml
