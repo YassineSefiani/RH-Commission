@@ -1,30 +1,30 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useRef, useState, useEffect, useMemo, useCallback, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  FileSpreadsheet,
   UploadCloud,
-  CheckCircle2,
   Loader2,
   Target,
+  AlertCircle,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
+import { useConstraints } from '../context/ConstraintsContext';
 import { logAudit } from '../services/auditApi';
-import { getAuthHeaders } from '../services/authHeaders';
+import { importApi, type ApiObjectif, type ApiRealisation, type ApiTriage, type ApiVolume } from '../services/importApi';
+import { MONTHS_FR, toPeriodeKey, toPeriodeLabel } from '../utils/periode';
+import { parseExcelDate } from '../utils/excelDate';
 
 import cocaBg from '../assets/coca cola.png';
 import ferreroBg from '../assets/ferrero rocher.png';
 import wallsBg from '../assets/walls.jpg';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // Utilitaire de normalisation des périodes pour correspondre au format attendu YYYY-MM
 const formatPeriodeToYYYYMM = (raw: string, fallbackPeriod: string) => {
   const s = String(raw).toUpperCase().trim();
   let year = "2026";
   let month = "01";
-  
+
   const yearMatch = s.match(/\d{4}/);
   if (yearMatch) year = yearMatch[0];
   else {
@@ -52,63 +52,119 @@ export default function CalculationPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const objFileInputRef = useRef<HTMLInputElement | null>(null);
-  
-  const [importedFileName, setImportedFileName] = useState<string>('');
+
   const { t } = useLang();
   const c = t.calculation;
+  const { constraints } = useConstraints();
+
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  const periodeKey = useMemo(() => toPeriodeKey(selectedMonth, selectedYear), [selectedMonth, selectedYear]);
+  const periodeLabel = useMemo(() => toPeriodeLabel(selectedMonth, selectedYear), [selectedMonth, selectedYear]);
 
   const [highlightedBrand, setHighlightedBrand] = useState<string>('coca-cola');
-  const periods = ['Mai 2026', 'Avril 2026', 'Mars 2026', 'Février 2026'];
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(periods[0]);
 
   const brandCards = [
     {
       id: 'coca-cola',
       name: 'Coca Cola',
       image: cocaBg,
-      description: c.brandDescCoca,
       sector: 'Boissons',
-      unitPrice: '12 €',
-      rate: '6%',
-      units: 320,
-      sellers: 12,
-      commission: '240 €',
       accent: 'border-orange-400 ring-2 ring-orange-200',
     },
     {
       id: 'walls',
       name: "Wall's",
       image: wallsBg,
-      description: c.brandDescWalls,
       sector: 'Glaces',
-      unitPrice: '8 €',
-      rate: '5%',
-      units: 180,
-      sellers: 7,
-      commission: '144 €',
       accent: 'border-sky-400 ring-2 ring-sky-200',
     },
     {
       id: 'ferrero-rocher',
       name: 'Ferrero Rocher',
       image: ferreroBg,
-      description: c.brandDescFerrero,
       sector: 'Chocolats',
-      unitPrice: '15 €',
-      rate: '7%',
-      units: 95,
-      sellers: 5,
-      commission: '96 €',
       accent: 'border-amber-400 ring-2 ring-amber-200',
     },
   ];
 
   const [importing, setImporting] = useState(false);
   const [importingObj, setImportingObj] = useState(false);
-  const [importStats, setImportStats] = useState<{ realisations: number; triage: number; volumes: number } | null>(null);
+
+  // ─── Statut d'import (source de vérité = base de données, pas la session) ──
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [objectifsStatus, setObjectifsStatus] = useState<ApiObjectif[]>([]);
+  const [realisationsStatus, setRealisationsStatus] = useState<ApiRealisation[]>([]);
+  const [triageStatus, setTriageStatus] = useState<ApiTriage[]>([]);
+  const [volumesStatus, setVolumesStatus] = useState<ApiVolume[]>([]);
+  const [statusError, setStatusError] = useState<string[]>([]);
+
+  const refreshStatus = useCallback(async () => {
+    setStatusLoading(true);
+    const [objRes, realRes, triRes, volRes] = await Promise.allSettled([
+      importApi.getObjectifsByPeriode(periodeKey),
+      importApi.getRealisationsByPeriode(periodeKey),
+      importApi.getTriageByPeriode(periodeKey),
+      importApi.getVolumesByPeriode(periodeKey),
+    ]);
+
+    const failedSources: string[] = [];
+
+    if (objRes.status === 'fulfilled') setObjectifsStatus(objRes.value);
+    else { setObjectifsStatus([]); failedSources.push('Objectifs'); }
+
+    if (realRes.status === 'fulfilled') setRealisationsStatus(realRes.value);
+    else { setRealisationsStatus([]); failedSources.push('Réalisations'); }
+
+    if (triRes.status === 'fulfilled') setTriageStatus(triRes.value);
+    else { setTriageStatus([]); failedSources.push('Triage'); }
+
+    if (volRes.status === 'fulfilled') setVolumesStatus(volRes.value);
+    else { setVolumesStatus([]); failedSources.push('Volumes'); }
+
+    setStatusError(failedSources);
+    setStatusLoading(false);
+  }, [periodeKey]);
+
+  useEffect(() => {
+    refreshStatus();
+  }, [refreshStatus]);
+
+  const carteStatusCounts = useMemo(() => {
+    const cartes = ['Coca Cola', "Wall's", 'Ferrero Rocher'];
+    const map: Record<string, { objectifs: number; realisations: number }> = {};
+    cartes.forEach(carteName => {
+      map[carteName] = {
+        objectifs: objectifsStatus.filter(o => o.carte === carteName).length,
+        realisations: realisationsStatus.filter(r => r.carte === carteName).length,
+      };
+    });
+    return map;
+  }, [objectifsStatus, realisationsStatus]);
+
+  const lastUpdated = useMemo(() => {
+    const dates = [...objectifsStatus, ...realisationsStatus, ...triageStatus, ...volumesStatus]
+      .map(x => x.derniereMaj)
+      .filter((d): d is string => Boolean(d));
+    if (dates.length === 0) return null;
+    return dates.reduce((max, d) => (d > max ? d : max), dates[0]);
+  }, [objectifsStatus, realisationsStatus, triageStatus, volumesStatus]);
+
+  const activeConstraintsCount = (carteName: string) => {
+    const target = carteName.toUpperCase();
+    return constraints.filter(cst => {
+      if (cst.active === false) return false;
+      const dbCarte = (cst.carte || '').toUpperCase();
+      if (target.includes('COCA') && dbCarte.includes('COCA')) return true;
+      if (target.includes('FERRERO') && dbCarte.includes('FERRERO')) return true;
+      if (target.includes('WALL') && dbCarte.includes('WALL')) return true;
+      return dbCarte === target;
+    }).length;
+  };
 
   const getVal = (row: any, keyword: string) => {
-    const key = Object.keys(row).find(k => 
+    const key = Object.keys(row).find(k =>
       k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(keyword)
     );
     return key ? row[key] : undefined;
@@ -128,36 +184,29 @@ export default function CalculationPage() {
       const file = files[0];
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data, { type: 'array' });
-      const sheet = wb.Sheets[wb.SheetNames[0]]; 
+      const sheet = wb.Sheets[wb.SheetNames[0]];
       const dataJson = XLSX.utils.sheet_to_json<any>(sheet);
 
-      const objPayload = dataJson.map(r => ({
-        periode: formatPeriodeToYYYYMM(getVal(r, 'periode') ?? selectedPeriod, selectedPeriod),
-        carte: String(getVal(r, 'carte') ?? ''),
-        matricule: String(getVal(r, 'matricule') ?? ''),
-        nomComplet: String(getVal(r, 'nom complet') ?? getVal(r, 'nom') ?? ''),
-        target: Number(getVal(r, 'target') ?? getVal(r, 'objectif') ?? 0),
-      })).filter(r => r.matricule && r.carte);
+      const objPayload = dataJson.map(r => {
+        const rawPeriode = getVal(r, 'periode');
+        return {
+          periode: rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey,
+          carte: String(getVal(r, 'carte') ?? ''),
+          matricule: String(getVal(r, 'matricule') ?? ''),
+          nomComplet: String(getVal(r, 'nom complet') ?? getVal(r, 'nom') ?? ''),
+          target: Number(getVal(r, 'target') ?? getVal(r, 'objectif') ?? 0),
+        };
+      }).filter(r => r.matricule && r.carte);
 
-      const role = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').superRole || ''; } catch { return ''; } })();
-      const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}), ...getAuthHeaders() };
+      await importApi.postObjectifsBatch(objPayload);
 
-      const res = await fetch(`${API_BASE_URL}/import/objectifs/batch`, {
-        method: 'POST',
-        headers: commonHeaders,
-        body: JSON.stringify(objPayload),
-      });
-
-      if (!res.ok) {
-        throw new Error("L'API d'importation des objectifs a renvoyé un échec.");
-      }
-
-      toast.success(`${objPayload.length} objectifs synchronisés avec succès en base de données !`);
+      toast.success(`${objPayload.length} objectifs synchronisés avec succès pour ${periodeLabel} !`);
       logAudit({
         action: 'IMPORT_OBJECTIFS_SQL',
         entity: 'Calcul',
-        details: `${objPayload.length} objectifs persistés en BDD pour la période`,
+        details: `${objPayload.length} objectifs persistés en BDD pour ${periodeLabel}`,
       });
+      await refreshStatus();
     } catch (err: any) {
       console.error('Erreur import Objectifs:', err);
       toast.error(err?.message ?? 'Échec de la sauvegarde des objectifs');
@@ -175,11 +224,9 @@ export default function CalculationPage() {
   const handleFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
-    
-    setImportedFileName(`${files.length} fichier(s) importé(s)`);
+
     setImporting(true);
-    setImportStats(null);
-    
+
     try {
       let allRealisations: any[] = [];
       let allTriages: any[] = [];
@@ -190,7 +237,7 @@ export default function CalculationPage() {
         const fileName = file.name.toLowerCase();
         const data = await file.arrayBuffer();
         const wb = XLSX.read(data, { type: 'array' });
-        const sheet = wb.Sheets[wb.SheetNames[0]]; 
+        const sheet = wb.Sheets[wb.SheetNames[0]];
         const dataJson = XLSX.utils.sheet_to_json<any>(sheet);
 
         if (fileName.includes('real') || fileName.includes('réal')) allRealisations.push(...dataJson);
@@ -198,19 +245,23 @@ export default function CalculationPage() {
         else if (fileName.includes('vol') || fileName.includes('coke')) allVolumes.push(...dataJson);
       }
 
-      const realPayload = allRealisations.map(r => ({
-        periode: String(getVal(r, 'periode') ?? 'AVRIL/2026'),
-        carte: String(getVal(r, 'carte') ?? ''),
-        matricule: String(getVal(r, 'matricule') ?? ''),
-        caRealise: Number(getVal(r, 'target') ?? getVal(r, 'realise') ?? 0),
-      })).filter(r => r.matricule);
+      const realPayload = allRealisations.map(r => {
+        const rawPeriode = getVal(r, 'periode');
+        return {
+          periode: rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey,
+          carte: String(getVal(r, 'carte') ?? ''),
+          matricule: String(getVal(r, 'matricule') ?? ''),
+          caRealise: Number(getVal(r, 'target') ?? getVal(r, 'realise') ?? 0),
+        };
+      }).filter(r => r.matricule);
 
       const triPayload = allTriages.map(r => {
         let noteStr = String(getVal(r, 'note') ?? '0').replace('%', '');
         let note = Number(noteStr);
         if (note < 1 && note > 0) note = note * 100;
+        const rawPeriode = getVal(r, 'periode');
         return {
-          periode: String(getVal(r, 'periode') ?? 'AVRIL/2026'),
+          periode: rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey,
           matricule: String(getVal(r, 'matricule') ?? ''),
           note: note,
         };
@@ -221,63 +272,51 @@ export default function CalculationPage() {
         const retourne = Number(getVal(r, 'retourne') ?? r['Volume retourné (en CP)'] ?? 0);
         const matricule = String(getVal(r, 'matricule') ?? '');
         const roleExtrait = String(getVal(r, 'role') ?? r.Role ?? r.role ?? '');
+        const rawDate = getVal(r, 'date') ?? r.Date ?? r.date ?? r['Date'] ?? '';
+        const isoDate = parseExcelDate(rawDate);
 
         return {
-          date: String(getVal(r, 'date') ?? 'AVRIL/2026'),
-          matricule: matricule,
-          Role: roleExtrait,
+          date: isoDate,
+          matricule,
+          role: roleExtrait,
           volumeCharge: charge,
           volumeRetourne: retourne,
-          volumeDistribue: charge - retourne,
-          tauxRetour: charge > 0 ? (retourne / charge) * 100 : 0
         };
-      }).filter(r => r.matricule);
+      }).filter(r => r.matricule && r.date);
 
-      const role = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').superRole || ''; } catch { return ''; } })();
-      const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}), ...getAuthHeaders() };
-
-      async function postBatch(path: string, body: any[]) {
-        if (body.length === 0) return { ok: true, inserted: 0 };
-        const res = await fetch(`${API_BASE_URL}/import/${path}/batch`, {
-          method: 'POST',
-          headers: commonHeaders,
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-          console.warn(`${path} API POST failed. On garde en cache local.`);
-          return { ok: false, inserted: body.length };
-        }
-        const json = await res.json();
-        return { ok: true, inserted: Array.isArray(json) ? json.length : body.length };
-      }
-
-      await Promise.all([
-        postBatch('realisations', realPayload).catch(() => ({ inserted: realPayload.length })),
-        postBatch('triage', triPayload).catch(() => ({ inserted: triPayload.length })),
+      const [realResult, triResult, volResult] = await Promise.allSettled([
+        importApi.postRealisationsBatch(realPayload),
+        importApi.postTriageBatch(triPayload),
+        importApi.postVolumesBatch(volPayload),
       ]);
 
-      localStorage.setItem('simulation_metrics', JSON.stringify({
-        realPayload,
-        triPayload,
-        volPayload
-      }));
+      const failed: string[] = [];
+      if (realResult.status === 'rejected') failed.push('Réalisations');
+      if (triResult.status === 'rejected') failed.push('Triage');
+      if (volResult.status === 'rejected') failed.push('Volumes');
 
-      setImportStats({ 
-        realisations: realPayload.length, 
-        triage: triPayload.length,
-        volumes: volPayload.length
-      });
+      if (failed.length > 0) {
+        toast.error(`Échec de l'import pour : ${failed.join(', ')}`);
+      }
+      if (failed.length < 3) {
+        const okCount = [
+          realResult.status === 'fulfilled' ? realPayload.length : null,
+          triResult.status === 'fulfilled' ? triPayload.length : null,
+          volResult.status === 'fulfilled' ? volPayload.length : null,
+        ];
+        toast.success(`Import ${periodeLabel} : ${okCount[0] ?? 0} réal, ${okCount[1] ?? 0} tri, ${okCount[2] ?? 0} volumes`);
+      }
 
       logAudit({
         action: 'IMPORT_EXCEL_SIMULATION',
         entity: 'Calcul',
-        details: `${files.length} fichiers chargés pour simulation de calcul`,
+        details: `${files.length} fichiers chargés pour ${periodeLabel}`,
       });
 
-      toast.success(`Simulation chargée : ${realPayload.length} réal, ${triPayload.length} tri, ${volPayload.length} volumes`);
+      await refreshStatus();
     } catch (err: any) {
       console.error('Erreur import Excel:', err);
-      toast.error(err?.message ?? 'Échec de l\'import Excel');
+      toast.error(err?.message ?? "Échec de l'import Excel");
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -285,19 +324,8 @@ export default function CalculationPage() {
   };
 
   const handleBrandClick = (brandName: string) => {
-    navigate(`/calculation/brand/${encodeURIComponent(brandName)}`);
+    navigate(`/calculation/brand/${encodeURIComponent(brandName)}`, { state: { periode: periodeKey, periodeLabel } });
   };
-
-  const hasImport = !!importStats && !!importedFileName;
-  const importedRowsCount = importStats ? importStats.realisations + importStats.triage + importStats.volumes : 0;
-  const lastImportAuthor = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
-      return [u.prenom, u.nom].filter(Boolean).join(' ') || u.email || '—';
-    } catch { return '—'; }
-  })();
-  const lastImportDate = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-  const lastImportFile = importedFileName || '';
 
   return (
     <div className="abc-page-inner abc-stack-lg">
@@ -312,25 +340,48 @@ export default function CalculationPage() {
           <h2 className="text-lg font-semibold text-gray-900">Source des données</h2>
         </div>
 
+        <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-500">Période active :</span>
+            <select
+              className="abc-mini-select"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            >
+              {MONTHS_FR.map((m, i) => (
+                <option key={m} value={i}>{m}</option>
+              ))}
+            </select>
+            <select
+              className="abc-mini-select"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              <option value={2026}>2026</option>
+              <option value={2025}>2025</option>
+              <option value={2024}>2024</option>
+            </select>
+          </div>
+        </div>
+
         {/* Inputs masqués pour la gestion de fichiers Excel */}
-        <input 
-          ref={fileInputRef} 
-          type="file" 
-          accept=".xlsx,.xls,.csv" 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
           multiple
-          className="hidden" 
-          onChange={handleFileSelected} 
+          className="hidden"
+          onChange={handleFileSelected}
         />
-        <input 
-          ref={objFileInputRef} 
-          type="file" 
-          accept=".xlsx,.xls,.csv" 
-          className="hidden" 
-          onChange={handleObjFileSelected} 
+        <input
+          ref={objFileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={handleObjFileSelected}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Bloc d'importation unique des objectifs en base */}
           <button
             type="button"
             onClick={handleObjImportClick}
@@ -341,12 +392,11 @@ export default function CalculationPage() {
               {importingObj ? <Loader2 className="h-7 w-7 text-orange-600 animate-spin" /> : <Target className="h-7 w-7 text-orange-600 group-hover:text-white" strokeWidth={1.5} />}
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-bold text-gray-900">1. Importer les Objectifs Mensuels (Base SQL)</p>
+              <p className="text-sm font-bold text-gray-900">1. Importer les Objectifs Mensuels ({periodeLabel})</p>
               <p className="text-xs text-gray-500">Persiste et met à jour définitivement le référentiel des cibles</p>
             </div>
           </button>
 
-          {/* Bloc d'importation des fichiers de métriques terrain */}
           <button
             type="button"
             onClick={handleImportClick}
@@ -357,61 +407,48 @@ export default function CalculationPage() {
               {importing ? <Loader2 className="h-7 w-7 animate-spin" strokeWidth={1.5} /> : <UploadCloud className="h-7 w-7" strokeWidth={1.5} />}
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-bold text-gray-900">2. Importer les Métriques (Réal, Triage, Volumes)</p>
-              <p className="text-xs text-gray-500">Glissez-déposez vos fichiers pour lancer la simulation du mois</p>
+              <p className="text-sm font-bold text-gray-900">2. Importer les Métriques ({periodeLabel})</p>
+              <p className="text-xs text-gray-500">Réalisations, Triage, Volumes — glissez-déposez vos fichiers</p>
             </div>
           </button>
         </div>
 
         <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-[10px] font-semibold tracking-[0.18em] text-gray-400">DERNICR IMPORT SIMULATION</span>
-            {hasImport && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-100">
-                <CheckCircle2 className="h-3 w-3" /> Traité
-              </span>
-            )}
+            <span className="text-[10px] font-semibold tracking-[0.18em] text-gray-400">STATUT D'IMPORT — {periodeLabel.toUpperCase()}</span>
+            {statusLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />}
           </div>
 
-          {hasImport ? (
-            <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
-                <FileSpreadsheet className="h-6 w-6" strokeWidth={1.5} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-gray-900">{lastImportFile}</p>
-                <p className="text-xs text-gray-500">{importedRowsCount} lignes cumulées · {lastImportDate}</p>
-                <p className="mt-0.5 text-xs text-gray-400">Importé par {lastImportAuthor}</p>
-                {importStats && (
-                  <p className="mt-1 text-[11px] text-gray-500 font-medium">
-                    {importStats.realisations} réalisations · {importStats.triage} triage · {importStats.volumes} volumes
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-16 flex-col items-center justify-center text-center">
-              <p className="text-xs text-gray-400">Aucune simulation chargée dans la session courante.</p>
-            </div>
+          {statusError.length > 0 && (
+            <p className="mb-3 flex items-center gap-1.5 text-xs text-red-600">
+              <AlertCircle className="h-3.5 w-3.5" /> Impossible de charger : {statusError.join(', ')}
+            </p>
           )}
-        </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {periods.map((p) => {
-              const active = selectedPeriod === p;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setSelectedPeriod(p)}
-                  className={'rounded-full px-3 py-1.5 text-xs font-medium transition-colors ' + (active ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900')}
-                >
-                  {p}
-                </button>
-              );
-            })}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-xl bg-gray-50 p-3 text-center">
+              <p className="text-2xl font-bold text-gray-900">{objectifsStatus.length}</p>
+              <p className="text-[11px] text-gray-500">Objectifs</p>
+            </div>
+            <div className="rounded-xl bg-gray-50 p-3 text-center">
+              <p className="text-2xl font-bold text-gray-900">{realisationsStatus.length}</p>
+              <p className="text-[11px] text-gray-500">Réalisations</p>
+            </div>
+            <div className="rounded-xl bg-gray-50 p-3 text-center">
+              <p className="text-2xl font-bold text-gray-900">{triageStatus.length}</p>
+              <p className="text-[11px] text-gray-500">Triage</p>
+            </div>
+            <div className="rounded-xl bg-gray-50 p-3 text-center">
+              <p className="text-2xl font-bold text-gray-900">{volumesStatus.length}</p>
+              <p className="text-[11px] text-gray-500">Volumes</p>
+            </div>
           </div>
+
+          <p className="mt-4 text-xs text-gray-400">
+            {lastUpdated
+              ? `Dernière mise à jour : ${new Date(lastUpdated).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+              : `Aucune donnée importée pour ${periodeLabel}.`}
+          </p>
         </div>
       </section>
 
@@ -426,6 +463,7 @@ export default function CalculationPage() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {brandCards.map((card) => {
             const selected = highlightedBrand === card.id;
+            const counts = carteStatusCounts[card.name] || { objectifs: 0, realisations: 0 };
             return (
               <div
                 key={card.id}
@@ -441,8 +479,12 @@ export default function CalculationPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-base font-semibold text-gray-900">{card.name}</h3>
-                    <p className="text-xs text-gray-400 truncate">{card.sector} · {card.rate}</p>
+                    <p className="text-xs text-gray-400 truncate">{card.sector} · {activeConstraintsCount(card.name)} règle(s) active(s)</p>
                   </div>
+                </div>
+                <div className="mt-3 flex items-center gap-2 text-[11px] font-medium">
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">{counts.objectifs} objectif(s)</span>
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">{counts.realisations} réalisation(s)</span>
                 </div>
               </div>
             );
