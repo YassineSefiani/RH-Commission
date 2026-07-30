@@ -40,7 +40,6 @@ interface HistoryContextType {
   deleteCalculation: (id: string) => void;
   clearHistory: () => void;
   archiveCalculation: (id: string) => Promise<void>;
-  refreshHistory: () => Promise<void>;
 
   constraintHistory: ConstraintHistoryEntry[];
   addHistoryEntry: (entry: ConstraintHistoryEntry) => void;
@@ -154,14 +153,14 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <HistoryContext.Provider value={{ history: [], addCalculation, deleteCalculation, clearHistory, archiveCalculation, refreshHistory: loadHistory, constraintHistory, addHistoryEntry }}>
+      <HistoryContext.Provider value={{ history: [], addCalculation, deleteCalculation, clearHistory, archiveCalculation, constraintHistory, addHistoryEntry }}>
         {children}
       </HistoryContext.Provider>
     );
   }
 
   return (
-    <HistoryContext.Provider value={{ history, addCalculation, deleteCalculation, clearHistory, archiveCalculation, refreshHistory: loadHistory, constraintHistory, addHistoryEntry }}>
+    <HistoryContext.Provider value={{ history, addCalculation, deleteCalculation, clearHistory, archiveCalculation, constraintHistory, addHistoryEntry }}>
       {children}
     </HistoryContext.Provider>
   );

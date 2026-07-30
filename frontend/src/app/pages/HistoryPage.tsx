@@ -2,20 +2,20 @@ import { useState, useMemo } from 'react';
 import { ChevronDown, Download, FileDown, Loader2, Trash2, Search, FileSpreadsheet, CheckSquare, CheckCircle } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { useHistory } from '../context/HistoryContext';
-import { historyApi } from '../services/api';
 import { exportHistoryPDF, exportSingleRecordPDF } from '../utils/pdfExport';
 import { useLang } from '../context/LangContext';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function HistoryPage() {
-  const { history, deleteCalculation, archiveCalculation, refreshHistory } = useHistory();
+  const { history, deleteCalculation, archiveCalculation } = useHistory();
   const { t, lang } = useLang();
   const h_ = t.history;
 
   const [search, setSearch] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
+  const [selectedCarte, setSelectedCarte] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   
@@ -45,6 +45,10 @@ export default function HistoryPage() {
     }));
   }, [history, localValidations]);
 
+  const carteOptions = useMemo(() => {
+    return Array.from(new Set(mergedHistory.map(h => h.carte).filter(Boolean) as string[])).sort();
+  }, [mergedHistory]);
+
   const filtered = useMemo(() => {
     return mergedHistory.filter((h) => {
       if (userRole !== 'ADV' && !h.isArchived) {
@@ -55,25 +59,28 @@ export default function HistoryPage() {
       const sMatch = h.employeeName.toLowerCase().includes(search.toLowerCase());
       const mMatch = !selectedMonth || String(d.getMonth()) === selectedMonth;
       const yMatch = !selectedYear || String(d.getFullYear()) === selectedYear;
-      return sMatch && mMatch && yMatch;
+      const cMatch = !selectedCarte || h.carte === selectedCarte;
+      return sMatch && mMatch && yMatch && cMatch;
     });
-  }, [mergedHistory, search, selectedMonth, selectedYear, userRole]);
+  }, [mergedHistory, search, selectedMonth, selectedYear, selectedCarte, userRole]);
 
   const hasUnarchivedSimulations = useMemo(() => {
     return filtered.some(h => !h.isArchived);
   }, [filtered]);
 
-  const unarchivedSimulationsGlobally = useMemo(() => {
-    return history.filter(h => !h.isArchived);
-  }, [history]);
+  // Respectent les filtres actifs (recherche/mois/année/produit) — filtrer d'abord,
+  // puis purger avec ces boutons, au lieu d'un bouton dédié par produit.
+  const unarchivedSimulationsFiltered = useMemo(() => {
+    return filtered.filter(h => !h.isArchived);
+  }, [filtered]);
 
-  const archivedCalculationsGlobally = useMemo(() => {
-    return history.filter(h => h.isArchived);
-  }, [history]);
+  const archivedCalculationsFiltered = useMemo(() => {
+    return filtered.filter(h => h.isArchived);
+  }, [filtered]);
 
-  const canShowClearButton = (userRole === 'ADMIN' || userRole === 'RH') 
-    ? archivedCalculationsGlobally.length > 0 
-    : (userRole === 'ADV' && unarchivedSimulationsGlobally.length > 0);
+  const canShowClearButton = (userRole === 'ADMIN' || userRole === 'RH')
+    ? archivedCalculationsFiltered.length > 0
+    : (userRole === 'ADV' && unarchivedSimulationsFiltered.length > 0);
 
   // ✨ NOUVEAU REGROUPEMENT : Les calculs validés fusionnent par mois !
   const grouped = useMemo(() => {
@@ -198,27 +205,6 @@ export default function HistoryPage() {
       toast.error(error?.message || "Une erreur est survenue lors de la validation du lot");
     } finally {
       setArchivingBatches(prev => ({ ...prev, [batchId]: false }));
-    }
-  };
-
-  const [purgingKey, setPurgingKey] = useState<string | null>(null);
-
-  const handlePurgerCarte = async (carte: string, mois: number, annee: number) => {
-    const key = `${carte}-${mois}-${annee}`;
-    setPurgingKey(key);
-    try {
-      const { supprimes } = await historyApi.purgerValide(carte, mois, annee);
-      await refreshHistory();
-      toast.success(
-        lang === 'en'
-          ? `${supprimes} validated calculation(s) purged for ${carte}`
-          : `${supprimes} calcul(s) validé(s) purgé(s) pour ${carte}`
-      );
-    } catch (error: any) {
-      console.error('Erreur lors de la purge :', error);
-      toast.error(error?.message || 'Impossible de purger les calculs validés');
-    } finally {
-      setPurgingKey(null);
     }
   };
 
@@ -418,22 +404,22 @@ export default function HistoryPage() {
                 ? (lang === 'en' ? 'Clear all simulations?' : "Purger les simulations ?") 
                 : (lang === 'en' ? 'Clear validated records?' : "Purger les calculs validés ?")}
               description={userRole === 'ADV'
-                ? (lang === 'en' 
-                  ? `This will delete ${unarchivedSimulationsGlobally.length} unvalidated simulation(s).` 
-                  : `Cela supprimera définitivement ${unarchivedSimulationsGlobally.length} simulation(s) non validée(s).`)
-                : (lang === 'en' 
-                  ? `This will permanently delete ${archivedCalculationsGlobally.length} validated record(s).` 
-                  : `Cela supprimera définitivement ${archivedCalculationsGlobally.length} calcul(s) validé(s).`)}
+                ? (lang === 'en'
+                  ? `This will delete ${unarchivedSimulationsFiltered.length} unvalidated simulation(s) matching the current filters.`
+                  : `Cela supprimera définitivement ${unarchivedSimulationsFiltered.length} simulation(s) non validée(s) correspondant aux filtres actuels.`)
+                : (lang === 'en'
+                  ? `This will permanently delete ${archivedCalculationsFiltered.length} validated record(s) matching the current filters.`
+                  : `Cela supprimera définitivement ${archivedCalculationsFiltered.length} calcul(s) validé(s) correspondant aux filtres actuels${selectedCarte ? ` (produit : ${selectedCarte})` : ''}.`)}
               confirmLabel={lang === 'en' ? 'Delete all' : 'Tout supprimer'}
               destructive
               onConfirm={async () => {
                 setIsClearing(true);
                 try {
                   if (userRole === 'ADV') {
-                    await Promise.all(unarchivedSimulationsGlobally.map(h => deleteCalculation(h.id).catch(() => {})));
+                    await Promise.all(unarchivedSimulationsFiltered.map(h => deleteCalculation(h.id).catch(() => {})));
                     toast.success(lang === 'en' ? 'Simulations cleared' : 'Simulations purgées avec succès');
                   } else {
-                    await Promise.all(archivedCalculationsGlobally.map(h => deleteCalculation(h.id).catch(() => {})));
+                    await Promise.all(archivedCalculationsFiltered.map(h => deleteCalculation(h.id).catch(() => {})));
                     toast.success(lang === 'en' ? 'Validated records cleared' : 'Calculs validés purgés avec succès');
                   }
                 } finally {
@@ -475,10 +461,20 @@ export default function HistoryPage() {
               <option value="2025">2025</option>
               <option value="2024">2024</option>
             </select>
-            {(search || selectedMonth || selectedYear) && (
+            <select
+              className="abc-mini-select"
+              value={selectedCarte}
+              onChange={(e) => setSelectedCarte(e.target.value)}
+            >
+              <option value="">{lang === 'en' ? 'All products' : 'Tous les produits'}</option>
+              {carteOptions.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            {(search || selectedMonth || selectedYear || selectedCarte) && (
               <button
                 className="abc-btn abc-btn-ghost abc-btn-sm"
-                onClick={() => { setSearch(''); setSelectedMonth(''); setSelectedYear(''); }}
+                onClick={() => { setSearch(''); setSelectedMonth(''); setSelectedYear(''); setSelectedCarte(''); }}
               >
                 {h_.reset}
               </button>
@@ -551,44 +547,6 @@ export default function HistoryPage() {
                   </button>
                 )}
 
-                {userRole === 'RH' && g.isArchived && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
-                    <span className="text-xs text-gray-500">
-                      {lang === 'en' ? 'Purge a validated product (unblocks re-validation)' : 'Purger un produit validé (débloque une nouvelle validation)'}
-                    </span>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                      {Array.from(new Set(g.items.map(it => it.carte).filter(Boolean) as string[])).map((carte) => {
-                        const mois = g.date.getMonth() + 1;
-                        const annee = g.date.getFullYear();
-                        const key = `${carte}-${mois}-${annee}`;
-                        return (
-                          <ConfirmDialog
-                            key={carte}
-                            trigger={
-                              <button
-                                className="abc-btn abc-btn-outline abc-btn-sm"
-                                style={{ borderColor: '#ef4444', color: '#ef4444' }}
-                                disabled={purgingKey === key}
-                              >
-                                {purgingKey === key ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                                {lang === 'en' ? `Purge ${carte}` : `Purger ${carte}`}
-                              </button>
-                            }
-                            title={lang === 'en' ? `Purge validated ${carte}?` : `Purger ${carte} validé ?`}
-                            description={
-                              lang === 'en'
-                                ? `Permanently deletes the validated calculation(s) for ${carte} in ${mois}/${annee}, so ADV can validate a new one.`
-                                : `Supprime définitivement le(s) calcul(s) validé(s) pour ${carte} en ${mois}/${annee}, pour permettre à l'ADV d'en valider un nouveau.`
-                            }
-                            confirmLabel={lang === 'en' ? 'Purge' : 'Purger'}
-                            destructive
-                            onConfirm={() => handlePurgerCarte(carte, mois, annee)}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 

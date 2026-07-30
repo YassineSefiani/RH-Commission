@@ -4,6 +4,14 @@ Trace des requêtes traitées par Claude sur ce projet. Ajouter une entrée par 
 
 ---
 
+## 2026-07-30 (suite — remplacement boutons "Purger {carte}" par filtre produit)
+
+- Bug remonté par l'utilisateur : les boutons "Purger {carte}" (un par produit, ajoutés dans la session précédente) ne fonctionnaient pas en pratique — le "Purger Validés"/"Purger Simulations" global, lui, marchait. Plutôt que débogueur les boutons cassés, l'utilisateur a demandé de les enlever et d'ajouter un filtre produit à la page Historique pour que le bouton existant (qui marche déjà) s'applique au sous-ensemble filtré.
+- Frontend (`HistoryPage.tsx`) : ajout d'un `<select>` "produit" (carte) dans la barre de filtres ; `unarchivedSimulationsGlobally`/`archivedCalculationsGlobally` remplacés par des variantes `*Filtered` dérivées de `filtered` (respectent recherche/mois/année/produit) ; le dialogue de confirmation "Purger Validés/Simulations" opère désormais sur ces ensembles filtrés et son texte mentionne le produit filtré. Suppression complète de l'UI par-carte cassée (`handlePurgerCarte`, `purgingKey`, boutons "Purger {carte}").
+- Backend (service-commission) : suppression du endpoint mort `DELETE /api/historique/purge`, de `HistoriqueService.purgerValide()`, et de la règle RH-only correspondante dans `JwtAuthFilter`. `findByCarteAndMoisAndAnneeAndIsArchivedTrue` conservé (toujours utilisé par le check de conflit dans `archiverCalcul`). `HistoryContext.tsx` : `refreshHistory` retiré (plus rien ne l'appelle).
+- Testé de bout en bout en navigateur réel (RH) : filtre "Coca Cola" → "Purger Validés" ne supprime que les 3 calculs Coca Cola filtrés, les 3 calculs validés "Wall's" restent intacts après réinitialisation du filtre. Ancien endpoint `/api/historique/purge` confirmé mort (ne répond plus en succès).
+- Backend recompilé + conteneur `service-commission` reconstruit (`docker compose up -d --build service-commission`), frontend rebuild (`vite build`) — les deux passent sans erreur.
+
 ## 2026-07-30 (suite — un seul calcul validé par produit/mois + purge RH)
 
 - Faille corrigée: rien n'empêchait de valider plusieurs simulations pour le même produit (carte) et mois — l'ADV pouvait valider "Coca Cola avril" plusieurs fois sans blocage.

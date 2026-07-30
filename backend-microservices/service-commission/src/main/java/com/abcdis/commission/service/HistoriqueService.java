@@ -211,20 +211,6 @@ public class HistoriqueService {
     }
 
     /**
-     * RH uniquement — supprime les calculs validés d'un produit/mois pour
-     * débloquer une nouvelle validation après une erreur.
-     */
-    @Transactional
-    public int purgerValide(String carte, Integer mois, Integer annee) {
-        List<HistoriqueCalcul> aPurger = historiqueRepository
-                .findByCarteAndMoisAndAnneeAndIsArchivedTrue(carte, mois, annee);
-        historiqueRepository.deleteAll(aPurger);
-        log.info("Purge RH : {} calcul(s) validé(s) supprimé(s) pour carte={} periode={}/{}",
-                aPurger.size(), carte, mois, annee);
-        return aPurger.size();
-    }
-
-    /**
      * Sérialise un Object (List, Map, String JSON déjà sérialisé...) en JSON valide.
      * Évite le `.toString()` Java qui produit "[a, b, c]" non-JSON.
      */

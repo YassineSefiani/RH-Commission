@@ -37,9 +37,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final List<RoleRule> ROLE_RULES = List.of(
             new RoleRule("/api/historique", List.of("ADMIN", "ADV", "RH")),
-            // Règle la plus spécifique en second : purger un calcul validé est réservé au RH
-            // (les deux règles s'appliquent cumulativement — /purge exige donc RH précisément).
-            new RoleRule("/api/historique/purge", List.of("RH")),
             new RoleRule("/api/contraintes", List.of("ADMIN", "ADV")),
             new RoleRule("/api/calcul", List.of("ADMIN", "ADV"))
     );
