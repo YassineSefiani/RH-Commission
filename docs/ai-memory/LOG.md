@@ -4,6 +4,16 @@ Trace des requêtes traitées par Claude sur ce projet. Ajouter une entrée par 
 
 ---
 
+## 2026-07-30 (suite — revue finale + corrections du plan Calcul)
+
+- Revue finale (whole-branch, modèle le plus capable) du plan complet (Tasks 1-5) : 1 finding **Critical** + 4 **Important**, tous corrigés directement (pas de subagent, corrections bien comprises) puis re-revus par un reviewer frais — verdict "Ready to merge: Yes".
+  - **Critical** : `formatPeriodeToYYYYMM` (`CalculationPage.tsx`) renvoyait février pour quasiment n'importe quelle date réelle — le test `.includes('02')` cherchait dans la chaîne AVANT d'en retirer l'année, et toute année "202X" contient la sous-chaîne "02". Reproduit avec un script Node isolé (confirmé : "2026-08" → "2026-02"), corrigé en isolant le mois après retrait de l'année + repli sur un motif numérique à bornes de mot. Testé sur 13 cas (mois français, MM/YYYY, ISO déjà normalisé, entrée vide/garbage) — tous corrects.
+  - **Important** ×4 : matcher flou de marque dupliqué 3× → extrait dans `utils/brandMatch.ts` ; liste d'années codée en dur (2024-2026, cassée dès 2027) → dynamique (année courante ±2) ; erreurs/avertissements de `BrandCalculationPage` invisibles (toast seul, aucun `<Toaster/>` monté) → bandeau inline ajouté en complément ; `parseExcelDate` interprétait JJ/MM/AAAA en MM/DD/YYYY (convention américaine) alors que l'entreprise est marocaine/française → corrigé en DD/MM/YYYY + validation ajoutée pour éviter qu'une date malformée fasse échouer tout un lot d'import.
+  - Re-testé en direct après corrections (build propre, sélecteur d'année, panneau de statut, bandeau d'avertissement visible) sans régression sur le scénario Août 2026 déjà validé.
+- **Découverte concurrente** : un `<Toaster/>` (sonner) a été monté dans `App.tsx` par une session séparément spawnée (déclenchée par une suggestion faite plus tôt dans cette session) — corrige le fait qu'aucun `toast.*` de toute l'application n'était visible auparavant. Vérifié en direct (`[data-sonner-toaster]` présent dans le DOM après rebuild), sans conflit avec les corrections ci-dessus.
+- **Nouveau finding hors-scope confirmé, flaggé pour plus tard** : `BrandCalculationPage.tsx` filtre les contraintes actives via `c.actif` alors que le type réel `Constraint` expose `active` (pas `actif`) — la vérification est donc toujours no-op, une règle de commission désactivée par le RH continue d'être appliquée dans les calculs. Bug de correction financière réel, confirmé par analyse de type, pas encore corrigé (hors scope du plan, business logic explicitement préservée à l'identique).
+- Plan `docs/superpowers/plans/2026-07-30-calcul-page-data-pipeline.md` terminé : 5 tâches + revue finale + corrections, toutes approuvées. Commits sur `DevBek`, pas encore poussés.
+
 ## 2026-07-30 (suite — Task 5 finale: vérification bout-en-bout page Calcul refondue)
 
 - Clôture du plan en 5 tâches (`docs/superpowers/plans/2026-07-30-calcul-page-data-pipeline.md`) exécuté via subagent-driven-development. Task 1 (entité `Volume` backend), Task 2 (`importApi.ts`+utils), Task 3 (`CalculationPage.tsx`), Task 4 (`BrandCalculationPage.tsx`) toutes revues et approuvées (task-reviewer par tâche, build/compile reconfirmé indépendamment par le contrôleur après Task 3 et Task 4).
