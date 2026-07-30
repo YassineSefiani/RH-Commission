@@ -3,9 +3,11 @@ package com.abcdis.commission.controller;
 import com.abcdis.commission.model.NoteTriage;
 import com.abcdis.commission.model.ObjectifCommercial;
 import com.abcdis.commission.model.RealisationCommerciale;
+import com.abcdis.commission.model.Volume;
 import com.abcdis.commission.service.NoteTriageService;
 import com.abcdis.commission.service.ObjectifCommercialService;
 import com.abcdis.commission.service.RealisationCommercialeService;
+import com.abcdis.commission.service.VolumeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,6 +28,7 @@ public class ImportController {
     private final NoteTriageService noteTriageService;
     private final ObjectifCommercialService objectifService;
     private final RealisationCommercialeService realisationService;
+    private final VolumeService volumeService;
 
     // ── Notes de Triage ──────────────────────────────────────────────────────
 
@@ -118,6 +121,34 @@ public class ImportController {
     @DeleteMapping("/realisations/{id}")
     public ResponseEntity<Void> supprimerRealisation(@PathVariable Long id) {
         realisationService.supprimer(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Volumes ──────────────────────────────────────────────────────────────
+
+    @GetMapping("/volumes")
+    public ResponseEntity<List<Volume>> listerVolumes() {
+        return ResponseEntity.ok(volumeService.listerToutes());
+    }
+
+    @PostMapping("/volumes")
+    public ResponseEntity<Volume> importerVolume(@Valid @RequestBody Volume volume) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(volumeService.enregistrer(volume));
+    }
+
+    @PostMapping("/volumes/batch")
+    public ResponseEntity<List<Volume>> importerVolumesBatch(@RequestBody List<@Valid Volume> volumes) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(volumeService.enregistrerBatch(volumes));
+    }
+
+    @GetMapping("/volumes/periode/{periode}")
+    public ResponseEntity<List<Volume>> listerVolumesParPeriode(@PathVariable String periode) {
+        return ResponseEntity.ok(volumeService.listerParPeriode(periode));
+    }
+
+    @DeleteMapping("/volumes/{id}")
+    public ResponseEntity<Void> supprimerVolume(@PathVariable Long id) {
+        volumeService.supprimer(id);
         return ResponseEntity.noContent().build();
     }
 }
