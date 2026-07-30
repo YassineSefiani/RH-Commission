@@ -4,6 +4,19 @@ Trace des requêtes traitées par Claude sur ce projet. Ajouter une entrée par 
 
 ---
 
+## 2026-07-30 (suite — Task 5 finale: vérification bout-en-bout page Calcul refondue)
+
+- Clôture du plan en 5 tâches (`docs/superpowers/plans/2026-07-30-calcul-page-data-pipeline.md`) exécuté via subagent-driven-development. Task 1 (entité `Volume` backend), Task 2 (`importApi.ts`+utils), Task 3 (`CalculationPage.tsx`), Task 4 (`BrandCalculationPage.tsx`) toutes revues et approuvées (task-reviewer par tâche, build/compile reconfirmé indépendamment par le contrôleur après Task 3 et Task 4).
+- **Vérification bout-en-bout réelle** (pas de fichiers Excel manipulables par le navigateur dans cet outil — données de test injectées directement via les mêmes endpoints `/api/import/*/batch` qu'un import Excel appellerait, pour 3 employés Coca Cola réels P001/P002/P003, période 2026-08) :
+  - Panneau de statut affiche 3/3/3/3 pour Août 2026 immédiatement après import, badges produit corrects (Coca Cola: 3 objectifs/3 réalisations, Wall's/Ferrero: 0/0).
+  - Calcul lancé pour Coca Cola/Août 2026 : résultats **exactement conformes au calcul manuel attendu** (Youssef Bennani 526,40 MAD = 176,40 commission + 150 + 200 bonus ; Sara El Idrissi 70,80 MAD ; Karim Moussaoui 94,20 MAD) — confirme que le pipeline utilise bien les vraies données persistées pour la bonne période, logique métier intacte.
+  - **Persistance confirmée** : navigation fraîche vers `/calculation` (sélecteurs mois/année reviennent sur le mois courant par défaut, comme prévu) puis re-sélection d'Août 2026 → panneau de statut toujours à 3/3/3/3 (pas de dépendance à la session navigateur, exactement le bug d'origine corrigé).
+  - Période sans donnée (Décembre 2026) : panneau à 0 partout, calcul renvoie des zéros (sauf une bonification pré-existante non liée à ce fix, cf. ci-dessous), sans planter.
+  - Historique confirme les 2 lots ("Simulation 5 - Coca Cola" 691 MAD, "Simulation 6 - Coca Cola" 250 MAD) avec les montants exacts vus sur la page de calcul.
+- **Trouvaille hors-scope, confirmée mais non corrigée ici** : aucun composant `<Toaster />` (sonner) n'est monté nulle part dans l'app (vérifié via `document.querySelector('[data-sonner-toaster]')` → `null`) — tous les `toast.success/error/warning` de toute l'application sont silencieusement invisibles depuis toujours. Flaggé en tâche séparée (spawn_task `task_5e82fe2c`), pas corrigé dans ce plan (hors scope, aucun rapport avec les 3 problèmes de la page Calcul).
+- **Donnée de test résiduelle** : 3 objectifs/3 réalisations/3 triage/3 volumes pour période 2026-08 (matricules P001/P002/P003, Coca Cola) et 2 lots de simulation dans l'historique ("Simulation 5/6 - Coca Cola", non validés) laissés en base — période future, sans impact, supprimables via le bouton "Purger Simulations" existant (filtre produit=Coca Cola + mois=Août 2026) si l'utilisateur préfère un environnement propre.
+- Commits sur `DevBek` (pas encore poussés, comme le reste de cette session) : Tasks 1-4 chacune sur son propre commit (+ un commit LOG.md par tâche), plan et spec committés séparément.
+
 ## 2026-07-30 (suite — Task 4 plan frontend: BrandCalculationPage calcul basé sur la BDD, plus localStorage)
 
 - Exécution de la Task 4 (dernière du plan en 4 tâches) : `.git/sdd/task-4-brief.md`, rapport détaillé `.git/sdd/task-4-report.md`.
