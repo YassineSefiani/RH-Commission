@@ -14,6 +14,7 @@ import { logAudit } from '../services/auditApi';
 import { importApi, type ApiObjectif, type ApiRealisation, type ApiTriage, type ApiVolume } from '../services/importApi';
 import { MONTHS_FR, toPeriodeKey, toPeriodeLabel } from '../utils/periode';
 import { parseExcelDate } from '../utils/excelDate';
+import { matchesBrand } from '../utils/brandMatch';
 
 import cocaBg from '../assets/coca cola.png';
 import ferreroBg from '../assets/ferrero rocher.png';
@@ -22,28 +23,37 @@ import wallsBg from '../assets/walls.jpg';
 // Utilitaire de normalisation des périodes pour correspondre au format attendu YYYY-MM
 const formatPeriodeToYYYYMM = (raw: string, fallbackPeriod: string) => {
   const s = String(raw).toUpperCase().trim();
-  let year = "2026";
-  let month = "01";
+
+  // Déjà au format normalisé
+  const isoMatch = s.match(/^(\d{4})-(\d{2})$/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}`;
 
   const yearMatch = s.match(/\d{4}/);
+  let year = fallbackPeriod.match(/\d{4}/)?.[0] ?? "2026";
   if (yearMatch) year = yearMatch[0];
-  else {
-    const fallbackYearMatch = fallbackPeriod.match(/\d{4}/);
-    if (fallbackYearMatch) year = fallbackYearMatch[0];
-  }
 
-  if (s.includes('JAN') || s.includes('01')) month = '01';
-  else if (s.includes('FEV') || s.includes('FÉV') || s.includes('02')) month = '02';
-  else if (s.includes('MAR') || s.includes('03')) month = '03';
-  else if (s.includes('AVR') || s.includes('04')) month = '04';
-  else if (s.includes('MAI') || s.includes('05')) month = '05';
-  else if (s.includes('JUN') || s.includes('JUIN') || s.includes('06')) month = '06';
-  else if (s.includes('JUL') || s.includes('JUIL') || s.includes('07')) month = '07';
-  else if (s.includes('AOU') || s.includes('AOÛ') || s.includes('08')) month = '08';
-  else if (s.includes('SEP') || s.includes('09')) month = '09';
-  else if (s.includes('OCT') || s.includes('10')) month = '10';
-  else if (s.includes('NOV') || s.includes('11')) month = '11';
-  else if (s.includes('DEC') || s.includes('DÉC') || s.includes('12')) month = '12';
+  // On retire l'année avant de chercher le mois : sinon ses propres chiffres
+  // (ex. "2026" contient "02") se faisaient passer pour un mois de février.
+  const withoutYear = yearMatch ? s.replace(yearMatch[0], '') : s;
+
+  let month = '';
+  if (withoutYear.includes('JAN')) month = '01';
+  else if (withoutYear.includes('FEV') || withoutYear.includes('FÉV')) month = '02';
+  else if (withoutYear.includes('MAR')) month = '03';
+  else if (withoutYear.includes('AVR')) month = '04';
+  else if (withoutYear.includes('MAI')) month = '05';
+  else if (withoutYear.includes('JUN') || withoutYear.includes('JUIN')) month = '06';
+  else if (withoutYear.includes('JUL') || withoutYear.includes('JUIL')) month = '07';
+  else if (withoutYear.includes('AOU') || withoutYear.includes('AOÛ')) month = '08';
+  else if (withoutYear.includes('SEP')) month = '09';
+  else if (withoutYear.includes('OCT')) month = '10';
+  else if (withoutYear.includes('NOV')) month = '11';
+  else if (withoutYear.includes('DEC') || withoutYear.includes('DÉC')) month = '12';
+
+  if (!month) {
+    const numMatch = withoutYear.match(/\b(0?[1-9]|1[0-2])\b/);
+    month = numMatch ? numMatch[1].padStart(2, '0') : (fallbackPeriod.match(/-(\d{2})$/)?.[1] ?? '01');
+  }
 
   return `${year}-${month}`;
 };
@@ -136,8 +146,8 @@ export default function CalculationPage() {
     const map: Record<string, { objectifs: number; realisations: number }> = {};
     cartes.forEach(carteName => {
       map[carteName] = {
-        objectifs: objectifsStatus.filter(o => o.carte === carteName).length,
-        realisations: realisationsStatus.filter(r => r.carte === carteName).length,
+        objectifs: objectifsStatus.filter(o => matchesBrand(o.carte, carteName)).length,
+        realisations: realisationsStatus.filter(r => matchesBrand(r.carte, carteName)).length,
       };
     });
     return map;
@@ -152,15 +162,7 @@ export default function CalculationPage() {
   }, [objectifsStatus, realisationsStatus, triageStatus, volumesStatus]);
 
   const activeConstraintsCount = (carteName: string) => {
-    const target = carteName.toUpperCase();
-    return constraints.filter(cst => {
-      if (cst.active === false) return false;
-      const dbCarte = (cst.carte || '').toUpperCase();
-      if (target.includes('COCA') && dbCarte.includes('COCA')) return true;
-      if (target.includes('FERRERO') && dbCarte.includes('FERRERO')) return true;
-      if (target.includes('WALL') && dbCarte.includes('WALL')) return true;
-      return dbCarte === target;
-    }).length;
+    return constraints.filter(cst => cst.active !== false && matchesBrand(cst.carte, carteName)).length;
   };
 
   const getVal = (row: any, keyword: string) => {
@@ -357,9 +359,9 @@ export default function CalculationPage() {
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
             >
-              <option value={2026}>2026</option>
-              <option value={2025}>2025</option>
-              <option value={2024}>2024</option>
+              {[now.getFullYear() + 1, now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2].map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
             </select>
           </div>
         </div>

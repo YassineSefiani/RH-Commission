@@ -10,12 +10,15 @@ export function parseExcelDate(raw: unknown): string {
   if (rawStr.includes('/')) {
     const parts = rawStr.split('/');
     if (parts.length === 3) {
-      return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+      // Convention DD/MM/YYYY (locale marocaine/française de l'entreprise),
+      // pas MM/DD/YYYY — vérifié cohérent avec le reste de l'app (fr-FR partout).
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
     }
   }
 
   if (rawStr.includes('-')) {
-    return rawStr.split('T')[0];
+    const candidate = rawStr.split('T')[0];
+    return /^\d{4}-\d{2}-\d{2}$/.test(candidate) ? candidate : '';
   }
 
   return '';

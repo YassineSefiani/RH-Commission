@@ -9,6 +9,7 @@ import { useLang } from '../context/LangContext';
 import { getAuthHeaders } from '../services/authHeaders';
 import { importApi } from '../services/importApi';
 import { currentMonthYear, toPeriodeKey, toPeriodeLabel } from '../utils/periode';
+import { matchesBrand } from '../utils/brandMatch';
 
 interface Employee {
   id: string;
@@ -62,6 +63,7 @@ export default function BrandCalculationPage() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [results, setResults] = useState<EmployeeCalculationResult[]>([]);
   const [activeTab, setActiveTab] = useState<'detail' | 'recap'>('detail');
+  const [calcNotice, setCalcNotice] = useState<{ type: 'error' | 'warning'; message: string } | null>(null);
 
   useEffect(() => {
     const fetchEmployeesByBrand = async () => {
@@ -103,9 +105,12 @@ export default function BrandCalculationPage() {
 
   const handleCalculateAll = async () => {
     setIsCalculating(true);
+    setCalcNotice(null);
     try {
       if (!constraints || constraints.length === 0) {
-        toast.error("Aucune règle de calcul disponible dans le contexte.");
+        const message = "Aucune règle de calcul disponible dans le contexte.";
+        toast.error(message);
+        setCalcNotice({ type: 'error', message });
         setIsCalculating(false);
         return;
       }
@@ -121,7 +126,9 @@ export default function BrandCalculationPage() {
       });
 
       if (activeConstraints.length === 0) {
-        toast.warning(`Aucune règle trouvée pour la marque : ${decodedBrand}`);
+        const message = `Aucune règle trouvée pour la marque : ${decodedBrand}`;
+        toast.warning(message);
+        setCalcNotice({ type: 'warning', message });
         setIsCalculating(false);
         return;
       }
@@ -133,15 +140,6 @@ export default function BrandCalculationPage() {
       const currentBatchId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
       const simulationName = `Simulation ${simNumber} - ${decodedBrand}`;
 
-      const urlBrand = decodedBrand.toUpperCase();
-      const matchesBrand = (dbCarte: string | undefined) => {
-        const carteUp = (dbCarte || '').toUpperCase();
-        if (urlBrand.includes('FERRERO') && carteUp.includes('FERRERO')) return true;
-        if (urlBrand.includes('COCA') && carteUp.includes('COCA')) return true;
-        if (urlBrand.includes('WALL') && carteUp.includes('WALL')) return true;
-        return carteUp === urlBrand;
-      };
-
       const [objectifsRes, realisationsRes, triageRes, volumesRes] = await Promise.allSettled([
         importApi.getObjectifsByPeriode(periodeKey),
         importApi.getRealisationsByPeriode(periodeKey),
@@ -150,9 +148,9 @@ export default function BrandCalculationPage() {
       ]);
 
       const missingSources: string[] = [];
-      const fetchedObjectifs = objectifsRes.status === 'fulfilled' ? objectifsRes.value.filter(o => matchesBrand(o.carte)) : [];
+      const fetchedObjectifs = objectifsRes.status === 'fulfilled' ? objectifsRes.value.filter(o => matchesBrand(o.carte, decodedBrand)) : [];
       if (objectifsRes.status === 'rejected') missingSources.push('Objectifs');
-      const realPayload = realisationsRes.status === 'fulfilled' ? realisationsRes.value.filter(r => matchesBrand(r.carte)) : [];
+      const realPayload = realisationsRes.status === 'fulfilled' ? realisationsRes.value.filter(r => matchesBrand(r.carte, decodedBrand)) : [];
       if (realisationsRes.status === 'rejected') missingSources.push('Réalisations');
       const triPayload = triageRes.status === 'fulfilled' ? triageRes.value : [];
       if (triageRes.status === 'rejected') missingSources.push('Triage');
@@ -160,13 +158,17 @@ export default function BrandCalculationPage() {
       if (volumesRes.status === 'rejected') missingSources.push('Volumes');
 
       if (missingSources.length > 0) {
-        toast.error(`Impossible de récupérer : ${missingSources.join(', ')} — calcul annulé.`);
+        const message = `Impossible de récupérer : ${missingSources.join(', ')} — calcul annulé.`;
+        toast.error(message);
+        setCalcNotice({ type: 'error', message });
         setIsCalculating(false);
         return;
       }
 
       if (fetchedObjectifs.length === 0 || realPayload.length === 0) {
-        toast.warning(`Aucune donnée importée pour ${periodeLabel} / ${decodedBrand} — le calcul utilisera 0 pour les employés concernés.`);
+        const message = `Aucune donnée importée pour ${periodeLabel} / ${decodedBrand} — le calcul utilisera 0 pour les employés concernés.`;
+        toast.warning(message);
+        setCalcNotice({ type: 'warning', message });
       }
 
       const brandResults = brandEmployees.map(employee => {
@@ -358,7 +360,9 @@ export default function BrandCalculationPage() {
       toast.success(`${simulationName} exécutée avec succès !`);
     } catch (error) {
       console.error("Erreur générale calcul:", error);
-      toast.error("Une erreur est survenue lors de l'exécution du calcul.");
+      const message = "Une erreur est survenue lors de l'exécution du calcul.";
+      toast.error(message);
+      setCalcNotice({ type: 'error', message });
     } finally {
       setIsCalculating(false);
     }
@@ -419,6 +423,12 @@ export default function BrandCalculationPage() {
               {isCalculating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calculator className="w-5 h-5" />}
               {isCalculating ? b.calculating : b.launchBtn}
             </button>
+
+            {calcNotice && (
+              <p className={`mt-3 text-xs rounded-lg px-3 py-2 ${calcNotice.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                {calcNotice.message}
+              </p>
+            )}
           </div>
         </div>
 
