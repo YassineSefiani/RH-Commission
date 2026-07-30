@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Calculator, Users, Loader2 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { useConstraints } from '../context/ConstraintsContext';
 import { useHistory } from '../context/HistoryContext';
 import { usePresence } from '../context/PresenceContext';
 import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
 import { getAuthHeaders } from '../services/authHeaders';
+import { importApi } from '../services/importApi';
+import { currentMonthYear, toPeriodeKey, toPeriodeLabel } from '../utils/periode';
 
 interface Employee {
-  id: string; 
-  matricule?: string; 
+  id: string;
+  matricule?: string;
   nom: string;
   prenom: string;
   role: string;
@@ -36,15 +38,24 @@ type EmployeeCalculationResult = {
 export default function BrandCalculationPage() {
   const { brand = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { constraints } = useConstraints();
-  
-  // Récupération de l'historique et de la méthode d'ajout
+
   const { history = [], addCalculation } = useHistory();
-  
-  const { presenceRecords } = usePresence(); 
+
+  const { presenceRecords } = usePresence();
   const decodedBrand = decodeURIComponent(brand);
   const { t } = useLang();
   const b = t.brandCalc;
+
+  const routeState = location.state as { periode?: string; periodeLabel?: string } | null;
+  const { periode: periodeKey, periodeLabel } = useMemo(() => {
+    if (routeState?.periode) {
+      return { periode: routeState.periode, periodeLabel: routeState.periodeLabel || routeState.periode };
+    }
+    const { month, year } = currentMonthYear();
+    return { periode: toPeriodeKey(month, year), periodeLabel: toPeriodeLabel(month, year) };
+  }, [routeState]);
 
   const [brandEmployees, setBrandEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,17 +72,17 @@ export default function BrandCalculationPage() {
 
         let response = await fetch(`${apiBase}/personnel`, { headers: getAuthHeaders() });
         let data = [];
-        
+
         if (response.ok) {
           const allPersonnel = await response.json();
           data = allPersonnel.filter((emp: Employee) => {
             if (!emp.carte) return false;
             const empCarte = emp.carte.trim().toUpperCase();
-            
+
             if (targetBrand.includes('FERRERO') && empCarte.includes('FERRERO')) return true;
             if (targetBrand.includes('COCA') && empCarte.includes('COCA')) return true;
             if (targetBrand.includes('WALL') && empCarte.includes('WALL')) return true;
-            
+
             return empCarte === targetBrand;
           });
         }
@@ -115,40 +126,48 @@ export default function BrandCalculationPage() {
         return;
       }
 
-      // Logique de numérotation de la simulation par lot
       const brandHistory = history.filter(h => (h.carte || '').toUpperCase() === decodedBrand.toUpperCase());
       const uniqueBatches = new Set(brandHistory.map(h => h.batchId).filter(Boolean));
       const simNumber = uniqueBatches.size + 1;
-      
+
       const currentBatchId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
       const simulationName = `Simulation ${simNumber} - ${decodedBrand}`;
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-      
-      let fetchedObjectifs: any[] = [];
-      try {
-        const objRes = await fetch(`${apiBase}/import/objectifs`, { headers: getAuthHeaders() });
-        if (objRes.ok) {
-          const allObjectives = await objRes.json();
-          const urlBrand = decodedBrand.toUpperCase();
-          
-          fetchedObjectifs = allObjectives.filter((o: any) => {
-            const dbCarte = (o.carte || '').toUpperCase();
-            if (urlBrand.includes('FERRERO') && dbCarte.includes('FERRERO')) return true;
-            if (urlBrand.includes('COCA') && dbCarte.includes('COCA')) return true;
-            if (urlBrand.includes('WALL') && dbCarte.includes('WALL')) return true;
-            return dbCarte === urlBrand;
-          });
-        }
-      } catch (err) {
-        console.error("Erreur API Objectifs:", err);
+      const urlBrand = decodedBrand.toUpperCase();
+      const matchesBrand = (dbCarte: string | undefined) => {
+        const carteUp = (dbCarte || '').toUpperCase();
+        if (urlBrand.includes('FERRERO') && carteUp.includes('FERRERO')) return true;
+        if (urlBrand.includes('COCA') && carteUp.includes('COCA')) return true;
+        if (urlBrand.includes('WALL') && carteUp.includes('WALL')) return true;
+        return carteUp === urlBrand;
+      };
+
+      const [objectifsRes, realisationsRes, triageRes, volumesRes] = await Promise.allSettled([
+        importApi.getObjectifsByPeriode(periodeKey),
+        importApi.getRealisationsByPeriode(periodeKey),
+        importApi.getTriageByPeriode(periodeKey),
+        importApi.getVolumesByPeriode(periodeKey),
+      ]);
+
+      const missingSources: string[] = [];
+      const fetchedObjectifs = objectifsRes.status === 'fulfilled' ? objectifsRes.value.filter(o => matchesBrand(o.carte)) : [];
+      if (objectifsRes.status === 'rejected') missingSources.push('Objectifs');
+      const realPayload = realisationsRes.status === 'fulfilled' ? realisationsRes.value.filter(r => matchesBrand(r.carte)) : [];
+      if (realisationsRes.status === 'rejected') missingSources.push('Réalisations');
+      const triPayload = triageRes.status === 'fulfilled' ? triageRes.value : [];
+      if (triageRes.status === 'rejected') missingSources.push('Triage');
+      const volPayload = volumesRes.status === 'fulfilled' ? volumesRes.value : [];
+      if (volumesRes.status === 'rejected') missingSources.push('Volumes');
+
+      if (missingSources.length > 0) {
+        toast.error(`Impossible de récupérer : ${missingSources.join(', ')} — calcul annulé.`);
+        setIsCalculating(false);
+        return;
       }
 
-      const today = new Date();
-      const currentPeriodStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-
-      const simulationData = JSON.parse(localStorage.getItem('simulation_metrics') || '{}');
-      const { realPayload = [], triPayload = [], volPayload = [] } = simulationData;
+      if (fetchedObjectifs.length === 0 || realPayload.length === 0) {
+        toast.warning(`Aucune donnée importée pour ${periodeLabel} / ${decodedBrand} — le calcul utilisera 0 pour les employés concernés.`);
+      }
 
       const brandResults = brandEmployees.map(employee => {
         let commissions = 0;
@@ -157,41 +176,25 @@ export default function BrandCalculationPage() {
 
         const empMatricule = String(employee.matricule || employee.id).trim().toUpperCase();
 
-        const empObjectif = fetchedObjectifs.find((o: any) => String(o.matricule).trim().toUpperCase() === empMatricule) || { target: 0 };
-        const empRealisation = realPayload.find((r: any) => String(r.matricule).trim().toUpperCase() === empMatricule) || { caRealise: 0 };
-        const empTriage = triPayload.find((t: any) => String(t.matricule).trim().toUpperCase() === empMatricule) || { note: 0 };
-        
-        const empVolumeRecords = volPayload.filter((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule);
+        const empObjectif = fetchedObjectifs.find((o) => String(o.matricule).trim().toUpperCase() === empMatricule) || { target: 0 };
+        const empRealisation = realPayload.find((r) => String(r.matricule).trim().toUpperCase() === empMatricule) || { caRealise: 0 };
+        const empTriage = triPayload.find((tr) => String(tr.matricule).trim().toUpperCase() === empMatricule) || { note: 0 };
+
+        const empVolumeRecords = volPayload.filter((v) => String(v.matricule).trim().toUpperCase() === empMatricule);
 
         const roleSegments: Record<string, { volume: number }> = {};
         let totalVolume = 0;
         let globalTauxRetour = 0;
 
         if (empVolumeRecords.length > 0) {
-          globalTauxRetour = empVolumeRecords[0].tauxRetour || 0;
-          
-          empVolumeRecords.forEach((record: any) => {
+          const first = empVolumeRecords[0];
+          globalTauxRetour = first.volumeCharge > 0 ? (first.volumeRetourne / first.volumeCharge) * 100 : 0;
+
+          empVolumeRecords.forEach((record) => {
             let dailyRole = String(employee.role || '').trim().toUpperCase();
-            const dailyVol = Number(record.volumeDistribue || record['Volume chargé (En CP)'] || 0);
+            const dailyVol = (record.volumeCharge || 0) - (record.volumeRetourne || 0);
 
-            const rawDate = record.Date || record.date || record['Date'] || '';
-            let formattedDate = '';
-            const rawStr = String(rawDate).trim();
-            
-            if (/^\d+$/.test(rawStr)) {
-              const serial = parseInt(rawStr, 10);
-              const dateObj = new Date(Date.UTC(1899, 11, 30 + serial));
-              formattedDate = dateObj.toISOString().split('T')[0];
-            } else if (rawStr.includes('/')) {
-              const parts = rawStr.split('/');
-              if (parts.length === 3) {
-                formattedDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
-              }
-            } else if (rawStr.includes('-')) {
-              formattedDate = rawStr.split('T')[0];
-            }
-
-            const dailyPresence = presenceRecords.find(p => p.date === formattedDate);
+            const dailyPresence = presenceRecords.find(p => p.date === record.date);
 
             if (dailyPresence) {
               const mat1 = (dailyPresence.livreur1Matricule || '').trim().toUpperCase();
@@ -217,7 +220,7 @@ export default function BrandCalculationPage() {
           });
         } else {
           let fallbackRole = String(employee.role || '').trim().toUpperCase();
-          
+
           if (decodedBrand.toUpperCase().includes('COCA')) {
             const hasGmsPresenceThisMonth = presenceRecords.some(p => {
               const mat1 = (p.livreur1Matricule || '').trim().toUpperCase();
@@ -230,10 +233,7 @@ export default function BrandCalculationPage() {
             }
           }
 
-          const fallbackVolData = volPayload.find((v: any) => String(v.matricule).trim().toUpperCase() === empMatricule) || { volumeDistribue: 0, tauxRetour: 0 };
-          totalVolume = Number(fallbackVolData.volumeDistribue || 0);
-          globalTauxRetour = fallbackVolData.tauxRetour || 0;
-          roleSegments[fallbackRole] = { volume: totalVolume };
+          roleSegments[fallbackRole] = { volume: 0 };
         }
 
         const tauxRea = empObjectif.target > 0 ? (empRealisation.caRealise / empObjectif.target) * 100 : 0;
@@ -246,15 +246,15 @@ export default function BrandCalculationPage() {
           tauxTriage: empTriage.note,
           caRealise: empRealisation.caRealise,
           tauxRealisation: tauxRea,
-          tauxRealisationGlobal: 105.0 
+          tauxRealisationGlobal: 105.0
         };
 
         activeConstraints.forEach(constraint => {
-          const nomRegle = String(constraint.name || constraint.nom || 'Règle inconnue').toUpperCase(); 
+          const nomRegle = String(constraint.name || constraint.nom || 'Règle inconnue').toUpperCase();
           const conditionStr = String(constraint.condition || '').toUpperCase();
           const typeValue = String(constraint.typeValeur || (constraint as any).type_valeur || (constraint as any).type || (constraint as any).valueType || '').toUpperCase();
           const valeur = Number(constraint.valeur !== undefined ? constraint.valeur : (constraint as any).value || 0);
-          const urlBrand = (decodedBrand || '').toUpperCase();
+          const urlBrandUp = (decodedBrand || '').toUpperCase();
 
           let jsCondition = conditionStr
             .replace(/\bAND\b/g, '&&')
@@ -263,10 +263,10 @@ export default function BrandCalculationPage() {
             .replace(/ROLE ===? 'AIDE LIVREUR 1'/g, "ROLE.includes('AIDE LIVREUR')")
             .replace(/ROLE ===? 'AIDE LIVREUR 2'/g, "ROLE.includes('AIDE LIVREUR')")
             .replace(/ROLE ===? 'AIDE LIVREUR'/g, "ROLE.includes('AIDE LIVREUR')")
-            .replace(/==+/g, "==="); 
+            .replace(/==+/g, "===");
 
           const isVolumeRule = typeValue.includes('UNITE') || typeValue.includes('UNITÉ') || typeValue.includes('UNIT') || (valeur < 1 && !typeValue.includes('POURCENTAGE'));
-          
+
           let amountGeneratedForRule = 0;
           let ruleApplied = false;
 
@@ -279,7 +279,7 @@ export default function BrandCalculationPage() {
                   `return ${jsCondition};`
                 );
                 conditionVerifiee = evaluator(
-                  roleJoue, CONTRAT, metrics.joursTravailles, metrics.tauxRetour, 
+                  roleJoue, CONTRAT, metrics.joursTravailles, metrics.tauxRetour,
                   metrics.tauxTriage, metrics.tauxRealisation, metrics.tauxRealisationGlobal
                 );
               } catch (e) {}
@@ -300,17 +300,17 @@ export default function BrandCalculationPage() {
                   `return ${jsCondition};`
                 );
                 if (evaluator(
-                    roleJoue, CONTRAT, metrics.joursTravailles, metrics.tauxRetour, 
+                    roleJoue, CONTRAT, metrics.joursTravailles, metrics.tauxRetour,
                     metrics.tauxTriage, metrics.tauxRealisation, metrics.tauxRealisationGlobal
                 )) {
                   conditionVerifiee = true;
-                  break; 
+                  break;
                 }
               } catch (e) {}
             }
 
             if (conditionVerifiee) {
-              if (typeValue.includes('POURCENTAGE') || (valeur <= 100 && !urlBrand.includes('COCA'))) {
+              if (typeValue.includes('POURCENTAGE') || (valeur <= 100 && !urlBrandUp.includes('COCA'))) {
                 amountGeneratedForRule = (valeur / 100) * metrics.caRealise;
                 commissions += amountGeneratedForRule;
               } else {
@@ -322,10 +322,10 @@ export default function BrandCalculationPage() {
           }
 
           if (ruleApplied && amountGeneratedForRule > 0) {
-            details.push({ 
-              name: nomRegle, 
-              amount: amountGeneratedForRule, 
-              type: (typeValue.includes('FIXE') || (!isVolumeRule && !typeValue.includes('POURCENTAGE') && valeur > 100)) ? 'bonus' : 'commission' 
+            details.push({
+              name: nomRegle,
+              amount: amountGeneratedForRule,
+              type: (typeValue.includes('FIXE') || (!isVolumeRule && !typeValue.includes('POURCENTAGE') && valeur > 100)) ? 'bonus' : 'commission'
             });
           }
         });
@@ -345,8 +345,8 @@ export default function BrandCalculationPage() {
           details,
           carte: decodedBrand,
           matricule: employee.matricule || employee.id,
-          periode: currentPeriodStr,
-          forcerRecalcul: true, 
+          periode: periodeKey,
+          forcerRecalcul: true,
           batchId: currentBatchId,
           simulationName: simulationName,
         });
@@ -373,7 +373,7 @@ export default function BrandCalculationPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Carte {decodedBrand}</h1>
-            <p className="text-gray-600">Gestion et calcul groupé pour le personnel {decodedBrand}.</p>
+            <p className="text-gray-600">Gestion et calcul groupé pour le personnel {decodedBrand} — période : {periodeLabel}.</p>
           </div>
         </div>
         <button
@@ -433,14 +433,14 @@ export default function BrandCalculationPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
               <div className="flex items-center justify-between border-b border-gray-200 mb-6">
                 <div className="flex gap-6">
-                  <button 
-                    onClick={() => setActiveTab('detail')} 
+                  <button
+                    onClick={() => setActiveTab('detail')}
                     className={`pb-3 border-b-2 font-medium transition-colors ${activeTab === 'detail' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                   >
                     {b.detailTab}
                   </button>
-                  <button 
-                    onClick={() => setActiveTab('recap')} 
+                  <button
+                    onClick={() => setActiveTab('recap')}
                     className={`pb-3 border-b-2 font-medium transition-colors ${activeTab === 'recap' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                   >
                     {b.recapTab}
