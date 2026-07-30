@@ -22,6 +22,9 @@ import java.nio.charset.StandardCharsets;
  * (même secret partagé via la variable d'environnement JWT_SECRET).
  * Pas de Spring Security ici : ce projet n'a pas besoin de la complexité
  * d'un SecurityFilterChain, juste d'un contrôle d'accès simple.
+ *
+ * <p>Modifier/supprimer une fiche de présence est réservé au rôle
+ * DISPATCHER — c'est sa fiche, personne d'autre n'a à y toucher.</p>
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -44,11 +47,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
+        String role;
         try {
             SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
             Claims claims = Jwts.parser().verifyWith(key).build()
                     .parseSignedClaims(header.substring(7)).getPayload();
-            request.setAttribute("userRole", claims.get("role"));
+            role = (String) claims.get("role");
         } catch (ExpiredJwtException e) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expiré");
             return;
@@ -57,6 +61,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
+        String method = request.getMethod();
+        boolean isModification = "PUT".equals(method) || "DELETE".equals(method);
+        if (isModification && request.getRequestURI().startsWith("/api/fiches-presence")
+                && !"DISPATCHER".equals(role)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Seul le dispatcher peut modifier ou supprimer une fiche de présence");
+            return;
+        }
+
+        request.setAttribute("userRole", role);
         chain.doFilter(request, response);
     }
 }

@@ -28,6 +28,7 @@ import {
 } from '../components/ui/select';
 import { usePresence } from '../context/PresenceContext';
 import { usePersonnel } from '../context/PersonnelContext';
+import { useUser } from '../context/UserContext';
 import { Trash2, Pencil, Calendar, Users, Truck, MapPin } from 'lucide-react'; // Ajout de MapPin
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -55,7 +56,9 @@ const emptyPresenceForm = {
 
 export default function PresencePage() {
   const { presenceRecords, deletePresenceRecord, updatePresenceRecord, clearPresenceRecords } = usePresence();
-  const { personnel } = usePersonnel(); 
+  const { personnel } = usePersonnel();
+  const { user } = useUser();
+  const canEdit = user?.superRole === 'DISPATCHER';
 
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editForm, setEditForm] = useState(emptyPresenceForm);
@@ -110,24 +113,26 @@ export default function PresencePage() {
               : `Consulter toutes les fiches enregistrées (${recordCountLabel}).`}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 justify-end">
-          <ConfirmDialog
-            trigger={
-              <Button
-                type="button"
-                variant="outline"
-                disabled={presenceRecords.length === 0}
-              >
-                Supprimer toutes
-              </Button>
-            }
-            title="Supprimer toutes les fiches de présence ?"
-            description={`Cela supprimera ${presenceRecords.length} fiche(s) — action irréversible.`}
-            confirmLabel="Tout supprimer"
-            destructive
-            onConfirm={clearPresenceRecords}
-          />
-        </div>
+        {canEdit && (
+          <div className="flex flex-wrap gap-2 justify-end">
+            <ConfirmDialog
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={presenceRecords.length === 0}
+                >
+                  Supprimer toutes
+                </Button>
+              }
+              title="Supprimer toutes les fiches de présence ?"
+              description={`Cela supprimera ${presenceRecords.length} fiche(s) — action irréversible.`}
+              confirmLabel="Tout supprimer"
+              destructive
+              onConfirm={clearPresenceRecords}
+            />
+          </div>
+        )}
       </div>
 
       {presenceRecords.length === 0 ? (
@@ -149,7 +154,7 @@ export default function PresencePage() {
                 <TableHead>Livreur</TableHead>
                 <TableHead>Aide Livreur 1</TableHead>
                 <TableHead>Aide Livreur 2</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -187,26 +192,28 @@ export default function PresencePage() {
                       <div className="text-gray-500">{record.livreur3Matricule || '-'}</div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditModal(record)}
-                      >
-                        <Pencil className="w-4 h-4 text-gray-500" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deletePresenceRecord(record.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {canEdit && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditModal(record)}
+                        >
+                          <Pencil className="w-4 h-4 text-gray-500" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deletePresenceRecord(record.id)}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
