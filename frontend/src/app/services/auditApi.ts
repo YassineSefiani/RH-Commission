@@ -3,6 +3,8 @@
 // Le serveur enregistre : qui (email + rôle), quand, quelle action, sur quelle entité, détails libres.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+import { getAuthHeaders } from './authHeaders';
+
 export interface AuditEvent {
   action: string;       // ex: "LOGIN", "CONSTRAINT_CREATE", "PERSONNEL_DELETE"
   entity?: string;      // ex: "Contrainte", "Personnel"
@@ -38,6 +40,7 @@ export async function logAudit(event: AuditEvent): Promise<void> {
         'Content-Type': 'application/json',
         ...(role ? { 'X-User-Role': role } : {}),
         ...(email ? { 'X-User-Email': email } : {}),
+        ...getAuthHeaders(),
       },
       body: JSON.stringify(payload),
       keepalive: true,
@@ -48,7 +51,7 @@ export async function logAudit(event: AuditEvent): Promise<void> {
 }
 
 export async function fetchAuditLog(limit = 200): Promise<any[]> {
-  const res = await fetch(`${API_BASE_URL}/audit?limit=${limit}`);
+  const res = await fetch(`${API_BASE_URL}/audit?limit=${limit}`, { headers: getAuthHeaders() });
   if (!res.ok) return [];
   return res.json();
 }

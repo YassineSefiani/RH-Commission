@@ -1,6 +1,8 @@
 // API Service pour la gestion des Fiches de Présence
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+import { getAuthHeaders } from './authHeaders';
+
 // ============================================
 // TYPES POUR L'API PRESENCE
 // ============================================
@@ -48,6 +50,7 @@ function getUserRole(): string {
 function getHeaders(): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    ...getAuthHeaders(),
   };
   const role = getUserRole();
   if (role) {
@@ -74,13 +77,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export const presenceApi = {
   // GET /api/fiches-presence
   getAll: async (): Promise<ApiFichePresence[]> => {
-    const response = await fetch(`${API_BASE_URL}/fiches-presence`);
+    const response = await fetch(`${API_BASE_URL}/fiches-presence`, { headers: getHeaders() });
     return handleResponse<ApiFichePresence[]>(response);
   },
 
   // GET /api/fiches-presence/date/{date}
   getByDate: async (date: string): Promise<ApiFichePresence[]> => {
-    const response = await fetch(`${API_BASE_URL}/fiches-presence/date/${date}`);
+    const response = await fetch(`${API_BASE_URL}/fiches-presence/date/${date}`, { headers: getHeaders() });
     return handleResponse<ApiFichePresence[]>(response);
   },
 
@@ -111,6 +114,12 @@ export const presenceApi = {
       headers: getHeaders(),
     });
     await handleResponse<void>(response);
+  },
+
+  // GET /api/fiches-presence/statistiques?mois=X&annee=Y
+  getStatistiques: async (mois: number, annee: number): Promise<Record<string, unknown>> => {
+    const response = await fetch(`${API_BASE_URL}/fiches-presence/statistiques?mois=${mois}&annee=${annee}`, { headers: getHeaders() });
+    return handleResponse<Record<string, unknown>>(response);
   },
 };
 

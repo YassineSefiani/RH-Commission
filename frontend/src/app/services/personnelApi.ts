@@ -1,6 +1,8 @@
 // API Service pour la gestion du Personnel
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+import { getAuthHeaders } from './authHeaders';
+
 // Types pour l'API Personnel
 export interface ApiPersonnel {
   id?: number;
@@ -44,13 +46,12 @@ function getUserRole(): string {
 function getHeaders(): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    ...getAuthHeaders(),
   };
   const role = getUserRole();
-  console.log('🔍 [personnelApi] getHeaders - role:', role);
   if (role) {
     headers['X-User-Role'] = role;
   }
-  console.log('🔍 [personnelApi] headers:', headers);
   return headers;
 }
 
@@ -88,54 +89,54 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export const personnelApi = {
   // GET /api/personnel
   getAll: async (): Promise<ApiPersonnel[]> => {
-    const response = await fetch(`${API_BASE_URL}/personnel`);
+    const response = await fetch(`${API_BASE_URL}/personnel`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel[]>(response);
   },
 
   // GET /api/personnel/{id}
   getById: async (id: number): Promise<ApiPersonnel> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/${id}`);
+    const response = await fetch(`${API_BASE_URL}/personnel/${id}`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel>(response);
   },
 
   // GET /api/personnel/matricule/{matricule}
   getByMatricule: async (matricule: string): Promise<ApiPersonnel> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/matricule/${matricule}`);
+    const response = await fetch(`${API_BASE_URL}/personnel/matricule/${matricule}`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel>(response);
   },
 
   // GET /api/personnel/actifs
   getActifs: async (): Promise<ApiPersonnel[]> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/actifs`);
+    const response = await fetch(`${API_BASE_URL}/personnel/actifs`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel[]>(response);
   },
 
   // GET /api/personnel/ville/{ville}
   getByVille: async (ville: string): Promise<ApiPersonnel[]> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/ville/${ville}`);
+    const response = await fetch(`${API_BASE_URL}/personnel/ville/${ville}`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel[]>(response);
   },
 
   // GET /api/personnel/contrat/{type}
   getByContrat: async (type: string): Promise<ApiPersonnel[]> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/contrat/${type}`);
+    const response = await fetch(`${API_BASE_URL}/personnel/contrat/${type}`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel[]>(response);
   },
 
   getByCarte: async (carte: string): Promise<ApiPersonnel[]> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/carte/${encodeURIComponent(carte)}`);
+    const response = await fetch(`${API_BASE_URL}/personnel/carte/${encodeURIComponent(carte)}`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel[]>(response);
   },
 
   // GET /api/personnel/search?nom=xxx
   searchByNom: async (nom: string): Promise<ApiPersonnel[]> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/search?nom=${encodeURIComponent(nom)}`);
+    const response = await fetch(`${API_BASE_URL}/personnel/search?nom=${encodeURIComponent(nom)}`, { headers: getHeaders() });
     return handleResponse<ApiPersonnel[]>(response);
   },
 
   // GET /api/personnel/stats
   getStats: async (): Promise<PersonnelStats> => {
-    const response = await fetch(`${API_BASE_URL}/personnel/stats`);
+    const response = await fetch(`${API_BASE_URL}/personnel/stats`, { headers: getHeaders() });
     return handleResponse<PersonnelStats>(response);
   },
 
@@ -186,7 +187,8 @@ export const personnelApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/octet-stream', // On indique au serveur que ce sont des données brutes
-        'X-File-Name': encodeURIComponent(file.name) // On passe le nom via un header personnalisé
+        'X-File-Name': encodeURIComponent(file.name), // On passe le nom via un header personnalisé
+        ...getAuthHeaders(),
       },
       body: arrayBuffer,
     });

@@ -10,6 +10,8 @@ declare global {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+import { getAuthHeaders } from './authHeaders';
+
 // Helper pour obtenir le rôle de l'utilisateur
 function getUserRole(): string {
   const userStr = localStorage.getItem('user');
@@ -27,6 +29,7 @@ function getUserRole(): string {
 function getHeaders(): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    ...getAuthHeaders(),
   };
   const role = getUserRole();
   if (role) {
@@ -89,11 +92,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
 // ============================================
 export const constraintsApi = {
   getAll: async (): Promise<ApiConstraint[]> => {
-    const response = await fetch(`${API_BASE_URL}/constraints`);
+    const response = await fetch(`${API_BASE_URL}/constraints`, { headers: getHeaders() });
     return handleResponse<ApiConstraint[]>(response);
   },
   getById: async (id: number): Promise<ApiConstraint> => {
-    const response = await fetch(`${API_BASE_URL}/constraints/${id}`);
+    const response = await fetch(`${API_BASE_URL}/constraints/${id}`, { headers: getHeaders() });
     return handleResponse<ApiConstraint>(response);
   },
   create: async (constraint: Omit<ApiConstraint, 'id'>): Promise<ApiConstraint> => {
@@ -133,17 +136,17 @@ export const constraintsApi = {
 // ============================================
 export const historyApi = {
   getAll: async (): Promise<ApiCalculationHistory[]> => {
-    const response = await fetch(`${API_BASE_URL}/historique`);
+    const response = await fetch(`${API_BASE_URL}/historique`, { headers: getHeaders() });
     return handleResponse<ApiCalculationHistory[]>(response);
   },
   getById: async (id: number): Promise<ApiCalculationHistory> => {
-    const response = await fetch(`${API_BASE_URL}/historique/${id}`);
+    const response = await fetch(`${API_BASE_URL}/historique/${id}`, { headers: getHeaders() });
     return handleResponse<ApiCalculationHistory>(response);
   },
   create: async (history: Omit<ApiCalculationHistory, 'id' | 'date'>): Promise<ApiCalculationHistory> => {
     const response = await fetch(`${API_BASE_URL}/historique`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(history),
     });
     return handleResponse<ApiCalculationHistory>(response);
@@ -158,12 +161,14 @@ export const historyApi = {
   delete: async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/historique/${id}`, {
       method: 'DELETE',
+      headers: getHeaders(),
     });
     await handleResponse<void>(response);
   },
   clearAll: async (): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/historique/vider`, {
       method: 'DELETE',
+      headers: getHeaders(),
     });
     await handleResponse<void>(response);
   },

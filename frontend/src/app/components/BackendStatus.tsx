@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+// Health check public (pas besoin de token) — /constraints exige désormais une
+// authentification, ce qui faisait faussement remonter "déconnecté".
+const HEALTH_URL = API_BASE_URL.replace(/\/api\/?$/, '') + '/actuator/health';
 
 export function BackendStatus() {
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
@@ -10,7 +13,7 @@ export function BackendStatus() {
   const checkConnection = async () => {
     setIsChecking(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/constraints`, {
+      const response = await fetch(HEALTH_URL, {
         method: 'GET',
       });
       setIsConnected(response.ok);
