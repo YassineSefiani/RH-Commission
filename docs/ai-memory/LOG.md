@@ -4,6 +4,19 @@ Trace des requêtes traitées par Claude sur ce projet. Ajouter une entrée par 
 
 ---
 
+## 2026-07-30 (suite — restriction fiche présence + notification ADV)
+
+- Restriction ajoutée: modifier/supprimer une fiche de présence (page Presence) réservé au rôle DISPATCHER, frontend + backend (`service-presence` JwtAuthFilter: PUT/DELETE sur `/api/fiches-presence` → 403 pour tout rôle ≠ DISPATCHER).
+- Nouvelle fonctionnalité: notification ADV quand le dispatcher modifie une fiche de présence liée à une période/employé déjà calculé. Granularité choisie: période (mois/année) + matricule, pas de lien exact fiche↔calcul (n'existe pas en base — `CalculRequest` est saisi à la main, aucune FK vers `FichePresence`).
+  - Backend: nouvelle entité/repo/service/controller `Notification` dans service-commission. `POST /api/notifications` ne persiste que si un `HistoriqueCalcul` existe déjà pour matricule+mois+année (pas de spam). Route ajoutée au gateway (`ProxyController`, oubliée initialement — 404).
+  - Frontend: `NotificationBell` (header, visible ADMIN/ADV, badge non-lus, poll 30s), `notificationsApi.ts`, hook dans `PresenceContext.tsx` (create/update/delete → notifie chaque livreur de la fiche).
+- **Bugs trouvés et corrigés en testant** (aucun lié à mon travail direct, découverts en marge):
+  - `HistoriqueCalcul.isArchived` toujours `null` au save via `@Builder` (Lombok ignore les valeurs par défaut des champs sauf `@Builder.Default`) → la page Calcul plantait en 500 dès qu'on lançait un vrai calcul. Corrigé.
+  - `updatePresenceRecord` (PresenceContext.tsx) faisait un `fetch()` brut en dehors de `presenceApi.ts`, jamais patché lors du passage JWT — modifier une fiche était cassé (401 silencieux) depuis l'ajout de l'authentification. Corrigé (réutilise `presenceApi.update`).
+  - Plusieurs autres `fetch()` bruts oubliés lors du même passage: `BrandCalculationPage.tsx`, `CalculationPage.tsx` (imports objectifs/réalisations). Corrigés.
+- Testé de bout en bout via docker-compose + navigateur réel (pas juste curl): dispatcher modifie une fiche → notification apparaît correctement dans la cloche ADV avec le bon message/période/matricule.
+- Tout commité sur `DevBek` (pas encore poussé, comme le reste de cette session).
+
 ## 2026-07-30 (restriction rôle DISPATCHER + authentification JWT réelle)
 
 - Découverte importante: **aucun service (sauf service-auth) ne validait le JWT** — service-personnel/commission/presence acceptaient tout appel sans vérification, et **le frontend n'envoyait le token sur aucun appel API** (juste stocké en localStorage après login, jamais attaché aux requêtes). Sécurité de l'appli reposait entièrement sur le frontend qui cachait des boutons, pas sur une vraie barrière serveur.
