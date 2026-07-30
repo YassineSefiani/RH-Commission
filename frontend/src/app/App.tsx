@@ -7,6 +7,7 @@ import { PresenceProvider } from './context/PresenceContext';
 import { UserProvider } from './context/UserContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { LangProvider } from './context/LangContext';
+import { Toaster } from './components/ui/sonner';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           </ConstraintsProvider>
         </UserProvider>
       </LangProvider>
+      <Toaster />
     </ThemeProvider>
   );
 }
