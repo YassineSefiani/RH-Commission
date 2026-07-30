@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
 import { logAudit } from '../services/auditApi';
+import { getAuthHeaders } from '../services/authHeaders';
 
 import cocaBg from '../assets/coca cola.png';
 import ferreroBg from '../assets/ferrero rocher.png';
@@ -139,7 +140,7 @@ export default function CalculationPage() {
       })).filter(r => r.matricule && r.carte);
 
       const role = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').superRole || ''; } catch { return ''; } })();
-      const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}) };
+      const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}), ...getAuthHeaders() };
 
       const res = await fetch(`${API_BASE_URL}/import/objectifs/batch`, {
         method: 'POST',
@@ -233,7 +234,7 @@ export default function CalculationPage() {
       }).filter(r => r.matricule);
 
       const role = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').superRole || ''; } catch { return ''; } })();
-      const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}) };
+      const commonHeaders: HeadersInit = { 'Content-Type': 'application/json', ...(role ? { 'X-User-Role': role } : {}), ...getAuthHeaders() };
 
       async function postBatch(path: string, body: any[]) {
         if (body.length === 0) return { ok: true, inserted: 0 };

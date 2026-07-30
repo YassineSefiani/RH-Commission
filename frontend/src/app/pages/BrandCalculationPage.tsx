@@ -6,6 +6,7 @@ import { useHistory } from '../context/HistoryContext';
 import { usePresence } from '../context/PresenceContext';
 import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
+import { getAuthHeaders } from '../services/authHeaders';
 
 interface Employee {
   id: string; 
@@ -58,7 +59,7 @@ export default function BrandCalculationPage() {
         const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
         const targetBrand = decodedBrand.trim().toUpperCase();
 
-        let response = await fetch(`${apiBase}/personnel`);
+        let response = await fetch(`${apiBase}/personnel`, { headers: getAuthHeaders() });
         let data = [];
         
         if (response.ok) {
@@ -126,7 +127,7 @@ export default function BrandCalculationPage() {
       
       let fetchedObjectifs: any[] = [];
       try {
-        const objRes = await fetch(`${apiBase}/import/objectifs`);
+        const objRes = await fetch(`${apiBase}/import/objectifs`, { headers: getAuthHeaders() });
         if (objRes.ok) {
           const allObjectives = await objRes.json();
           const urlBrand = decodedBrand.toUpperCase();
