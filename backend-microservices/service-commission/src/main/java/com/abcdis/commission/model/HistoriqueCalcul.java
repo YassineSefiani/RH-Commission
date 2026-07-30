@@ -104,6 +104,7 @@ public class HistoriqueCalcul {
     
     @JsonProperty("isArchived")
     @Column(name = "is_archived", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
     private Boolean isArchived = false;
 
     @PrePersist
