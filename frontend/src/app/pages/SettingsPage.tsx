@@ -225,8 +225,8 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all bg-white"
               >
                 <option value="ADMIN">Administrateur</option>
+                <option value="ADV">ADV</option>
                 <option value="DISPATCHER">Dispatcher</option>
-                <option value="MANAGER">Manager</option>
                 <option value="RH">RH</option>
               </select>
             </div>
