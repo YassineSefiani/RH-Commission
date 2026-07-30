@@ -4,6 +4,14 @@ Trace des requêtes traitées par Claude sur ce projet. Ajouter une entrée par 
 
 ---
 
+## 2026-07-30 (suite — un seul calcul validé par produit/mois + purge RH)
+
+- Faille corrigée: rien n'empêchait de valider plusieurs simulations pour le même produit (carte) et mois — l'ADV pouvait valider "Coca Cola avril" plusieurs fois sans blocage.
+- Backend (`HistoriqueService.archiverCalcul`): vérifie qu'aucun autre calcul (batchId différent) n'est déjà validé pour carte+mois+année avant d'autoriser une validation. Les lignes d'un même lot (plusieurs employés validés ensemble) passent toujours ensemble. Conflit → 409 avec message clair.
+- Nouvel endpoint RH uniquement: `DELETE /api/historique/purge?carte&mois&annee` — supprime définitivement les calculs validés de ce produit/mois pour débloquer une nouvelle validation après une erreur. Restreint via JwtAuthFilter (même pattern que DISPATCHER pour les fiches présence).
+- Frontend: message d'erreur réel remonté (pas juste "erreur"), rollback de l'état optimiste manquant sur les 2 handlers de validation par lot (corrigé), bouton "Purger {carte}" visible RH uniquement sur la page Historique.
+- Testé de bout en bout (API + navigateur réel): validation → conflit 409 → purge RH → re-validation possible. Confirmé.
+
 ## 2026-07-30 (suite — restriction fiche présence + notification ADV)
 
 - Restriction ajoutée: modifier/supprimer une fiche de présence (page Presence) réservé au rôle DISPATCHER, frontend + backend (`service-presence` JwtAuthFilter: PUT/DELETE sur `/api/fiches-presence` → 403 pour tout rôle ≠ DISPATCHER).
