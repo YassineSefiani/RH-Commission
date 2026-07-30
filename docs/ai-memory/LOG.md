@@ -4,6 +4,17 @@ Trace des requêtes traitées par Claude sur ce projet. Ajouter une entrée par 
 
 ---
 
+## 2026-07-30 (restriction rôle DISPATCHER + authentification JWT réelle)
+
+- Découverte importante: **aucun service (sauf service-auth) ne validait le JWT** — service-personnel/commission/presence acceptaient tout appel sans vérification, et **le frontend n'envoyait le token sur aucun appel API** (juste stocké en localStorage après login, jamais attaché aux requêtes). Sécurité de l'appli reposait entièrement sur le frontend qui cachait des boutons, pas sur une vraie barrière serveur.
+- Ajout d'un `JwtAuthFilter` (simple servlet filter, pas de Spring Security) à service-personnel/commission/presence, réutilisant le secret JWT déjà partagé (`JWT_SECRET`). `/actuator/**` reste public (health checks).
+- service-commission applique en plus des règles de rôle: `/api/historique` → ADMIN/ADV/RH (pas DISPATCHER), `/api/contraintes` + `/api/calcul` → ADMIN/ADV (aligne le backend sur ce que le frontend cachait déjà sans jamais l'appliquer réellement).
+- Frontend: nouveau helper `frontend/src/app/services/authHeaders.ts`, câblé dans les 4 fichiers API (`api.ts`, `personnelApi.ts`, `presenceApi.ts`, `auditApi.ts`) — plusieurs appels GET n'avaient même pas d'objet `headers` du tout.
+- Rôle DISPATCHER restreint à son périmètre réel (fiches de présence uniquement): Dashboard remplacé par mini-stats présence, History retiré du menu, page Personnel masque type de contrat + téléphone.
+- Testé de bout en bout via docker-compose + navigateur: ADMIN inchangé (dashboard financier complet, historique, personnel complet), DISPATCHER bien restreint, appels sans token → 401, DISPATCHER sur `/api/historique`/`/api/contraintes` → 403.
+- 4 commits sur `DevBek` (2 hygiène .gitignore `frontend/dist/`, 1 backend JWT, 1 frontend headers, 1 frontend UI dispatcher) — **pas encore poussés sur origin**, à confirmer avec l'utilisateur.
+- Toujours en pause sur Task 14 (déploiement Render, blocage carte bancaire) — voir entrée du 2026-07-29 ci-dessous.
+
 ## 2026-07-29 (migration cloud DB — en pause, bloqué sur hébergement)
 
 - Design + plan écrits et exécutés via superpowers (subagent-driven-development): [design](../superpowers/specs/2026-07-25-cloud-database-migration-design.md), [plan](../superpowers/plans/2026-07-25-cloud-database-migration.md).
