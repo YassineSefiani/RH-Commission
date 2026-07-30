@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import logo from '../assets/logo-on-black.png';
 import { BackendStatus } from './BackendStatus';
+import { NotificationBell } from './NotificationBell';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../context/ThemeContext';
 import { useLang } from '../context/LangContext';
@@ -139,6 +140,7 @@ export default function Layout({ children }: LayoutProps) {
           </button>
           <span className="abc-topbar-title">{currentLabel}</span>
           <div className="abc-topbar-right">
+            <NotificationBell />
             <button
               className="abc-iconbtn"
               onClick={toggleTheme}

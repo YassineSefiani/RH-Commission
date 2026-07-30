@@ -1,12 +1,30 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { toast } from 'sonner';
 import { logAudit } from '../services/auditApi';
-import { 
-  presenceApi, 
-  PresenceRecord, 
-  mapApiToPresenceRecord, 
-  mapPresenceRecordToApi 
+import { notificationsApi } from '../services/notificationsApi';
+import {
+  presenceApi,
+  PresenceRecord,
+  mapApiToPresenceRecord,
+  mapPresenceRecordToApi
 } from '../services/presenceApi';
+
+// Prévient l'ADV que cette fiche a changé, pour chaque livreur qui a déjà
+// un calcul de commission sur cette période (le backend ignore l'appel
+// s'il n'y a rien à revoir). Fire-and-forget : ne doit jamais bloquer l'UI.
+function notifierChangementPresence(record: PresenceRecord, action: 'créée' | 'modifiée' | 'supprimée') {
+  const d = new Date(record.date);
+  const mois = d.getMonth() + 1;
+  const annee = d.getFullYear();
+  const matricules = [record.livreur1Matricule, record.livreur2Matricule, record.livreur3Matricule]
+    .filter((m): m is string => !!m);
+  const message = `Fiche de presence ${action} pour le ${d.toLocaleDateString('fr-FR')}` +
+    (record.ville ? ` (${record.ville})` : '') + ' - verifiez le calcul de commission de cette periode.';
+
+  matricules.forEach((matricule) => {
+    notificationsApi.create({ matricule, mois, annee, message }).catch(() => {});
+  });
+}
 
 interface PresenceContextType {
   presenceRecords: PresenceRecord[];
@@ -63,6 +81,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       
       setPresenceRecords((prev) => [newRecord, ...prev]);
       logAudit({ action: 'PRESENCE_CREATE', entity: 'FichePresence', entityId: newRecord.id, details: `${newRecord.date} ${newRecord.matriculeCamion}` });
+      notifierChangementPresence(newRecord, 'créée');
       toast.success('Fiche de présence enregistrée sur le serveur');
     } catch (error: any) {
       console.error('Erreur lors de l\'ajout:', error);
@@ -84,22 +103,9 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
 
       // Formater pour l'API Spring Boot
       const apiInput = mapPresenceRecordToApi(record);
-      const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-      
-      const response = await fetch(`${apiBase}/fiches-presence/${numericId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiInput),
-      });
 
-      if (!response.ok) {
-        throw new Error("Erreur lors de la mise à jour");
-      }
+      const updatedApiRecord = await presenceApi.update(numericId, apiInput);
 
-      const updatedApiRecord = await response.json();
-      
       // Convertir la réponse dans le format React
       const updatedRecord = mapApiToPresenceRecord(updatedApiRecord);
 
@@ -109,6 +115,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       );
       
       logAudit({ action: 'PRESENCE_UPDATE', entity: 'FichePresence', entityId: id });
+      notifierChangementPresence(updatedRecord, 'modifiée');
       toast.success('Fiche de présence mise à jour avec succès');
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error);
@@ -125,10 +132,16 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       const numericId = parseInt(id, 10);
       if (isNaN(numericId)) throw new Error("ID invalide");
 
+      // Capturé avant suppression : il faut ses infos (date, livreurs) pour notifier l'ADV.
+      const recordAvantSuppression = presenceRecords.find((r) => r.id === id);
+
       await presenceApi.delete(numericId);
 
       setPresenceRecords((prev) => prev.filter((record) => record.id !== id));
       logAudit({ action: 'PRESENCE_DELETE', entity: 'FichePresence', entityId: id });
+      if (recordAvantSuppression) {
+        notifierChangementPresence(recordAvantSuppression, 'supprimée');
+      }
       toast.success('Fiche de présence supprimée du serveur');
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);

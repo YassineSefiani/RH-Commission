@@ -93,4 +93,11 @@ public interface HistoriqueCalculRepository extends JpaRepository<HistoriqueCalc
 
     /** Version paginée triée date desc pour les écrans de listing. */
     Page<HistoriqueCalcul> findAllByOrderByDateCalculDesc(Pageable pageable);
+
+    /**
+     * Un calcul existe-t-il déjà pour cet employé sur cette période ?
+     * Sert à ne créer une notification que si l'ADV a effectivement quelque
+     * chose à revoir (pas de bruit s'il n'y a jamais eu de calcul).
+     */
+    boolean existsByMatriculeAndMoisAndAnnee(String matricule, Integer mois, Integer annee);
 }

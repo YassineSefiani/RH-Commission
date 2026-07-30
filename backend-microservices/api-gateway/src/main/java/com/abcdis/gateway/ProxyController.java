@@ -36,6 +36,7 @@ import java.util.Map;
  *   /api/contraintes/**      → http://localhost:8083
  *   /api/calcul/**           → http://localhost:8083
  *   /api/historique/**       → http://localhost:8083
+ *   /api/notifications/**    → http://localhost:8083
  *   /api/fiches-presence/**  → http://localhost:8084
  *   /api/voyages/**          → http://localhost:8084
  *   /api/ventes/**           → http://localhost:8084
@@ -186,11 +187,12 @@ public class ProxyController {
             return personnelUrl;
         }
 
-        // Service Commission (port 8083) : contraintes + calcul + historique + import
+        // Service Commission (port 8083) : contraintes + calcul + historique + import + notifications
         if (path.startsWith("/api/contraintes/") || path.equals("/api/contraintes")
                 || path.startsWith("/api/calcul/") || path.equals("/api/calcul")
                 || path.startsWith("/api/historique/") || path.equals("/api/historique")
-                || path.startsWith("/api/import/") || path.equals("/api/import")) {
+                || path.startsWith("/api/import/") || path.equals("/api/import")
+                || path.startsWith("/api/notifications/") || path.equals("/api/notifications")) {
             return commissionUrl;
         }
 
