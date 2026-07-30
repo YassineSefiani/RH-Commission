@@ -22,6 +22,13 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(404, "Not Found", ex.getMessage()));
     }
 
+    @ExceptionHandler(CalculDejaValideException.class)
+    public ResponseEntity<ErrorResponse> handleDejaValide(CalculDejaValideException ex) {
+        log.warn("Validation refusée: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of(409, "Conflict", ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()

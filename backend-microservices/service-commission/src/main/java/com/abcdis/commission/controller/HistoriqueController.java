@@ -75,4 +75,13 @@ public class HistoriqueController {
         historiqueService.archiverCalcul(id);
         return ResponseEntity.ok().build();
     }
+
+    /** RH uniquement (voir JwtAuthFilter) — purge les calculs validés d'un produit/mois. */
+    @DeleteMapping("/purge")
+    public ResponseEntity<Map<String, Integer>> purgerValide(@RequestParam String carte,
+                                                               @RequestParam Integer mois,
+                                                               @RequestParam Integer annee) {
+        int supprimes = historiqueService.purgerValide(carte, mois, annee);
+        return ResponseEntity.ok(Map.of("supprimes", supprimes));
+    }
 }

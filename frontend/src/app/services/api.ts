@@ -156,7 +156,21 @@ export const historyApi = {
       method: 'PATCH',
       headers: getHeaders(),
     });
-    if (!response.ok) throw new Error("Impossible d'archiver côté serveur");
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.message || "Impossible d'archiver côté serveur");
+    }
+  },
+  purgerValide: async (carte: string, mois: number, annee: number): Promise<{ supprimes: number }> => {
+    const response = await fetch(`${API_BASE_URL}/historique/purge?carte=${encodeURIComponent(carte)}&mois=${mois}&annee=${annee}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.message || "Impossible de purger les calculs validés");
+    }
+    return response.json();
   },
   delete: async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/historique/${id}`, {

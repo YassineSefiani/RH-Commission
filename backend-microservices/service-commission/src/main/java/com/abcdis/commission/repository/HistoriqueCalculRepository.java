@@ -100,4 +100,11 @@ public interface HistoriqueCalculRepository extends JpaRepository<HistoriqueCalc
      * chose à revoir (pas de bruit s'il n'y a jamais eu de calcul).
      */
     boolean existsByMatriculeAndMoisAndAnnee(String matricule, Integer mois, Integer annee);
+
+    /**
+     * Calculs déjà validés pour ce produit sur cette période — sert à
+     * détecter un conflit avant une nouvelle validation, et à lister ce que
+     * le RH s'apprête à purger.
+     */
+    List<HistoriqueCalcul> findByCarteAndMoisAndAnneeAndIsArchivedTrue(String carte, Integer mois, Integer annee);
 }

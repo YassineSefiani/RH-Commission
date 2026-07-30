@@ -1,6 +1,7 @@
 package com.abcdis.commission.service;
 
 import com.abcdis.commission.dto.HistoriqueCreationRequest;
+import com.abcdis.commission.exception.CalculDejaValideException;
 import com.abcdis.commission.exception.ResourceNotFoundException;
 import com.abcdis.commission.model.HistoriqueCalcul;
 import com.abcdis.commission.repository.HistoriqueCalculRepository;
@@ -179,12 +180,48 @@ public class HistoriqueService {
         historiqueRepository.deleteAll();
     }
 
+    /**
+     * Un seul calcul validé par produit (carte) et par mois. On peut valider
+     * plusieurs lignes d'un même lot (batchId identique — ex: tous les
+     * employés d'une simulation "Coca Cola - Avril") en une fois, mais pas
+     * une ligne d'un lot différent si ce produit/mois a déjà une validation.
+     */
     @Transactional
     public void archiverCalcul(Long id) {
         HistoriqueCalcul calcul = trouverParId(id);
+        List<HistoriqueCalcul> dejaValides = historiqueRepository
+                .findByCarteAndMoisAndAnneeAndIsArchivedTrue(calcul.getCarte(), calcul.getMois(), calcul.getAnnee());
+
+        boolean conflit = dejaValides.stream().anyMatch(h -> {
+            if (h.getId().equals(calcul.getId())) return false; // lui-même, pas un conflit
+            boolean memeLot = calcul.getBatchId() != null && calcul.getBatchId().equals(h.getBatchId());
+            return !memeLot;
+        });
+
+        if (conflit) {
+            throw new CalculDejaValideException(
+                    "Un calcul a déjà été validé pour " + calcul.getCarte() + " en "
+                    + calcul.getMois() + "/" + calcul.getAnnee()
+                    + " — demandez au RH de purger l'ancien avant d'en valider un nouveau.");
+        }
+
         calcul.setIsArchived(true);
         historiqueRepository.save(calcul);
         log.info("Calcul ID {} validé et archivé avec succès.", id);
+    }
+
+    /**
+     * RH uniquement — supprime les calculs validés d'un produit/mois pour
+     * débloquer une nouvelle validation après une erreur.
+     */
+    @Transactional
+    public int purgerValide(String carte, Integer mois, Integer annee) {
+        List<HistoriqueCalcul> aPurger = historiqueRepository
+                .findByCarteAndMoisAndAnneeAndIsArchivedTrue(carte, mois, annee);
+        historiqueRepository.deleteAll(aPurger);
+        log.info("Purge RH : {} calcul(s) validé(s) supprimé(s) pour carte={} periode={}/{}",
+                aPurger.size(), carte, mois, annee);
+        return aPurger.size();
     }
 
     /**

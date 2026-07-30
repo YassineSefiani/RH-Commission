@@ -2,13 +2,14 @@ import { useState, useMemo } from 'react';
 import { ChevronDown, Download, FileDown, Loader2, Trash2, Search, FileSpreadsheet, CheckSquare, CheckCircle } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import { useHistory } from '../context/HistoryContext';
+import { historyApi } from '../services/api';
 import { exportHistoryPDF, exportSingleRecordPDF } from '../utils/pdfExport';
 import { useLang } from '../context/LangContext';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
 export default function HistoryPage() {
-  const { history, deleteCalculation, archiveCalculation } = useHistory();
+  const { history, deleteCalculation, archiveCalculation, refreshHistory } = useHistory();
   const { t, lang } = useLang();
   const h_ = t.history;
 
@@ -145,11 +146,16 @@ export default function HistoryPage() {
       await Promise.all(unarchivedItems.map(async (h) => {
         await archiveCalculation(h.id);
       }));
-      
+
       toast.success(lang === 'en' ? 'All simulations validated successfully' : 'Toutes les simulations du groupe ont été validées !');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la validation groupée :", error);
-      toast.error("Une erreur est survenue lors de la validation globale");
+      setLocalValidations(prev => {
+        const reverted = { ...prev };
+        unarchivedItems.forEach(item => { reverted[item.id] = false; });
+        return reverted;
+      });
+      toast.error(error?.message || "Une erreur est survenue lors de la validation globale");
     } finally {
       setIsArchivingBatch(false);
     }
@@ -180,13 +186,39 @@ export default function HistoryPage() {
       await Promise.all(itemsToArchive.map(async (h) => {
         await archiveCalculation(h.id);
       }));
-      
+
       toast.success(lang === 'en' ? 'Simulation validated successfully' : 'Lot de simulation validé avec succès !');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la validation du lot :", error);
-      toast.error("Une erreur est survenue lors de la validation du lot");
+      setLocalValidations(prev => {
+        const reverted = { ...prev };
+        itemsToArchive.forEach(item => { reverted[item.id] = false; });
+        return reverted;
+      });
+      toast.error(error?.message || "Une erreur est survenue lors de la validation du lot");
     } finally {
       setArchivingBatches(prev => ({ ...prev, [batchId]: false }));
+    }
+  };
+
+  const [purgingKey, setPurgingKey] = useState<string | null>(null);
+
+  const handlePurgerCarte = async (carte: string, mois: number, annee: number) => {
+    const key = `${carte}-${mois}-${annee}`;
+    setPurgingKey(key);
+    try {
+      const { supprimes } = await historyApi.purgerValide(carte, mois, annee);
+      await refreshHistory();
+      toast.success(
+        lang === 'en'
+          ? `${supprimes} validated calculation(s) purged for ${carte}`
+          : `${supprimes} calcul(s) validé(s) purgé(s) pour ${carte}`
+      );
+    } catch (error: any) {
+      console.error('Erreur lors de la purge :', error);
+      toast.error(error?.message || 'Impossible de purger les calculs validés');
+    } finally {
+      setPurgingKey(null);
     }
   };
 
@@ -518,6 +550,45 @@ export default function HistoryPage() {
                     <span>{lang === 'en' ? 'Validate Simulation' : 'Valider la simulation'}</span>
                   </button>
                 )}
+
+                {userRole === 'RH' && g.isArchived && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                    <span className="text-xs text-gray-500">
+                      {lang === 'en' ? 'Purge a validated product (unblocks re-validation)' : 'Purger un produit validé (débloque une nouvelle validation)'}
+                    </span>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      {Array.from(new Set(g.items.map(it => it.carte).filter(Boolean) as string[])).map((carte) => {
+                        const mois = g.date.getMonth() + 1;
+                        const annee = g.date.getFullYear();
+                        const key = `${carte}-${mois}-${annee}`;
+                        return (
+                          <ConfirmDialog
+                            key={carte}
+                            trigger={
+                              <button
+                                className="abc-btn abc-btn-outline abc-btn-sm"
+                                style={{ borderColor: '#ef4444', color: '#ef4444' }}
+                                disabled={purgingKey === key}
+                              >
+                                {purgingKey === key ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                {lang === 'en' ? `Purge ${carte}` : `Purger ${carte}`}
+                              </button>
+                            }
+                            title={lang === 'en' ? `Purge validated ${carte}?` : `Purger ${carte} validé ?`}
+                            description={
+                              lang === 'en'
+                                ? `Permanently deletes the validated calculation(s) for ${carte} in ${mois}/${annee}, so ADV can validate a new one.`
+                                : `Supprime définitivement le(s) calcul(s) validé(s) pour ${carte} en ${mois}/${annee}, pour permettre à l'ADV d'en valider un nouveau.`
+                            }
+                            confirmLabel={lang === 'en' ? 'Purge' : 'Purger'}
+                            destructive
+                            onConfirm={() => handlePurgerCarte(carte, mois, annee)}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -625,10 +696,10 @@ export default function HistoryPage() {
                                     await archiveCalculation(h.id);
                                     toast.success(lang === 'en' ? 'Calculation validated successfully' : 'Calcul validé avec succès !');
                                   }
-                                } catch (err) {
+                                } catch (err: any) {
                                   console.error(err);
                                   setLocalValidations(prev => ({ ...prev, [h.id]: false }));
-                                  toast.error("Échec de la validation du calcul");
+                                  toast.error(err?.message || "Échec de la validation du calcul");
                                 }
                               }}
                             >
