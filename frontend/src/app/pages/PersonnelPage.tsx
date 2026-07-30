@@ -517,9 +517,11 @@ export default function PersonnelPage() {
                     {person.carte}
                   </span>
                 )}
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                  {person.natureContrat}
-                </span>
+                {user?.superRole !== 'DISPATCHER' && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                    {person.natureContrat}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center justify-between text-xs text-gray-400 mt-2">
@@ -555,9 +557,11 @@ export default function PersonnelPage() {
                   { icon: <Briefcase className="w-4 h-4" />, label: p.role, value: selectedPerson.role },
                   { icon: <Briefcase className="w-4 h-4" />, label: p.fonction, value: selectedPerson.fonction },
                   { icon: null, label: p.carte, value: selectedPerson.carte },
-                  { icon: null, label: p.contractType, value: selectedPerson.natureContrat },
+                  ...(user?.superRole !== 'DISPATCHER' ? [
+                    { icon: null, label: p.contractType, value: selectedPerson.natureContrat },
+                    { icon: <Phone className="w-4 h-4" />, label: p.telephone, value: selectedPerson.numero },
+                  ] : []),
                   { icon: <MapPin className="w-4 h-4" />, label: p.ville, value: selectedPerson.ville },
-                  { icon: <Phone className="w-4 h-4" />, label: p.telephone, value: selectedPerson.numero },
                 ].map(({ icon, label, value }) => value ? (
                   <div key={label} className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-400 uppercase font-semibold mb-1">{label}</p>

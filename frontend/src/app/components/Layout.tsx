@@ -44,7 +44,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/presence',    label: t.nav.presence,    icon: ClipboardList },
     { path: '/constraints', label: t.nav.constraints, icon: FileText,   allowedRoles: ['ADMIN', 'ADV'] },
     { path: '/calculation', label: t.nav.calculation, icon: Calculator, allowedRoles: ['ADMIN', 'ADV'] },
-    { path: '/history',     label: t.nav.history,     icon: History },
+    { path: '/history',     label: t.nav.history,     icon: History,   allowedRoles: ['ADMIN', 'ADV', 'RH'] },
     { path: '/audit',       label: 'Audit',            icon: Activity, allowedRoles: ['ADMIN'] },
     { path: '/settings',    label: t.nav.settings,    icon: Settings },
   ];

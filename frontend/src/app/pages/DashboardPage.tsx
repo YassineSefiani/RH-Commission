@@ -1,13 +1,89 @@
-import { useState, useMemo } from 'react';
-import { Users, TrendingUp, DollarSign, Calculator, Award, BarChart2, Filter } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Users, TrendingUp, DollarSign, Calculator, Award, BarChart2, Filter, ClipboardList, Truck, CalendarCheck } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { useHistory } from '../context/HistoryContext';
 import { useLang } from '../context/LangContext';
+import { useUser } from '../context/UserContext';
+import { presenceApi, ApiFichePresence } from '../services/presenceApi';
+
+// Dashboard restreint pour le rôle DISPATCHER : son travail se limite aux fiches
+// de présence, il n'a pas besoin de voir le chiffre d'affaires, les commissions
+// ou la masse salariale de l'entreprise.
+function DispatcherDashboard() {
+  const [stats, setStats] = useState<{ totalFiches: number; livreursPrésents: number; totalVoyages: number } | null>(null);
+  const [recentFiches, setRecentFiches] = useState<ApiFichePresence[]>([]);
+
+  useEffect(() => {
+    const now = new Date();
+    presenceApi.getStatistiques(now.getMonth() + 1, now.getFullYear())
+      .then((s) => setStats(s as any))
+      .catch(() => setStats(null));
+    presenceApi.getAll()
+      .then((list) => setRecentFiches(
+        [...list].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5)
+      ))
+      .catch(() => setRecentFiches([]));
+  }, []);
+
+  const cards = [
+    { label: 'Fiches ce mois', value: stats?.totalFiches ?? '—', icon: ClipboardList, tone: 'violet' },
+    { label: 'Livreurs présents', value: stats?.livreursPrésents ?? '—', icon: Users, tone: 'blue' },
+    { label: 'Voyages ce mois', value: stats?.totalVoyages ?? '—', icon: Truck, tone: 'emerald' },
+  ];
+
+  return (
+    <div className="abc-page-inner abc-stack-lg">
+      <div className="abc-kpi-grid">
+        {cards.map((k) => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className="abc-card abc-kpi">
+              <div className="abc-kpi-head">
+                <span className="abc-kpi-label">{k.label}</span>
+                <span className={`abc-kpi-icon abc-kpi-icon-${k.tone}`}>
+                  <Icon size={14} />
+                </span>
+              </div>
+              <div className="abc-kpi-value">{k.value}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="abc-card no-pad">
+        <div className="abc-top-card-head">
+          <div>
+            <h3 className="abc-h3">Dernières fiches saisies</h3>
+            <p className="abc-sub abc-sub-tight">Vos 5 fiches de présence les plus récentes</p>
+          </div>
+        </div>
+        {recentFiches.length === 0 ? (
+          <div className="text-center py-10 text-gray-400">Aucune fiche pour le moment.</div>
+        ) : (
+          <ul className="abc-activity-list">
+            {recentFiches.map((f) => (
+              <li key={f.id} className="abc-activity-row">
+                <div className="abc-avatar abc-avatar-sm" style={{ background: 'var(--brand)', color: 'white', width: 30, height: 30, fontSize: 11 }}>
+                  <CalendarCheck size={14} />
+                </div>
+                <div className="abc-activity-info">
+                  <span className="abc-activity-name">{f.matriculeCamion} · {f.canal}</span>
+                  <span className="abc-activity-meta">{new Date(f.date).toLocaleDateString('fr-FR')} · {f.livreur1Prenom} {f.livreur1Nom}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
+  const { user } = useUser();
   const { history } = useHistory();
   const { t, lang } = useLang();
   const d = t.dashboard;
@@ -111,6 +187,10 @@ export default function DashboardPage() {
     setSelectedMonth('');
     setSelectedYear('');
   };
+
+  if (user?.superRole === 'DISPATCHER') {
+    return <DispatcherDashboard />;
+  }
 
   return (
     <div className="abc-page-inner abc-stack-lg">
