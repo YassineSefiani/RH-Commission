@@ -116,7 +116,7 @@ export default function BrandCalculationPage() {
       }
 
       const activeConstraints = constraints.filter(c => {
-        if (c.actif === false || c.actif === 0) return false;
+        if (c.active === false) return false;
         const dbCarte = (c.carte || '').toUpperCase();
         const urlBrand = (decodedBrand || '').toUpperCase();
         if (urlBrand.includes('COCA') && dbCarte.includes('COCA')) return true;
