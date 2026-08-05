@@ -1,0 +1,68 @@
+services:
+  service-auth:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-auth/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8081:8081"
+    environment:
+      DB_URL_AUTH: ${NEON_AUTH_URL}
+      DB_USERNAME: ${NEON_AUTH_USER}
+      DB_PASSWORD: ${NEON_AUTH_PASSWORD}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5174,http://localhost:5175
+
+  service-personnel:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-personnel/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8082:8082"
+    environment:
+      DB_URL_PERSONNEL: ${NEON_PERSONNEL_URL}
+      DB_USERNAME: ${NEON_PERSONNEL_USER}
+      DB_PASSWORD: ${NEON_PERSONNEL_PASSWORD}
+
+  service-commission:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-commission/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8083:8083"
+    environment:
+      DB_URL_COMMISSION: ${NEON_COMMISSION_URL}
+      DB_USERNAME: ${NEON_COMMISSION_USER}
+      DB_PASSWORD: ${NEON_COMMISSION_PASSWORD}
+
+  service-presence:
+    build:
+      context: ./backend-microservices
+      dockerfile: service-presence/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8084:8084"
+    environment:
+      DB_URL_PRESENCE: ${NEON_PRESENCE_URL}
+      DB_USERNAME: ${NEON_PRESENCE_USER}
+      DB_PASSWORD: ${NEON_PRESENCE_PASSWORD}
+
+  api-gateway:
+    build:
+      context: ./backend-microservices
+      dockerfile: api-gateway/Dockerfile
+    mem_limit: 512m
+    ports:
+      - "8080:8080"
+    environment:
+      SERVICE_AUTH_URL: http://service-auth:8081
+      SERVICE_PERSONNEL_URL: http://service-personnel:8082
+      SERVICE_COMMISSION_URL: http://service-commission:8083
+      SERVICE_PRESENCE_URL: http://service-presence:8084
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5174,http://localhost:5175
+    depends_on:
+      - service-auth
+      - service-personnel
+      - service-commission
+      - service-presence
