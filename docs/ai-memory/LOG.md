@@ -4,6 +4,22 @@ Trace des requêtes traitées par Claude sur ce projet. Ajouter une entrée par 
 
 ---
 
+## 2026-07-30 (suite — fix `c.actif` no-op dans BrandCalculationPage)
+
+- Corrigé le bug flaggé plus tôt aujourd'hui (voir entrée ci-dessous "revue finale") : [BrandCalculationPage.tsx:119](../../frontend/src/app/pages/BrandCalculationPage.tsx#L119) testait `c.actif === false || c.actif === 0` alors que `Constraint` (`ConstraintsContext.tsx`) expose `active: boolean`, pas `actif` — filtre toujours no-op, contrainte désactivée par RH restait appliquée. Changé en `c.active === false`.
+- Vérifié `.nom`/`.valeur`/`.typeValeur` restants dans le même fichier (lignes 255-258) : ce sont des fallbacks défensifs après le vrai champ (`constraint.name || constraint.nom`, etc.) — inoffensifs, pas touchés.
+- Build (`npx vite build`) : succès. Vérifié en navigateur réel (ADMIN, `docker compose` déjà up) : contrainte "Retour Coke 1% à 2%" (règle Coca Cola, 150 MAD) désactivée via la page Contraintes → calcul Coca Cola Août 2026 pour Youssef Bennani passe de 526,40 MAD à 376,40 MAD (ligne "RETOUR COKE 1% À 2%" disparue, les 2 autres règles intactes) → contrainte réactivée après, état restauré.
+- Créé `C:\Projets\.claude\launch.json` (`npm --prefix RH-Commission/frontend run dev`, port 5173) pour permettre au navigateur de preview de lancer le frontend directement — n'existait pas avant.
+- Commit fait dans la session principale (1ae2439).
+
+## 2026-07-30 (suite — historique des fichiers importés sur la page Calcul)
+
+- Demande utilisateur : visibilité sur les fichiers Excel importés (nom du fichier, qui, quand) — choisi parmi 3 options proposées (aperçu avant import / table détaillée / historique des imports).
+- Réutilise l'infra d'audit déjà existante (`logAudit`/`fetchAuditLog`, `/api/audit`, déjà utilisée pour `IMPORT_OBJECTIFS_SQL`/`IMPORT_EXCEL_SIMULATION` mais sans nom de fichier dans `details`) plutôt que d'ajouter un nouveau système.
+- `CalculationPage.tsx` : les deux handlers d'import ajoutent maintenant le(s) nom(s) de fichier réel(s) dans `details` (`file.name` pour Objectifs, liste jointe pour Réal/Triage/Volumes). Nouveau panneau "Historique des fichiers importés" (10 dernières entrées, toutes périodes confondues, pas juste la période active) sous le panneau de statut — interroge `fetchAuditLog` filtré côté client sur les 2 actions d'import, trié par date décroissante.
+- Endpoint `/api/audit` déjà accessible sans restriction de rôle côté backend (vérifié dans `AuditController.java`) — fonctionne donc pour ADV, pas seulement ADMIN (contrairement à la page `/audit` globale, réservée ADMIN côté nav).
+- Build (`npx vite build`) : succès. Vérification live interrompue en cours de route : Docker Desktop s'est arrêté pendant le test (panneau navigateur vide, `docker ps` → "cannot connect to the Docker API"), hors de mon contrôle — code committé et build-vérifié, mais pas re-testé en navigateur après ce point. À reconfirmer visuellement au prochain lancement de `docker compose up -d`.
+
 ## 2026-07-30 (suite — revue finale + corrections du plan Calcul)
 
 - Revue finale (whole-branch, modèle le plus capable) du plan complet (Tasks 1-5) : 1 finding **Critical** + 4 **Important**, tous corrigés directement (pas de subagent, corrections bien comprises) puis re-revus par un reviewer frais — verdict "Ready to merge: Yes".

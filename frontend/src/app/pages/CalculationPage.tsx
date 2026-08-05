@@ -5,12 +5,13 @@ import {
   Loader2,
   Target,
   AlertCircle,
+  History,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 import { useLang } from '../context/LangContext';
 import { useConstraints } from '../context/ConstraintsContext';
-import { logAudit } from '../services/auditApi';
+import { logAudit, fetchAuditLog } from '../services/auditApi';
 import { importApi, type ApiObjectif, type ApiRealisation, type ApiTriage, type ApiVolume } from '../services/importApi';
 import { MONTHS_FR, toPeriodeKey, toPeriodeLabel } from '../utils/periode';
 import { parseExcelDate } from '../utils/excelDate';
@@ -141,6 +142,35 @@ export default function CalculationPage() {
     refreshStatus();
   }, [refreshStatus]);
 
+  // ─── Historique des fichiers importés (qui/quand/quoi, toutes périodes) ───
+  interface ImportHistoryEntry {
+    id: number;
+    userEmail: string;
+    action: string;
+    details?: string;
+    timestamp: string;
+  }
+  const [importHistory, setImportHistory] = useState<ImportHistoryEntry[]>([]);
+  const [importHistoryLoading, setImportHistoryLoading] = useState(false);
+
+  const refreshImportHistory = useCallback(async () => {
+    setImportHistoryLoading(true);
+    try {
+      const entries = await fetchAuditLog(200);
+      const importEntries = (entries as ImportHistoryEntry[])
+        .filter(e => e.action === 'IMPORT_OBJECTIFS_SQL' || e.action === 'IMPORT_EXCEL_SIMULATION')
+        .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+        .slice(0, 10);
+      setImportHistory(importEntries);
+    } finally {
+      setImportHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshImportHistory();
+  }, [refreshImportHistory]);
+
   const carteStatusCounts = useMemo(() => {
     const cartes = ['Coca Cola', "Wall's", 'Ferrero Rocher'];
     const map: Record<string, { objectifs: number; realisations: number }> = {};
@@ -206,9 +236,10 @@ export default function CalculationPage() {
       logAudit({
         action: 'IMPORT_OBJECTIFS_SQL',
         entity: 'Calcul',
-        details: `${objPayload.length} objectifs persistés en BDD pour ${periodeLabel}`,
+        details: `${file.name} — ${objPayload.length} objectifs pour ${periodeLabel}`,
       });
       await refreshStatus();
+      await refreshImportHistory();
     } catch (err: any) {
       console.error('Erreur import Objectifs:', err);
       toast.error(err?.message ?? 'Échec de la sauvegarde des objectifs');
@@ -309,13 +340,15 @@ export default function CalculationPage() {
         toast.success(`Import ${periodeLabel} : ${okCount[0] ?? 0} réal, ${okCount[1] ?? 0} tri, ${okCount[2] ?? 0} volumes`);
       }
 
+      const fileNames = Array.from(files).map(f => f.name).join(', ');
       logAudit({
         action: 'IMPORT_EXCEL_SIMULATION',
         entity: 'Calcul',
-        details: `${files.length} fichiers chargés pour ${periodeLabel}`,
+        details: `${fileNames} — pour ${periodeLabel}`,
       });
 
       await refreshStatus();
+      await refreshImportHistory();
     } catch (err: any) {
       console.error('Erreur import Excel:', err);
       toast.error(err?.message ?? "Échec de l'import Excel");
@@ -451,6 +484,29 @@ export default function CalculationPage() {
               ? `Dernière mise à jour : ${new Date(lastUpdated).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
               : `Aucune donnée importée pour ${periodeLabel}.`}
           </p>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <History className="h-4 w-4 text-gray-400" />
+            <span className="text-[10px] font-semibold tracking-[0.18em] text-gray-400">HISTORIQUE DES FICHIERS IMPORTÉS</span>
+            {importHistoryLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />}
+          </div>
+
+          {importHistory.length === 0 ? (
+            <p className="text-xs text-gray-400">Aucun import enregistré pour l'instant.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {importHistory.map((entry) => (
+                <li key={entry.id} className="flex flex-col gap-0.5 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <span className="min-w-0 flex-1 truncate text-gray-700" title={entry.details}>{entry.details || '—'}</span>
+                  <span className="whitespace-nowrap text-gray-400">
+                    {entry.userEmail} · {new Date(entry.timestamp).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
 
