@@ -51,6 +51,25 @@ export default function ConstraintsPage() {
     return matchesSearch && matchesCarte;
   });
 
+  // Fonction pour formater l'affichage des valeurs spécifiques
+  const formatConstraintValue = (val: number, type: string) => {
+    // S'il s'agit déjà d'un pourcentage dans la base
+    if (type === 'percentage') return `${val}%`;
+
+    // Les valeurs à multiplier par 100 pour l'affichage (Distribution Coca)
+    if ([0.18, 0.11, 0.12, 0.08].includes(val)) {
+      return `${Math.round(val * 100)}%`; 
+    }
+    
+    // Les valeurs à garder telles quelles en ajoutant juste un '%'
+    if ([1.5, 0.7, 0.8, 0.9, 1, 0.6, 0.4, 0.5, 1.8, 2].includes(val)) {
+      return `${val}%`; 
+    }
+
+    // Affichage par défaut pour le reste (ex: montants fixes)
+    return `${val} MAD`;
+  };
+
   return (
     <div className="abc-page-inner abc-stack-lg">
       {/* Header */}
@@ -129,7 +148,7 @@ export default function ConstraintsPage() {
                     </td>
                     <td className="py-4 px-6">
                       <span className="font-semibold text-gray-900">
-                        {constraint.valueType === 'percentage' ? `${constraint.value}%` : `${constraint.value} MAD`}
+                        {formatConstraintValue(constraint.value, constraint.valueType)}
                       </span>
                     </td>
                     <td className="py-4 px-6">

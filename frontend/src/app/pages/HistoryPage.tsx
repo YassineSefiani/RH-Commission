@@ -49,13 +49,24 @@ export default function HistoryPage() {
     return Array.from(new Set(mergedHistory.map(h => h.carte).filter(Boolean) as string[])).sort();
   }, [mergedHistory]);
 
+  // ---> NOUVEAU : Fonction utilitaire pour utiliser la période du calcul plutôt que la date d'exécution
+  const getPeriodeDate = (h: any) => {
+    if (h.periode) {
+      // h.periode est au format "YYYY-MM" (ex: "2026-04").
+      // On fixe au 1er du mois à 12:00 pour éviter tout décalage de fuseau horaire
+      return new Date(`${h.periode}-01T12:00:00`);
+    }
+    // Fallback de sécurité si d'anciens calculs n'ont pas de période enregistrée
+    return new Date(h.date);
+  };
+
   const filtered = useMemo(() => {
     return mergedHistory.filter((h) => {
       if (userRole !== 'ADV' && !h.isArchived) {
         return false;
       }
 
-      const d = new Date(h.date);
+      const d = getPeriodeDate(h); // <-- On filtre désormais par période
       const sMatch = h.employeeName.toLowerCase().includes(search.toLowerCase());
       const mMatch = !selectedMonth || String(d.getMonth()) === selectedMonth;
       const yMatch = !selectedYear || String(d.getFullYear()) === selectedYear;
@@ -68,8 +79,6 @@ export default function HistoryPage() {
     return filtered.some(h => !h.isArchived);
   }, [filtered]);
 
-  // Respectent les filtres actifs (recherche/mois/année/produit) — filtrer d'abord,
-  // puis purger avec ces boutons, au lieu d'un bouton dédié par produit.
   const unarchivedSimulationsFiltered = useMemo(() => {
     return filtered.filter(h => !h.isArchived);
   }, [filtered]);
@@ -82,16 +91,13 @@ export default function HistoryPage() {
     ? archivedCalculationsFiltered.length > 0
     : (userRole === 'ADV' && unarchivedSimulationsFiltered.length > 0);
 
-  // ✨ NOUVEAU REGROUPEMENT : Les calculs validés fusionnent par mois !
   const grouped = useMemo(() => {
     const map = new Map<string, { batchId: string; title: string; date: Date; items: typeof history; total: number; count: number; isArchived: boolean }>();
     
     filtered.forEach((h) => {
-      const d = new Date(h.date);
+      const d = getPeriodeDate(h); // <-- On groupe par période
       const monthKey = `month-${d.getFullYear()}-${d.getMonth()}`;
       
-      // La magie est ici : si c'est archivé/validé, on l'envoie dans le dossier du mois.
-      // Sinon, on le garde dans son lot de simulation (batchId).
       const k = h.isArchived ? monthKey : (h.batchId || monthKey);
       
       if (!map.has(k)) {
@@ -101,7 +107,6 @@ export default function HistoryPage() {
           ? d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' })
           : (h.simulationName || 'Simulation');
           
-        // Mettre une majuscule au mois (ex: "Juin 2026")
         if (isMonthlyGroup) {
           rawTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
         }
@@ -113,7 +118,7 @@ export default function HistoryPage() {
           items: [], 
           total: 0, 
           count: 0,
-          isArchived: true // Sera passé à false si on trouve un élément non archivé
+          isArchived: true
         });
       }
       
@@ -123,7 +128,7 @@ export default function HistoryPage() {
       g.count += 1;
       
       if (!h.isArchived) g.isArchived = false;
-      if (d > g.date) g.date = d; // Garde la date la plus récente
+      if (d > g.date) g.date = d;
     });
     
     return Array.from(map.values()).sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -169,10 +174,11 @@ export default function HistoryPage() {
   };
 
   const handleArchiveBatch = async (batchId: string) => {
-    const itemsToArchive = filtered.filter(h => 
-      (h.batchId === batchId || (!h.batchId && `month-${new Date(h.date).getFullYear()}-${new Date(h.date).getMonth()}` === batchId)) 
-      && !h.isArchived
-    );
+    const itemsToArchive = filtered.filter(h => {
+      const d = getPeriodeDate(h);
+      return (h.batchId === batchId || (!h.batchId && `month-${d.getFullYear()}-${d.getMonth()}` === batchId)) 
+      && !h.isArchived;
+    });
 
     if (itemsToArchive.length === 0) return;
 
@@ -234,7 +240,7 @@ export default function HistoryPage() {
       worksheet.columns = [
         { header: lang === 'en' ? 'Employee' : 'Employé', key: 'employee', width: 28 },
         { header: lang === 'en' ? 'Role' : 'Rôle', key: 'role', width: 22 },
-        { header: lang === 'en' ? 'Date' : 'Date', key: 'date', width: 16 },
+        { header: lang === 'en' ? 'Period' : 'Période', key: 'period', width: 16 },
         { header: lang === 'en' ? 'Commissions' : 'Commissions', key: 'commissions', width: 18 },
         { header: lang === 'en' ? 'Bonus' : 'Bonus', key: 'bonus', width: 16 },
         { header: lang === 'en' ? 'Final Salary' : 'Salaire Final', key: 'finalSalary', width: 20 }
@@ -249,12 +255,13 @@ export default function HistoryPage() {
       });
 
       filtered.forEach((h) => {
-        const formattedDate = new Date(h.date).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR');
+        const pDate = getPeriodeDate(h);
+        const formattedDate = pDate.toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', { month: '2-digit', year: 'numeric' });
         
         const row = worksheet.addRow({
           employee: h.employeeName,
           role: h.employeeRole,
-          date: formattedDate,
+          period: formattedDate,
           commissions: h.commissions || 0,
           bonus: h.bonuses || 0,
           finalSalary: h.finalSalary || 0
@@ -277,7 +284,7 @@ export default function HistoryPage() {
       const totalsRow = worksheet.addRow({
         employee: lang === 'en' ? 'GENERAL TOTAL' : 'TOTAL GÉNÉRAL',
         role: '',
-        date: '',
+        period: '',
         commissions: sumComm,
         bonus: sumBonus,
         finalSalary: sumFinal
@@ -503,7 +510,7 @@ export default function HistoryPage() {
             <div className="abc-month-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
               <div className="abc-month-title" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span className="abc-eyebrow text-gray-500" style={{ display: 'block', marginBottom: '2px' }}>
-                  {g.date.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {lang === 'en' ? 'Period:' : 'Période :'} {g.date.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' })}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <h3 className="abc-h3" style={{ margin: 0, fontSize: '1.125rem', fontWeight: 'bold' }}>{g.title}</h3>
@@ -546,7 +553,6 @@ export default function HistoryPage() {
                     <span>{lang === 'en' ? 'Validate Simulation' : 'Valider la simulation'}</span>
                   </button>
                 )}
-
               </div>
             </div>
 
@@ -558,6 +564,9 @@ export default function HistoryPage() {
                 const canDelete = !h.isArchived 
                   ? (userRole === 'ADV') 
                   : (userRole === 'RH' || userRole === 'ADMIN');
+                  
+                const pDate = getPeriodeDate(h);
+                const periodStr = pDate.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'short', year: 'numeric' });
 
                 return (
                   <div key={h.id} className={`abc-history-row ${isOpen ? 'is-open' : ''}`}>
@@ -586,7 +595,9 @@ export default function HistoryPage() {
                             </span>
                           )}
                         </div>
-                        <span className="abc-history-meta">{formatDateLong(h.date)} · {h.employeeRole}</span>
+                        <span className="abc-history-meta">
+                          {lang === 'en' ? 'Period:' : 'Période :'} {periodStr} · {lang === 'en' ? 'Run on' : 'Calculé le'} {formatDateLong(h.date)} · {h.employeeRole}
+                        </span>
                       </div>
 
                       <div className="abc-history-stats">

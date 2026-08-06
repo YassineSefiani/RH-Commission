@@ -18,7 +18,7 @@ import { parseExcelDate } from '../utils/excelDate';
 import { matchesBrand } from '../utils/brandMatch';
 
 import cocaBg from '../assets/coca cola.png';
-import ferreroBg from '../assets/ferrero rocher.png';
+import ferreroBg from '../assets/Ferrero Rocher.png';
 import wallsBg from '../assets/walls.jpg';
 
 // Utilitaire de normalisation des périodes pour correspondre au format attendu YYYY-MM
@@ -93,7 +93,7 @@ export default function CalculationPage() {
     },
     {
       id: 'ferrero-rocher',
-      name: 'Ferrero Rocher',
+      name: 'Ferrero',
       image: ferreroBg,
       sector: 'Chocolats',
       accent: 'border-amber-400 ring-2 ring-amber-200',
@@ -172,7 +172,7 @@ export default function CalculationPage() {
   }, [refreshImportHistory]);
 
   const carteStatusCounts = useMemo(() => {
-    const cartes = ['Coca Cola', "Wall's", 'Ferrero Rocher'];
+    const cartes = ['Coca Cola', "Wall's", 'Ferrero'];
     const map: Record<string, { objectifs: number; realisations: number }> = {};
     cartes.forEach(carteName => {
       map[carteName] = {
@@ -278,10 +278,15 @@ export default function CalculationPage() {
         else if (fileName.includes('vol') || fileName.includes('coke')) allVolumes.push(...dataJson);
       }
 
+      let hasMismatch = false;
+
       const realPayload = allRealisations.map(r => {
         const rawPeriode = getVal(r, 'periode');
+        const rowPeriode = rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey;
+        if (rawPeriode && rowPeriode !== periodeKey) hasMismatch = true;
+
         return {
-          periode: rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey,
+          periode: rowPeriode,
           carte: String(getVal(r, 'carte') ?? ''),
           matricule: String(getVal(r, 'matricule') ?? ''),
           caRealise: Number(getVal(r, 'target') ?? getVal(r, 'realise') ?? 0),
@@ -292,9 +297,13 @@ export default function CalculationPage() {
         let noteStr = String(getVal(r, 'note') ?? '0').replace('%', '');
         let note = Number(noteStr);
         if (note < 1 && note > 0) note = note * 100;
+        
         const rawPeriode = getVal(r, 'periode');
+        const rowPeriode = rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey;
+        if (rawPeriode && rowPeriode !== periodeKey) hasMismatch = true;
+
         return {
-          periode: rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey,
+          periode: rowPeriode,
           matricule: String(getVal(r, 'matricule') ?? ''),
           note: note,
         };
@@ -305,8 +314,14 @@ export default function CalculationPage() {
         const retourne = Number(getVal(r, 'retourne') ?? r['Volume retourné (en CP)'] ?? 0);
         const matricule = String(getVal(r, 'matricule') ?? '');
         const roleExtrait = String(getVal(r, 'role') ?? r.Role ?? r.role ?? '');
+        
         const rawDate = getVal(r, 'date') ?? r.Date ?? r.date ?? r['Date'] ?? '';
         const isoDate = parseExcelDate(rawDate);
+        
+        // On vérifie que la date extraite (YYYY-MM-DD) commence bien par notre clé de période (YYYY-MM)
+        if (isoDate && !isoDate.startsWith(periodeKey)) {
+          hasMismatch = true;
+        }
 
         return {
           date: isoDate,
@@ -316,6 +331,14 @@ export default function CalculationPage() {
           volumeRetourne: retourne,
         };
       }).filter(r => r.matricule && r.date);
+
+      // --- BLOCAGE SI MAUVAISE PÉRIODE ---
+      if (hasMismatch) {
+        toast.error(`Un ou plusieurs fichiers contiennent des données qui ne correspondent pas à la période sélectionnée (${periodeLabel}). Import annulé.`);
+        setImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
 
       const [realResult, triResult, volResult] = await Promise.allSettled([
         importApi.postRealisationsBatch(realPayload),
