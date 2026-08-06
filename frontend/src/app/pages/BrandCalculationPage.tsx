@@ -193,7 +193,8 @@ export default function BrandCalculationPage() {
           globalTauxRetour = first.volumeCharge > 0 ? (first.volumeRetourne / first.volumeCharge) * 100 : 0;
 
           empVolumeRecords.forEach((record) => {
-            let dailyRole = String(employee.role || '').trim().toUpperCase();
+            // 1. On initialise avec un rôle neutre qui ne déclenchera aucune règle
+            let dailyRole = 'NON ASSIGNE';
             const dailyVol = (record.volumeCharge || 0) - (record.volumeRetourne || 0);
 
             const dailyPresence = presenceRecords.find(p => p.date === record.date);
@@ -203,13 +204,15 @@ export default function BrandCalculationPage() {
               const mat2 = (dailyPresence.livreur2Matricule || '').trim().toUpperCase();
               const mat3 = (dailyPresence.livreur3Matricule || '').trim().toUpperCase();
 
+              // 2. On attribue le rôle SEULEMENT si la présence confirme la position
               if (empMatricule === mat1) {
                 dailyRole = 'LIVREUR';
               } else if (empMatricule === mat2 || empMatricule === mat3) {
                 dailyRole = 'AIDE LIVREUR';
               }
 
-              if (decodedBrand.toUpperCase().includes('COCA') && dailyPresence.canal?.trim().toUpperCase() === 'GMS') {
+              // 3. On ajoute la spécificité GMS uniquement si l'employé était bien sur la fiche
+              if (dailyRole !== 'NON ASSIGNE' && decodedBrand.toUpperCase().includes('COCA') && dailyPresence.canal?.trim().toUpperCase() === 'GMS') {
                 dailyRole = `${dailyRole} GMS`;
               }
             }

@@ -427,7 +427,7 @@ export default function CalculationPage() {
               {importingObj ? <Loader2 className="h-7 w-7 text-orange-600 animate-spin" /> : <Target className="h-7 w-7 text-orange-600 group-hover:text-white" strokeWidth={1.5} />}
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-bold text-gray-900">1. Importer les Objectifs Mensuels ({periodeLabel})</p>
+              <p className="text-sm font-bold text-gray-900">1. Importer les Objectifs Annuels</p>
               <p className="text-xs text-gray-500">Persiste et met à jour définitivement le référentiel des cibles</p>
             </div>
           </button>
