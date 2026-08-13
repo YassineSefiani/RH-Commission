@@ -55,22 +55,48 @@ async function getByPeriode<T>(resource: string, periode: string): Promise<T[]> 
   const res = await fetch(`${API_BASE_URL}/import/${resource}/periode/${encodeURIComponent(periode)}`, {
     headers: getHeaders(),
   });
+  
   if (!res.ok) throw new Error(`Impossible de récupérer ${resource} pour la période ${periode}`);
-  return res.json();
+  
+  // On extrait les données JSON dans une variable
+  const data = await res.json();
+  
+  // On affiche un log clair dans la console avec la ressource (objectifs, realisations, etc.)
+  console.log(`📥 [DB FETCH] Données récupérées pour ${resource.toUpperCase()} (${periode}) :`, data);
+  
+  // On retourne les données pour que le reste de l'application puisse les utiliser
+  return data;
 }
 
 async function postBatch<T>(resource: string, payload: unknown[]): Promise<T[]> {
   if (payload.length === 0) return [];
-  const res = await fetch(`${API_BASE_URL}/import/${resource}/batch`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new Error(body?.message || `Échec de l'import ${resource}`);
+
+  // Découpage en paquets de 200 lignes pour éviter le timeout de la passerelle
+  const CHUNK_SIZE = 200;
+  let allResults: T[] = [];
+
+  for (let i = 0; i < payload.length; i += CHUNK_SIZE) {
+    const chunk = payload.slice(i, i + CHUNK_SIZE);
+    
+    console.log(`📤 [IMPORT BATCH] Envoi du lot (${i + 1} à ${Math.min(i + CHUNK_SIZE, payload.length)}) pour ${resource.toUpperCase()}...`);
+
+    const res = await fetch(`${API_BASE_URL}/import/${resource}/batch`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(chunk),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error(body?.message || `Échec de l'import ${resource} (lot ${i + 1}-${i + chunk.length})`);
+    }
+
+    const chunkResult = await res.json();
+    allResults = allResults.concat(chunkResult);
   }
-  return res.json();
+
+  console.log(`✅ [IMPORT SUCCÈS] Total de ${allResults.length} lignes importées pour ${resource.toUpperCase()}`);
+  return allResults;
 }
 
 export const importApi = {

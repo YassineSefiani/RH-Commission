@@ -580,7 +580,7 @@ export default function PersonnelPage() {
               </div>
 
               <DialogFooter className="flex gap-2 sm:justify-between">
-                {user?.superRole === 'RH' && (
+                {(user?.superRole === 'RH' || user?.superRole === 'ADMIN') && (
                   <>
                     <button
                       onClick={() => togglePersonnel(selectedPerson.id)}
@@ -605,7 +605,7 @@ export default function PersonnelPage() {
                     </div>
                   </>
                 )}
-                {user?.superRole !== 'RH' && (
+                {(user?.superRole === 'RH' || user?.superRole === 'ADMIN') && (
                   <div className="flex justify-end w-full">
                      <button
                       onClick={() => setSelectedPerson(null)}

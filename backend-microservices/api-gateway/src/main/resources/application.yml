@@ -9,7 +9,7 @@ spring:
 app:
   proxy:
     connect-timeout-ms: ${PROXY_CONNECT_TIMEOUT_MS:3000}
-    read-timeout-ms: ${PROXY_READ_TIMEOUT_MS:15000}
+    read-timeout-ms: ${PROXY_READ_TIMEOUT_MS:100000}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000}
 

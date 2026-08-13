@@ -224,7 +224,7 @@ export default function CalculationPage() {
         return {
           periode: rawPeriode ? formatPeriodeToYYYYMM(rawPeriode, periodeKey) : periodeKey,
           carte: String(getVal(r, 'carte') ?? ''),
-          matricule: String(getVal(r, 'matricule') ?? ''),
+          matricule: String(getVal(r, 'matricule') ?? '').replace(/\.0$/, ''),
           nomComplet: String(getVal(r, 'nom complet') ?? getVal(r, 'nom') ?? ''),
           target: Number(getVal(r, 'target') ?? getVal(r, 'objectif') ?? 0),
         };
@@ -288,8 +288,10 @@ export default function CalculationPage() {
         return {
           periode: rowPeriode,
           carte: String(getVal(r, 'carte') ?? ''),
-          matricule: String(getVal(r, 'matricule') ?? ''),
-          caRealise: Number(getVal(r, 'target') ?? getVal(r, 'realise') ?? 0),
+          // Ajout du nettoyage pour le matricule (.0)
+          matricule: String(getVal(r, 'matricule') ?? '').replace(/\.0$/, ''),
+          // Ajout de 'realisation' pour attraper votre colonne Excel "REALISATIONS" ou "TARGET" et la mettre dans caRealise
+          caRealise: Number(getVal(r, 'realisation') ?? getVal(r, 'realise') ?? getVal(r, 'target') ?? 0),
         };
       }).filter(r => r.matricule);
 
@@ -304,21 +306,31 @@ export default function CalculationPage() {
 
         return {
           periode: rowPeriode,
-          matricule: String(getVal(r, 'matricule') ?? ''),
+          // Ajout du nettoyage pour le matricule (.0)
+          matricule: String(getVal(r, 'matricule') ?? '').replace(/\.0$/, ''),
           note: note,
         };
       }).filter(r => r.matricule);
 
       const volPayload = allVolumes.map(r => {
-        const charge = Number(getVal(r, 'charge') ?? r['Volume chargé (En CP)'] ?? 0);
-        const retourne = Number(getVal(r, 'retourne') ?? r['Volume retourné (en CP)'] ?? 0);
-        const matricule = String(getVal(r, 'matricule') ?? '');
+        // 1. On force la conversion en vrai chiffre, et si c'est vide on met 0
+        const rawCharge = getVal(r, 'charge') ?? r['Volume chargé (En CP)'] ?? 0;
+        const rawRetourne = getVal(r, 'retourne') ?? r['Volume retourné (en CP)'] ?? 0;
+        
+        let charge = parseFloat(String(rawCharge).replace(',', '.'));
+        if (isNaN(charge)) charge = 0;
+        
+        let retourne = parseFloat(String(rawRetourne).replace(',', '.'));
+        if (isNaN(retourne)) retourne = 0;
+
+        // 2. Nettoyage du matricule
+        const matricule = String(getVal(r, 'matricule') ?? '').replace(/\.0$/, '');
         const roleExtrait = String(getVal(r, 'role') ?? r.Role ?? r.role ?? '');
         
+        // 3. Gestion de la date
         const rawDate = getVal(r, 'date') ?? r.Date ?? r.date ?? r['Date'] ?? '';
         const isoDate = parseExcelDate(rawDate);
         
-        // On vérifie que la date extraite (YYYY-MM-DD) commence bien par notre clé de période (YYYY-MM)
         if (isoDate && !isoDate.startsWith(periodeKey)) {
           hasMismatch = true;
         }

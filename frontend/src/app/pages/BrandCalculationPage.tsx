@@ -171,50 +171,64 @@ export default function BrandCalculationPage() {
         setCalcNotice({ type: 'warning', message });
       }
 
+      console.log(`--- DÉBUT DU CALCUL POUR LA MARQUE : ${decodedBrand} ---`);
+
       const brandResults = brandEmployees.map(employee => {
         let commissions = 0;
         let bonuses = 0;
         const details: CalculationDetail[] = [];
 
-        const empMatricule = String(employee.matricule || employee.id).trim().toUpperCase();
+        const cleanMatricule = (mat: any) => String(mat || '').trim().toUpperCase().replace(/\.0$/, '');
+        const empMatricule = cleanMatricule(employee.matricule || employee.id);
 
-        const empObjectif = fetchedObjectifs.find((o) => String(o.matricule).trim().toUpperCase() === empMatricule) || { target: 0 };
-        const empRealisation = realPayload.find((r) => String(r.matricule).trim().toUpperCase() === empMatricule) || { caRealise: 0 };
-        const empTriage = triPayload.find((tr) => String(tr.matricule).trim().toUpperCase() === empMatricule) || { note: 0 };
+        const empObjectif = fetchedObjectifs.find((o) => cleanMatricule(o.matricule) === empMatricule) || { target: 0 };
+        const empRealisation = realPayload.find((r) => cleanMatricule(r.matricule) === empMatricule) || { caRealise: 0 };
+        const empTriage = triPayload.find((tr) => cleanMatricule(tr.matricule) === empMatricule) || { note: 0 };
 
-        const empVolumeRecords = volPayload.filter((v) => String(v.matricule).trim().toUpperCase() === empMatricule);
+        const empVolumeRecords = volPayload.filter((v) => cleanMatricule(v.matricule) === empMatricule);
 
         const roleSegments: Record<string, { volume: number }> = {};
         let totalVolume = 0;
         let globalTauxRetour = 0;
+
+        console.log(`\nAnalyse de l'employé : ${employee.prenom} ${employee.nom} (Matricule: "${empMatricule}")`);
 
         if (empVolumeRecords.length > 0) {
           const first = empVolumeRecords[0];
           globalTauxRetour = first.volumeCharge > 0 ? (first.volumeRetourne / first.volumeCharge) * 100 : 0;
 
           empVolumeRecords.forEach((record) => {
-            // 1. On initialise avec un rôle neutre qui ne déclenchera aucune règle
             let dailyRole = 'NON ASSIGNE';
             const dailyVol = (record.volumeCharge || 0) - (record.volumeRetourne || 0);
+            
+            // 🚨 MODIFICATION MAJEURE ICI : On récupère TOUS les camions de la journée
+            const dailyPresences = presenceRecords.filter(p => p.date === record.date);
+            let matchedPresence = null;
 
-            const dailyPresence = presenceRecords.find(p => p.date === record.date);
+            for (const p of dailyPresences) {
+              const matLivreur1 = String(p.livreur1Matricule || (p as any).livreur1_matricule || p.livreur1Id || '').trim().toUpperCase();
+              const matLivreur2 = String(p.livreur2Matricule || (p as any).livreur2_matricule || p.livreur2Id || '').trim().toUpperCase();
+              const matLivreur3 = String(p.livreur3Matricule || (p as any).livreur3_matricule || p.livreur3Id || '').trim().toUpperCase();
 
-            if (dailyPresence) {
-              const mat1 = (dailyPresence.livreur1Matricule || '').trim().toUpperCase();
-              const mat2 = (dailyPresence.livreur2Matricule || '').trim().toUpperCase();
-              const mat3 = (dailyPresence.livreur3Matricule || '').trim().toUpperCase();
-
-              // 2. On attribue le rôle SEULEMENT si la présence confirme la position
-              if (empMatricule === mat1) {
+              if (empMatricule === matLivreur1) {
                 dailyRole = 'LIVREUR';
-              } else if (empMatricule === mat2 || empMatricule === mat3) {
+                matchedPresence = p;
+                break; // Trouvé ! On arrête de chercher dans les autres camions
+              } else if (empMatricule === matLivreur2 || empMatricule === matLivreur3) {
                 dailyRole = 'AIDE LIVREUR';
+                matchedPresence = p;
+                break; // Trouvé ! On arrête de chercher dans les autres camions
               }
+            }
 
-              // 3. On ajoute la spécificité GMS uniquement si l'employé était bien sur la fiche
-              if (dailyRole !== 'NON ASSIGNE' && decodedBrand.toUpperCase().includes('COCA') && dailyPresence.canal?.trim().toUpperCase() === 'GMS') {
+            if (matchedPresence) {
+              // Spécificité Coca : Ajout du suffixe GMS
+              if (decodedBrand.toUpperCase().includes('COCA') && String(matchedPresence.canal || '').trim().toUpperCase() === 'GMS') {
                 dailyRole = `${dailyRole} GMS`;
               }
+              console.log(` -> Date ${record.date} : Trouvé dans la présence (Camion: ${matchedPresence.matriculeCamion}, Rôle assigné: ${dailyRole})`);
+            } else {
+              console.log(` -> Date ${record.date} : ⚠️ Présent dans les volumes mais ABSENT de TOUTES les fiches de présence de ce jour !`);
             }
 
             if (!roleSegments[dailyRole]) {
@@ -224,15 +238,20 @@ export default function BrandCalculationPage() {
             totalVolume += dailyVol;
           });
         } else {
+          console.log(` -> ⚠️ Aucun enregistrement de volume trouvé pour le matricule ${empMatricule}`);
           let fallbackRole = String(employee.role || '').trim().toUpperCase();
 
           if (decodedBrand.toUpperCase().includes('COCA')) {
             const hasGmsPresenceThisMonth = presenceRecords.some(p => {
-              const mat1 = (p.livreur1Matricule || '').trim().toUpperCase();
-              const mat2 = (p.livreur2Matricule || '').trim().toUpperCase();
-              const mat3 = (p.livreur3Matricule || '').trim().toUpperCase();
-              return p.canal?.trim().toUpperCase() === 'GMS' && (empMatricule === mat1 || empMatricule === mat2 || empMatricule === mat3);
+              if (String(p.canal || '').trim().toUpperCase() !== 'GMS') return false;
+              
+              const m1 = String(p.livreur1Matricule || (p as any).livreur1_matricule || p.livreur1Id || '').trim().toUpperCase();
+              const m2 = String(p.livreur2Matricule || (p as any).livreur2_matricule || p.livreur2Id || '').trim().toUpperCase();
+              const m3 = String(p.livreur3Matricule || (p as any).livreur3_matricule || p.livreur3Id || '').trim().toUpperCase();
+
+              return [m1, m2, m3].includes(empMatricule);
             });
+            
             if (hasGmsPresenceThisMonth) {
               fallbackRole = `${fallbackRole} GMS`;
             }
@@ -359,6 +378,7 @@ export default function BrandCalculationPage() {
         return { employee, commissions, bonuses, finalSalary, details };
       });
 
+      console.log("--- FIN DU CALCUL ---");
       setResults(brandResults);
       toast.success(`${simulationName} exécutée avec succès !`);
     } catch (error) {
@@ -393,8 +413,8 @@ export default function BrandCalculationPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col h-full">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col h-[calc(100vh-14rem)]">
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900">{b.teamMembers}</h2>
               <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase">
                 {brandEmployees.length} {b.active}
@@ -404,7 +424,7 @@ export default function BrandCalculationPage() {
             {loading ? (
               <div className="py-10 text-center text-gray-500">Chargement...</div>
             ) : (
-              <div className="grid gap-3 flex-1 overflow-y-auto pr-2 mb-6">
+              <div className="grid gap-3 flex-1 overflow-y-auto pr-2 mb-4">
                 {brandEmployees.map(emp => (
                   <div key={emp.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-orange-200 transition-colors">
                     <div>
@@ -418,33 +438,35 @@ export default function BrandCalculationPage() {
               </div>
             )}
 
-            <button
-              onClick={handleCalculateAll}
-              disabled={loading || brandEmployees.length === 0 || isCalculating}
-              className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white py-3 px-4 rounded-lg font-bold hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isCalculating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calculator className="w-5 h-5" />}
-              {isCalculating ? b.calculating : b.launchBtn}
-            </button>
+            <div className="flex-shrink-0 pt-2 border-t border-gray-100">
+              <button
+                onClick={handleCalculateAll}
+                disabled={loading || brandEmployees.length === 0 || isCalculating}
+                className="w-full flex items-center justify-center gap-2 bg-orange-500 text-white py-3 px-4 rounded-lg font-bold hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCalculating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calculator className="w-5 h-5" />}
+                {isCalculating ? b.calculating : b.launchBtn}
+              </button>
 
-            {calcNotice && (
-              <p className={`mt-3 text-xs rounded-lg px-3 py-2 ${calcNotice.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
-                {calcNotice.message}
-              </p>
-            )}
+              {calcNotice && (
+                <p className={`mt-3 text-xs rounded-lg px-3 py-2 ${calcNotice.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                  {calcNotice.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="lg:col-span-2">
           {results.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 h-full flex flex-col items-center justify-center text-center">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 h-[calc(100vh-14rem)] flex flex-col items-center justify-center text-center">
               <Calculator className="w-16 h-16 text-gray-200 mb-4" />
               <h3 className="text-lg font-bold text-gray-900 mb-2">{b.noCalc}</h3>
               <p className="text-gray-500 max-w-sm">{b.noCalcSub}</p>
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
-              <div className="flex items-center justify-between border-b border-gray-200 mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 h-[calc(100vh-14rem)] flex flex-col">
+              <div className="flex items-center justify-between border-b border-gray-200 mb-4 flex-shrink-0">
                 <div className="flex gap-6">
                   <button
                     onClick={() => setActiveTab('detail')}
@@ -507,7 +529,7 @@ export default function BrandCalculationPage() {
                 ) : (
                   <div className="overflow-x-auto rounded-xl border border-gray-200">
                     <table className="w-full text-left border-collapse whitespace-nowrap">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gray-50 sticky top-0">
                         <tr className="border-b border-gray-200 text-xs text-gray-600 uppercase tracking-wider">
                           <th className="p-4 font-semibold">{b.colEmployee}</th>
                           <th className="p-4 font-semibold">{b.colComm}</th>
@@ -525,7 +547,7 @@ export default function BrandCalculationPage() {
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="bg-orange-50 font-bold border-t-2 border-orange-200">
+                      <tfoot className="bg-orange-50 font-bold border-t-2 border-orange-200 sticky bottom-0">
                         <tr>
                           <td className="p-4 text-orange-900">{b.teamTotal}</td>
                           <td className="p-4 text-green-700">+{formatCurrency(results.reduce((acc, r) => acc + r.commissions, 0))}</td>
